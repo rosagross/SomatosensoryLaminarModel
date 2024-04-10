@@ -36,6 +36,10 @@ u_t = np.zeros((nPop, nPop+1)) # the initial first-order derivative: v'(t) = u(t
 
 coupling_strengths = np.arange(0, 100, 5)
 
+# for 100
+#W = genfromtxt('W100.csv', delimiter=',')
+
+
 # arrays to store min and max rate
 minRate = np.zeros((nPop, len(coupling_strengths)))
 maxRate = np.zeros((nPop, len(coupling_strengths)))
@@ -44,13 +48,15 @@ for sim_iter, g in enumerate(coupling_strengths):
 
     # Weight matrix [to x from]
     W = params.get_connectivity(params.P, params.S, params.C, g) 
+    #W = W0 * g
 
     for timestep, time in enumerate(steps):
         
         # Update RATE (calculated from the current potential)
         # technically this could also go to the end of the for-loop but we need a rate value calculated from the initial potential value
         for i in range(nPop):
-            rate_current[i] = sigm[i][2] / (1 + np.exp(sigm[i][0]*(sigm[i][1] - np.sum(v_current[i,:])))) 
+            # the incoming potential has to be defined in mV because of how the sigmoid parameter are defined (also in mV!)
+            rate_current[i] = sigm[i][2] / (1 + np.exp(sigm[i][0]*(sigm[i][1] - np.sum(v_current[i,:])*1e3)))  
 
         # Save the new values
         rate[:, timestep] = rate_current 
@@ -81,6 +87,7 @@ fig, axs = plt.subplots(4, 1, figsize=(3, 6))  # Set figure size
 
 # Plot settings for all subplots
 for i, ax in enumerate(axs, start=1):
+    #ax.plot(steps, rate[(i-1)*4:i*4, :].T, linewidth=1)
     ax.plot(coupling_strengths, minRate[(i-1)*4:i*4, :].T, linewidth=1)
     #ax.plot(coupling_strengths, maxRate[(i-1)*4:i*4, :].T, linewidth=2)
     ax.grid(True)
