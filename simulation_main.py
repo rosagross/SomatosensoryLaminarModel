@@ -34,7 +34,7 @@ v_current = np.zeros((nPop, nPop+1))
 rate_current = np.zeros(nPop)
 u_t = np.zeros((nPop, nPop+1)) # the initial first-order derivative: v'(t) = u(t)
 
-coupling_strengths = [100]# np.arange(0, 100, 5)
+coupling_strengths = np.arange(0, 100, 5)
 
 # arrays to store min and max rate
 minRate = np.zeros((nPop, len(coupling_strengths)))
@@ -65,11 +65,11 @@ for sim_iter, g in enumerate(coupling_strengths):
                 v_current[i, j] = v_current[i, j] + v_dot * step_size
                 
                 # 2. Update the first derivative based on the current potential (NOT the just updated one!) current first derivative
-                u_dot = (H[i, j]/tau[j]) * (W[i, j]*rate_current[j]) - 2 * u_t[i, j]/tau[j] - potential[i, j, timestep]/(tau[j]**2)
+                u_dot = (H[i, j]/tau[i,j]) * (W[i, j]*rate_current[j]) - 2 * u_t[i, j]/tau[i,j] - potential[i, j, timestep]/(tau[i,j]**2)
                 u_t[i, j] = u_t[i,j] + u_dot * step_size
 
             # Add external input 
-            u_dot = (H[i,-1]/tau[-1]) * (W[i, -1]) * Iext[i, timestep] - 2 * u_t[i, j]/tau[-1] - potential[i, -1, timestep]/(tau[-1]**2)
+            u_dot = (H[i,-1]/tau[i,-1]) * (W[i, -1]) * Iext[i, timestep] - 2 * u_t[i, j]/tau[i,-1] - potential[i, -1, timestep]/(tau[i,-1]**2)
             u_t[i, -1] = u_t[i,-1] + u_dot * step_size
     
     minRate[:,sim_iter] = np.min(rate[:,-100:],axis=1)
@@ -81,7 +81,8 @@ fig, axs = plt.subplots(4, 1, figsize=(3, 6))  # Set figure size
 
 # Plot settings for all subplots
 for i, ax in enumerate(axs, start=1):
-    ax.plot(steps, rate[(i-1)*4:i*4, :].T, linewidth=2)
+    ax.plot(coupling_strengths, minRate[(i-1)*4:i*4, :].T, linewidth=1)
+    #ax.plot(coupling_strengths, maxRate[(i-1)*4:i*4, :].T, linewidth=2)
     ax.grid(True)
     ax.set_ylabel('Hz')
     ax.legend(['L2/3', 'L4', 'L5', 'L6'])
