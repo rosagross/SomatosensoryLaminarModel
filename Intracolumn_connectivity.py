@@ -2,9 +2,9 @@ import numpy as np
 from pyrates.frontend import OperatorTemplate
 
 N_cells = 16
-pro_variables = np.tile(np.array(['pro_E', 'pro_PV', 'pro_SOM', 'pro_VIP']),4)
-pros = np.array(['PRO_E', 'PRO_PV', 'PRO_SOM', 'PRO_VIP'])
-pros = np.tile(pros,4)
+#pro_variables = np.tile(np.array(['PRO_E', 'PRO_PV', 'PRO_SOM', 'PRO_VIP']),4)
+pro_names = np.array(['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4', 'PRO_P1', 'PRO_P2', 'PRO_P3', 'PRO_P4', 'PRO_S1', 'PRO_S2', 'PRO_S3', 'PRO_S4', 'PRO_V1', 'PRO_V2', 'PRO_V3', 'PRO_V4'])
+
 
 # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
 sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
@@ -24,9 +24,8 @@ sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
                             [  0.0704119 ,  37.86409387,  38.52689646],
                             [  0.0704119 ,  37.86409387,  38.52689646]])
 
-#values for E from Chien
-pro_E = OperatorTemplate(
-    name='PRO_E', path=None,
+PRO_E1 = OperatorTemplate(
+    name='PRO_E1', path=None,
     equations=["m_out = 1/(1 + exp(r*(vth-v))) - 1/(1 + exp(r*vth))"], #welche Formel mit m_max?
     variables={'m_out': 'output',
                'v': 'input',
@@ -35,29 +34,27 @@ pro_E = OperatorTemplate(
                'm_max': 31.39696397}, 
     description="sigmoidal potential-to-rate operator")
 
+pro = np.array([PRO_E1])
+
 
 from copy import deepcopy  
-for i in range(1,N_cells):
-    new_template = pro_variables[i]
-    new_template = deepcopy(pro_E).update_template(
-        name = f'{pros[i]}', path=None, variables={'r': sigmoid_params[i,0], 'vth': sigmoid_params[i,1], 'm_max': sigmoid_params[i,2]}
-    )
-    
+for i in range(1,len(pro_names)):
+    pro = np.append(pro, deepcopy(PRO_E1).update_template(
+        name = f'{pro_names[i]}', path=None, variables={'r': sigmoid_params[i,0], 'vth': sigmoid_params[i,1], 'm_max': sigmoid_params[i,2]}
+    ))
+
+print(pro)
 
 # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
 tau_L = np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,15,15,15,3])*1e-3 # sec
 
-rpos = np.array([['RPO_EE','RPO_E_PV','RPO_E_SOM','RPO_E_VIP'],
-                 ['RPO_PV_E','RPO_PV_PV','RPO_PV_SOM','RPO_PV_VIP'],
-                 ['RPO_SOM_E','RPO_SOM_PV','RPO_SOM_SOM','RPO_SOM_VIP'],
-                 ['RPO_VIP_E','RPO_VIP_PV','RPO_VIP_SOM','RPO_VIP_VIP']])
-rpos_up = np.tile(rpos, (4, 4))
+rpo_names = np.array(['RPO_E1', 'RPO_E2', 'RPO_E3', 'RPO_E4', 'RPO_P1', 'RPO_P2', 'RPO_P3', 'RPO_P4', 'RPO_S1', 'RPO_S2', 'RPO_S3', 'RPO_S4', 'RPO_V1', 'RPO_V2', 'RPO_V3', 'RPO_V4', 'RPO_INPUT'])
+#rpos_up = np.tile(rpo_names, (4, 4))
 
-# values for E -> E AMPA
-rpo_E_E = OperatorTemplate(
-    name='RPO_EE', path=None,
+RPO_E1 = OperatorTemplate(
+    name='RPO_E1', path=None,
     equations=['d/dt * v = u',
-               'd/dt * u = H * r - (tau1+tau2)/(tau1*tau2) * u - 1/(tau1*tau2) * v'], #was ist mit w(t) in der Gleichung im Paper?
+               'd/dt * u = H * r - tau/tau * u - 1/tau * v'],  #Woher kommt die Gleichung?
     variables={'v': 'output',
                'u': 'variable',
                'r': 'input',
@@ -65,24 +62,33 @@ rpo_E_E = OperatorTemplate(
                'H': 1},
     description="rate-to-potential operator")
 
-for i in range(4):
-    for j in range(4):
-        new_template = rpos[i,j]
-        new_template = deepcopy(rpo_E_E).update_template(
-            name = f'{rpos[i,j]}', path=None, variables={'tau': tau_L[i]} #stimmt die Reihenfolge der tau-values?
-        )
+rpo = np.array([RPO_E1])
 
+for i in range(1, len(rpo_names)):
+    rpo = np.append(rpo, deepcopy(RPO_E1).update_template(
+    name = f'{rpo_names[i]}', variables={'tau': tau_L[i]} 
+    ))
+
+print(rpo)
+
+
+population_names = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4']
 
 from pyrates.frontend import NodeTemplate
-pop_E = NodeTemplate(name="E1", path=None, operators=[pro_E, rpo_E_E, rpo_PV_E, rpo_SOM_E, rpo_VIP_E]) #alle Eingänge
-pop_PV = NodeTemplate(name="P1", path=None, operators=[pro_PV, rpo_E_PV, rpo_PV_PV, rpo_SOM_PV, rpo_VIP_PV])
-pop_SOM = NodeTemplate(name='S1', path=None, operators=[pro_SOM, rpo_E_SOM, rpo_PV_SOM, rpo_SOM_SOM, rpo_VIP_SOM])
-pop_VIP = NodeTemplate(name='V1', path=None, operators=[pro_VIP, rpo_E_VIP, rpo_PV_VIP, rpo_SOM_VIP, rpo_VIP_VIP])
+E1 = NodeTemplate(name="E1", path=None, operators=[PRO_E1 + list(rpo)]) #alle Eingänge
+
+pop = np.array([E1])
+
+for i in range(1,len(N_cells)):
+    pop = np.append(pop, deepcopy(E1).update_template(
+        name = f'{population_names[i]}', operators=[pro_names[i] + list(rpo)]
+    ))
 
 
 
 cells = np.array(['E1','P1','S1','V1','E2','P2','S2','V2','E3','P3','S3','V3','E4','P4','S4','V4'])
 
+#Spalte für Input-connections?
 
 # Connection probabilies
 # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
@@ -103,19 +109,20 @@ W = np.array([[0.110000000000000,	0.494409448818898,	0.319464566929134,	0.083669
             [0, 0, 0, 0, 0, 0, 0, 0, 0.0650600054303557, 0.109800787401575, 0.0698732283464567, 0.259529133858268, 0.243703937007874, 0.0598913385826772, 0.159710236220472, 0.189655905511811],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.129764566929134, 0, 0.0598913385826772, 0.708714173228346, 0]])
 
+
 from pyrates.frontend import CircuitTemplate
 cir = CircuitTemplate(
-    name="cir", nodes={'E1': pop_E, 'E2': pop_E, 'E3': pop_E, 'E4': pop_E, 'P1': pop_PV, 'P2': pop_PV, 'P3': pop_PV, 'P4': pop_PV, 'S1': pop_SOM, 'S2': pop_SOM, 'S3': pop_SOM, 'S4': pop_SOM, 'V1': pop_VIP, 'V2': pop_VIP, 'V3': pop_VIP, 'V4': pop_VIP},
+    name="cir", nodes={'E1': E1, 'E2': E2, 'E3': E3, 'E4': E4, 'P1': P1, 'P2': P2, 'P3': P3, 'P4': P4, 'S1': S1, 'S2': S2, 'S3': S3, 'S4': S4, 'V1': V1, 'V2': V2, 'V3': V3, 'V4': V4},
     edges=[],
             path = None 
 )
 
+#Probelm: andere Reihenfolge der Zellen in rpo und pro, als in W
 for i in range(len(cells)):
     for j in range(len(cells)):
         cir = deepcopy(cir).update_template(
-        edges=[(f'{cells[i]}/{pros[i]}/m_out', f'{cells[j]}/{rpos_up[i,j]}/r', None, {'weight': W[i,j]})]
-) #Wie kann ich kontrollieren ob das stimmt?
-
+        edges=[(f'{cells[i]}/{pro[i]}/m_out', f'{cells[j]}/{rpo[i]}/r', None, {'weight': W[i,j]})]
+)
 
 
 results = cir.run(simulation_time=2.0,
@@ -124,7 +131,6 @@ results = cir.run(simulation_time=2.0,
                   outputs={'V_E1': 'E1/RPO_E_E/v'},
                   backend='default',
                   solver='scipy')
-
 
 
 import matplotlib.pyplot as plt
