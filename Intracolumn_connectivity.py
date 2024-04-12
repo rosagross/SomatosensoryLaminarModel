@@ -2,12 +2,11 @@ import numpy as np
 from pyrates.frontend import OperatorTemplate
 
 N_cells = 16
-#pro_variables = np.tile(np.array(['PRO_E', 'PRO_PV', 'PRO_SOM', 'PRO_VIP']),4)
-pro_names = np.array(['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4', 'PRO_P1', 'PRO_P2', 'PRO_P3', 'PRO_P4', 'PRO_S1', 'PRO_S2', 'PRO_S3', 'PRO_S4', 'PRO_V1', 'PRO_V2', 'PRO_V3', 'PRO_V4'])
+pro_names = np.array(['PRO_E1', 'PRO_P1', 'PRO_S1', 'PRO_V1', 'PRO_E2', 'PRO_P2', 'PRO_S2', 'PRO_V2', 'PRO_E3', 'PRO_P3', 'PRO_S3', 'PRO_V3', 'PRO_E4', 'PRO_P4', 'PRO_S4', 'PRO_V4'])
 
 
 # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
-sigmoid_params = np.array([ [  0.12782346,  32.10540543,  31.39696397],
+sigmoid_params = np.array([ [  0.12782346,  32.10540543,  31.39696397], #Zellen in welcher Reihenfolge?
                             [  0.12782346,  32.10540543,  31.39696397],
                             [  0.12782346,  32.10540543,  31.39696397],
                             [  0.12782346,  32.10540543,  31.39696397],
@@ -43,12 +42,12 @@ for i in range(1,len(pro_names)):
         name = f'{pro_names[i]}', path=None, variables={'r': sigmoid_params[i,0], 'vth': sigmoid_params[i,1], 'm_max': sigmoid_params[i,2]}
     ))
 
-print(pro)
+#print(pro)
 
-# E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
-tau_L = np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,15,15,15,3])*1e-3 # sec
+# E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext 
+tau_L = np.array([6,3,20,15,6,3,20,15,6,3,20,15,6,3,20,15,3])*1e-3 # sec  #NEUE REIHENFOLGE NACH OPERATOREN
 
-rpo_names = np.array(['RPO_E1', 'RPO_E2', 'RPO_E3', 'RPO_E4', 'RPO_P1', 'RPO_P2', 'RPO_P3', 'RPO_P4', 'RPO_S1', 'RPO_S2', 'RPO_S3', 'RPO_S4', 'RPO_V1', 'RPO_V2', 'RPO_V3', 'RPO_V4', 'RPO_INPUT'])
+rpo_names = np.array(['RPO_E1', 'RPO_P1', 'RPO_S1', 'RPO_V1', 'RPO_E2', 'RPO_P2', 'RPO_S2', 'RPO_V2', 'RPO_E3', 'RPO_P3', 'RPO_S3', 'RPO_V3', 'RPO_E4', 'RPO_P4', 'RPO_S4', 'RPO_V4', 'RPO_INPUT'])
 #rpos_up = np.tile(rpo_names, (4, 4))
 
 RPO_E1 = OperatorTemplate(
@@ -69,10 +68,10 @@ for i in range(1, len(rpo_names)):
     name = f'{rpo_names[i]}', variables={'tau': tau_L[i]} 
     ))
 
-print(rpo)
+#print(rpo)
 
 
-population_names = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4']
+cells = np.array(['E1','P1','S1','V1','E2','P2','S2','V2','E3','P3','S3','V3','E4','P4','S4','V4'])
 
 from pyrates.frontend import NodeTemplate
 E1 = NodeTemplate(name="E1", path=None, operators=[PRO_E1] + list(rpo)) #alle Eingänge
@@ -81,12 +80,12 @@ pop = np.array([E1])
 
 for i in range(1,N_cells):
     pop = np.append(pop, deepcopy(E1).update_template(
-        name = f'{population_names[i]}', operators=[pro[i]] + list(rpo)
+        name = f'{cells[i]}', operators=[pro[i]] + list(rpo)
     ))
 
+print("Operatoren von P1:", pop[1].operators)
 
 
-cells = np.array(['E1','P1','S1','V1','E2','P2','S2','V2','E3','P3','S3','V3','E4','P4','S4','V4'])
 
 #Spalte für Input-connections?
 
@@ -112,23 +111,30 @@ W = np.array([[0.110000000000000,	0.494409448818898,	0.319464566929134,	0.083669
 
 from pyrates.frontend import CircuitTemplate
 cir = CircuitTemplate(  #Schleife
-    name="cir", nodes={'E1': E1, 'E2': pop[1], 'E3': pop[2], 'E4': pop[3], 'P1': pop[4], 'P2': pop[5], 'P3': pop[6], 'P4': pop[7], 'S1':pop[8], 'S2':pop[9], 'S3':pop[10], 'S4': pop[11], 'V1': pop[12], 'V2': pop[13], 'V3': pop[14], 'V4': pop[15]},
+    name="cir", nodes={},
     edges=[],
             path = None 
 )
 
-#ich glaube das nimmt nicht den richtigen Operator, weil pro und rpo in einer anderen Reihenfolge sind als W
+updated_nodes={}
+for i in range(N_cells):
+    updated_nodes[cells[i]] = pop[i]
+
+cir = cir.update_template(nodes=updated_nodes)
+
+
 for i, cell_i in enumerate(cells):
     for j, cell_j in enumerate(cells):
         cir = deepcopy(cir).update_template(
-        edges=[(f'{cell_i}/{pro[i].name}/m_out', f'{cell_j}/{rpo[i].name}/r', None, {'weight': W[i,j]})]
+        edges=[(f'{cell_i}/{pro[i].name}/m_out', f'{cell_j}/{rpo[j].name}/r', None, {'weight': W[i,j]})]
 )
+#print(cir.edges)
 
 
 results = cir.run(simulation_time=2.0,
                   step_size=1e-4,
                   sampling_step_size=1e-3,
-                  outputs={'V_E1': 'E1/RPO_E_E/v'},
+                  outputs={'V_E1': 'E1/RPO_E/v'},
                   backend='default',
                   solver='scipy')
 
