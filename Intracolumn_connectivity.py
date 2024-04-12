@@ -83,7 +83,8 @@ for i in range(1,N_cells):
         name = f'{cells[i]}', operators=[pro[i]] + list(rpo)
     ))
 
-print("Operatoren von P1:", pop[1].operators)
+#print("Pop:",pop)
+#print("Operatoren von P1:", pop[1].operators)
 
 
 
@@ -128,7 +129,7 @@ for i, cell_i in enumerate(cells):
         cir = deepcopy(cir).update_template(
         edges=[(f'{cell_i}/{pro[i].name}/m_out', f'{cell_j}/{rpo[j].name}/r', None, {'weight': W[i,j]})]
 )
-#print(cir.edges)
+print(cir.edges)
 
 
 results = cir.run(simulation_time=2.0,
