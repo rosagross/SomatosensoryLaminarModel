@@ -7,7 +7,7 @@ pro_names = np.array(['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4', 'PRO_P1', 'PRO_P2'
 
 
 # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
-sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
+sigmoid_params = np.array([ [  0.12782346,  32.10540543,  31.39696397],
                             [  0.12782346,  32.10540543,  31.39696397],
                             [  0.12782346,  32.10540543,  31.39696397],
                             [  0.12782346,  32.10540543,  31.39696397],
@@ -75,13 +75,13 @@ print(rpo)
 population_names = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4']
 
 from pyrates.frontend import NodeTemplate
-E1 = NodeTemplate(name="E1", path=None, operators=[PRO_E1 + list(rpo)]) #alle Eingänge
+E1 = NodeTemplate(name="E1", path=None, operators=[PRO_E1] + list(rpo)) #alle Eingänge
 
 pop = np.array([E1])
 
-for i in range(1,len(N_cells)):
+for i in range(1,N_cells):
     pop = np.append(pop, deepcopy(E1).update_template(
-        name = f'{population_names[i]}', operators=[pro_names[i] + list(rpo)]
+        name = f'{population_names[i]}', operators=[pro[i]] + list(rpo)
     ))
 
 
@@ -111,17 +111,17 @@ W = np.array([[0.110000000000000,	0.494409448818898,	0.319464566929134,	0.083669
 
 
 from pyrates.frontend import CircuitTemplate
-cir = CircuitTemplate(
-    name="cir", nodes={'E1': E1, 'E2': E2, 'E3': E3, 'E4': E4, 'P1': P1, 'P2': P2, 'P3': P3, 'P4': P4, 'S1': S1, 'S2': S2, 'S3': S3, 'S4': S4, 'V1': V1, 'V2': V2, 'V3': V3, 'V4': V4},
+cir = CircuitTemplate(  #Schleife
+    name="cir", nodes={'E1': E1, 'E2': pop[1], 'E3': pop[2], 'E4': pop[3], 'P1': pop[4], 'P2': pop[5], 'P3': pop[6], 'P4': pop[7], 'S1':pop[8], 'S2':pop[9], 'S3':pop[10], 'S4': pop[11], 'V1': pop[12], 'V2': pop[13], 'V3': pop[14], 'V4': pop[15]},
     edges=[],
             path = None 
 )
 
-#Probelm: andere Reihenfolge der Zellen in rpo und pro, als in W
-for i in range(len(cells)):
-    for j in range(len(cells)):
+#ich glaube das nimmt nicht den richtigen Operator, weil pro und rpo in einer anderen Reihenfolge sind als W
+for i, cell_i in enumerate(cells):
+    for j, cell_j in enumerate(cells):
         cir = deepcopy(cir).update_template(
-        edges=[(f'{cells[i]}/{pro[i]}/m_out', f'{cells[j]}/{rpo[i]}/r', None, {'weight': W[i,j]})]
+        edges=[(f'{cell_i}/{pro[i].name}/m_out', f'{cell_j}/{rpo[i].name}/r', None, {'weight': W[i,j]})]
 )
 
 
