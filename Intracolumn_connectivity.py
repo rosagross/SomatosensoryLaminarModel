@@ -82,6 +82,7 @@ for i in range(1,N_cells):
     pop = np.append(pop, deepcopy(E1).update_template(
         name = f'{cells[i]}', operators=[pro[i]] + list(rpo)
     ))
+pop = list(pop)
 
 #print("Pop:",pop)
 #print("Operatoren von P1:", pop[1].operators)
@@ -109,35 +110,40 @@ W = np.array([[0.110000000000000,	0.494409448818898,	0.319464566929134,	0.083669
             [0, 0, 0, 0, 0, 0, 0, 0, 0.0650600054303557, 0.109800787401575, 0.0698732283464567, 0.259529133858268, 0.243703937007874, 0.0598913385826772, 0.159710236220472, 0.189655905511811],
             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.129764566929134, 0, 0.0598913385826772, 0.708714173228346, 0]])
 
-
-from pyrates.frontend import CircuitTemplate
-cir = CircuitTemplate(  #Schleife
-    name="cir", nodes={},
-    edges=[],
-            path = None 
-)
-
 updated_nodes={}
 for i in range(N_cells):
     updated_nodes[cells[i]] = pop[i]
-
-cir = cir.update_template(nodes=updated_nodes)
-
-
+edges=[]
+# i : target 
 for i, cell_i in enumerate(cells):
+    # j : source
     for j, cell_j in enumerate(cells):
-        cir = deepcopy(cir).update_template(
-        edges=[(f'{cell_i}/{pro[i].name}/m_out', f'{cell_j}/{rpo[j].name}/r', None, {'weight': W[i,j]})]
+        #cir = deepcopy(cir).update_template(
+        edges.append((f'{cell_j}/{pro[j].name}/m_out', f'{cell_i}/{rpo[j].name}/r', None, {'weight': W[i,j]})) # to x from 
+        #edges=[(f'{cell_i}/{pro[i].name}/m_out', f'{cell_j}/{rpo[j].name}/r', None, {'weight': W[i,j]})]
+#)
+        
+from pyrates.frontend import CircuitTemplate
+cir = CircuitTemplate(  #Schleife
+    name="cir", nodes=updated_nodes,
+    edges=edges,
+            path = None 
 )
+
+
+#cir = cir.update_template(nodes=updated_nodes)
+
+
 print(cir.edges)
 
 
 results = cir.run(simulation_time=2.0,
                   step_size=1e-4,
                   sampling_step_size=1e-3,
-                  outputs={'V_E1': 'E1/RPO_E/v'},
+                  outputs={'V_E1': 'E1/RPO_P1/v'},
                   backend='default',
-                  solver='scipy')
+                  solver='scipy',
+                  vectorize=False)
 
 
 import matplotlib.pyplot as plt
