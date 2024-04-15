@@ -3,12 +3,11 @@ import numpy as np
 class Parameter():
 
     def __init__(self):
-        self.tau, self.nPop, self.sim_dur, self.step_size = self.get_params()
+        self.tau, self.nPop = self.get_params()
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
         self.C = self.get_cellcounts()
         self.sigmoid_params = self.get_sigmoid()
-        self.Iext = self.create_Iext(self.nPop, self.sim_dur/self.step_size)
 
     def get_params(self):
 
@@ -16,15 +15,11 @@ class Parameter():
         # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
         tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,15,15,15,3])*1e-3, (17,1)) # sec
 
-        # Simulation parameters
-        simulation_time = 0.5 # in s
-        step_size = 1e-3 # in s
-
         # nr. of populations
         nPop = 16
 
         # synaptic kernel efficacy
-        return tau, nPop, simulation_time, step_size
+        return tau, nPop
 
     def get_connectProb(self):
 
@@ -81,14 +76,14 @@ class Parameter():
 
         return C 
 
-    def get_connectivity(self, P, S, C, g):
+    def get_connectivity(self, g):
         # g is a scaling factor scaling the general coupling strength
 
         # Final connectivity matrix 
         # PS = P * S (16 x 16) --> Connectivity probability if all cells were equally distributed
         # W = PS * C (16 x 16) --> make sure that cell counts are accounted for! C is shaped (16 x 1) so tile it before multiplying  
-        PS = P * S
-        W = PS * np.tile(C, (16,1))
+        PS = self.P * self.S
+        W = PS * np.tile(self.C, (16,1))
 
         # sort so that this order yields:  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
         # define index for E, PV, SOM, and VIP
@@ -129,11 +124,11 @@ class Parameter():
         W0 = np.vstack([row1, row2, row3, row4])
 
         # now append the external input matrix 
-        W_ext = np.zeros((16,1))
-        W = np.concatenate((W0*g, W_ext), axis=1)
+        Wext = np.ones((16,1))
+        Wext[1] = 1
+        W = np.concatenate((W0*g, Wext), axis=1)
 
         return W
-
 
 
     def get_sigmoid(self):
@@ -158,8 +153,4 @@ class Parameter():
         return sigmoid_params
     
 
-    def create_Iext(self, nPop, time_steps):
-
-        Iext = np.zeros((nPop, int(time_steps)))
-        return Iext
 
