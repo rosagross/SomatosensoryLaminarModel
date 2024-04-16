@@ -37,7 +37,7 @@ def plot_results(rates, Iext, step_size, simulation_time):
 
     plot_rates = rates[0, 0:4, :]
     
-    axs[0].plot(steps, Iext)
+    axs[0].plot(steps[500:700], Iext[500:700])
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs[1:], start=1):
@@ -67,7 +67,7 @@ def create_Iext(simulation_time, step_size, input_type):
 
     if input_type == "step":
         # after 50 ms for 50ms
-        x  = int(0.02/step_size)
+        #x  = int(0.02/step_size)
         Iext[501:520] = 5
 
     return Iext
