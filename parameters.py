@@ -124,7 +124,7 @@ class Parameter():
         W0 = np.vstack([row1, row2, row3, row4])
 
         # now append the external input matrix 
-        Wext = np.ones((16,1))
+        Wext = np.zeros((16,1))
         Wext[1] = 1
         W = np.concatenate((W0*g, Wext), axis=1)
 

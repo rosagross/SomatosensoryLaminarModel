@@ -26,9 +26,6 @@ class JR_Model():
 
         # external input matrix
         self.Iext = np.tile(Iext, (self.nPop,1))
-        print(self.Iext)
-
-
 
     def run_simulation(self, g):
         '''
@@ -72,7 +69,9 @@ class JR_Model():
                     self.u_t[i, j] = self.u_t[i,j] + u_dot * self.step_size
 
                 # Add external input 
-                u_dot = (self.H[i,-1]/self.tau[i,-1]) * (W[i, -1]) * self.Iext[i, timestep] - 2 * self.u_t[i, j]/self.tau[i,-1] - self.potential[i, -1, timestep]/(self.tau[i,-1]**2)
+                v_dot = self.u_t[i, -1]
+                self.v_current[i, -1] = self.v_current[i, -1] + v_dot * self.step_size
+                u_dot = (self.H[i,-1]/self.tau[i,-1]) * ((W[i, -1]) * self.Iext[i, timestep]) - 2 * self.u_t[i, -1]/self.tau[i,-1] - self.potential[i, -1, timestep]/(self.tau[i,-1]**2)
                 self.u_t[i, -1] = self.u_t[i,-1] + u_dot * self.step_size
         
         

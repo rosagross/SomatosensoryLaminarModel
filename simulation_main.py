@@ -41,10 +41,11 @@ def plot_results(rates, Iext, step_size, simulation_time):
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs[1:], start=1):
-        ax.plot(steps, rates[0, (i-1)*4:i*4, :].T, linewidth=1)
+        ax.plot(steps[500:700], rates[0, (i-1)*4:i*4, 500:700].T, linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
-        ax.legend(['L2/3', 'L4', 'L5', 'L6'])
+    
+    axs[1].legend(['L2/3', 'L4', 'L5', 'L6'])
 
     # Set titles for each subplot
     axs[0].set_title('Input')
@@ -66,8 +67,8 @@ def create_Iext(simulation_time, step_size, input_type):
 
     if input_type == "step":
         # after 50 ms for 50ms
-        x  = int(0.1/step_size)
-        Iext[x:x*4] = 50
+        x  = int(0.02/step_size)
+        Iext[501:520] = 5
 
     return Iext
 
@@ -79,12 +80,12 @@ def main():
     plot = True
 
     # set coupling strengths and step size
-    coupling_strengths = np.arange(0, 100, 5)
+    coupling_strengths = [20] # np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1
 
     # define input
-    input_type = "baseline" # other options are "baseline"
+    input_type = "step" # other options are "baseline"
     Iext = create_Iext(simulation_time, step_size, input_type)
 
     # arrays to store rate
