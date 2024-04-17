@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from pyrates.frontend import OperatorTemplate
 
 N_cells = 16
@@ -42,13 +43,11 @@ for i in range(1,len(pro_names)):
         name = f'{pro_names[i]}', path=None, variables={'r': sigmoid_params[i,0], 'vth': sigmoid_params[i,1], 'm_max': sigmoid_params[i,2]}
     ))
 
-#print(pro)
 
 # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext 
 tau_L = np.array([6,3,20,15,6,3,20,15,6,3,20,15,6,3,20,15,3])*1e-3 # sec  #NEUE REIHENFOLGE NACH OPERATOREN
 
 rpo_names = np.array(['RPO_E1', 'RPO_P1', 'RPO_S1', 'RPO_V1', 'RPO_E2', 'RPO_P2', 'RPO_S2', 'RPO_V2', 'RPO_E3', 'RPO_P3', 'RPO_S3', 'RPO_V3', 'RPO_E4', 'RPO_P4', 'RPO_S4', 'RPO_V4', 'RPO_INPUT'])
-#rpos_up = np.tile(rpo_names, (4, 4))
 
 RPO_E1 = OperatorTemplate(
     name='RPO_E1', path=None,
@@ -68,7 +67,6 @@ for i in range(1, len(rpo_names)):
     name = f'{rpo_names[i]}', variables={'tau': tau_L[i]} 
     ))
 
-#print(rpo)
 
 
 cells = np.array(['E1','P1','S1','V1','E2','P2','S2','V2','E3','P3','S3','V3','E4','P4','S4','V4'])
@@ -83,10 +81,6 @@ for i in range(1,N_cells):
         name = f'{cells[i]}', operators=[pro[i]] + list(rpo)
     ))
 pop = list(pop)
-
-#print("Pop:",pop)
-#print("Operatoren von P1:", pop[1].operators)
-
 
 
 #Spalte für Input-connections?
@@ -118,34 +112,56 @@ edges=[]
 for i, cell_i in enumerate(cells):
     # j : source
     for j, cell_j in enumerate(cells):
-        #cir = deepcopy(cir).update_template(
         edges.append((f'{cell_j}/{pro[j].name}/m_out', f'{cell_i}/{rpo[j].name}/r', None, {'weight': W[i,j]})) # to x from 
-        #edges=[(f'{cell_i}/{pro[i].name}/m_out', f'{cell_j}/{rpo[j].name}/r', None, {'weight': W[i,j]})]
-#)
+        
+#print(edges)
         
 from pyrates.frontend import CircuitTemplate
-cir = CircuitTemplate(  #Schleife
-    name="cir", nodes=updated_nodes,
+cir = CircuitTemplate( 
+    name="cir", 
+    nodes=updated_nodes,
     edges=edges,
-            path = None 
+    path = None 
 )
 
 
-#cir = cir.update_template(nodes=updated_nodes)
+###########################
+outputs = {}
+for target_cell in cells:
+    for rpo_name in rpo_names:
+        outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
 
+simulation_time=2.0
+step_size=1e-4
+sampling_step_size = 1e-3
 
-print(cir.edges)
-
-
-results = cir.run(simulation_time=2.0,
-                  step_size=1e-4,
-                  sampling_step_size=1e-3,
-                  outputs={'V_E1': 'E1/RPO_P1/v'},
+results = cir.run(simulation_time=simulation_time,
+                  step_size=step_size,
+                  sampling_step_size=sampling_step_size,
+                  outputs=outputs,
                   backend='default',
                   solver='scipy',
                   vectorize=False)
 
 
-import matplotlib.pyplot as plt
-results.plot()
+#print(results)
+
+time_list = np.arange(0, simulation_time, sampling_step_size)
+print(np.shape(time_list))
+print(np.shape(results))
+
+
+cell_potential = np.zeros((N_cells, len(time_list)))
+for i,target in enumerate(cells):
+    for rpo_name in rpo_names:
+        #plt.plot(time_list, results[f'V_{target}/{rpo_name}'])
+        #zusammenfassen zu gesamtpotential einer zelle aus allen eingängen:
+        cell_potential[i] += results[f'V_{target}/{rpo_name}']
+    plt.plot(time_list, cell_potential[i], label = target)
+
+plt.xlabel('Time (s)')
+plt.ylabel('Potential (mV)')
+plt.legend()
 plt.show()
+
+
