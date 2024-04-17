@@ -1,7 +1,7 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from jr_model import JR_Model 
+from jr_model import JR_Model
 
 def plot_minmax(rates, coupling_strengths):
     minRate = np.min(rates[:,:,-100:],axis=2)
@@ -37,11 +37,11 @@ def plot_results(rates, Iext, step_size, simulation_time):
 
     plot_rates = rates[0, 0:4, :]
     
-    axs[0].plot(steps[500:700], Iext[500:700])
+    axs[0].plot(steps[0:700], Iext[0:700])
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs[1:], start=1):
-        ax.plot(steps[500:700], rates[0, (i-1)*4:i*4, 500:700].T, linewidth=1)
+        ax.plot(steps[0:700], rates[0, (i-1)*4:i*4, 0:700].T, linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -80,12 +80,12 @@ def main():
     plot = True
 
     # set coupling strengths and step size
-    coupling_strengths = [20] # np.arange(0, 100, 5)
+    coupling_strengths = [1] # np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1
 
     # define input
-    input_type = "step" # other options are "baseline"
+    input_type = "baseline" # other options are "baseline"
     Iext = create_Iext(simulation_time, step_size, input_type)
 
     # arrays to store rate

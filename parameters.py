@@ -126,6 +126,8 @@ class Parameter():
         # now append the external input matrix 
         Wext = np.zeros((16,1))
         Wext[1] = 1
+
+        # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4
         W = np.concatenate((W0*g, Wext), axis=1)
 
         return W
