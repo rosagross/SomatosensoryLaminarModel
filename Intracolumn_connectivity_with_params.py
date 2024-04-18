@@ -35,7 +35,7 @@ for i in range(len(rpo_names)):
             name = f'{rpo_names[i]}', 
             path = None, 
             equations = ['d/dt * v = u',
-                        'd/dt * u = H/tau * w * r - 2 * u/tau - v/(tau**2)'],  
+                        'd/dt * u = H/tau * r - 2 * u/tau - v/(tau**2)'],  
             variables = {'v': 'output',
                         'u': 'variable',
                         'r': 'input',
