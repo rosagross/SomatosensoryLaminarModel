@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy  
 from pyrates.frontend import OperatorTemplate
-from neu_parameters import Parameter
+from parameters import Parameter
 from pyrates import grid_search
 
 params = Parameter()
@@ -96,7 +96,7 @@ for source_cell in cells:
 T = 2.0
 dt = 1e-4 #numerische Integration
 sampling_step_size = 1e-3  #Datenaufzeichnung
-
+'''
 results = cir.run(simulation_time = T,
                   step_size = dt,
                   sampling_step_size=sampling_step_size,
@@ -112,7 +112,6 @@ time_list = np.arange(0, T, sampling_step_size)
 cell_potential = np.zeros((N_cells, len(time_list)))
 firing_rate = np.zeros((N_cells, len(time_list)))
 
-'''
 for i,target in enumerate(cells):
     #Membrane Potential
     
@@ -142,12 +141,24 @@ plt.show()
 
 g = [0.3, 0.8, 1]
 
-W_g1 = params.get_connectivity(g[0])
+W_g1 = list(params.get_connectivity(g[0])[:,:-1].flatten())
 W_g2 = params.get_connectivity(g[1])
 W_g3 = params.get_connectivity(g[2])
-Weights = np.stack([W_g1, W_g2, W_g3], axis=0)
+# Weights = np.stack([W_g1, W_g2, W_g3], axis=0)
 #print(Weights.shape)
 
+all_edges = [(f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo[j].name}/r') for j, cell_j in enumerate(cells) for cell_i in cells]
+
+results_g, params = grid_search(cir,
+                                param_grid = {f'g0': W_g1},
+                                param_map = {f'g0': {'vars': ['weight'],
+                                            'edges': all_edges}},
+                                outputs = {'V_out' : "E1/RPO_P1/v"},
+                                step_size=dt, simulation_time=T, sampling_step_size=1e-3,
+                                cutoff=1.0, permute_grid=False)
+
+
+'''
 outputs = {}
 for g_value in range(len(g)):
     # i : target 
@@ -163,7 +174,7 @@ for g_value in range(len(g)):
                                            cutoff=1.0, permute_grid=False)
                                                                                       
 print(results_g.shape)
-
+'''
 '''
 for i,target in enumerate(cells):
     #Membrane Potential  
