@@ -30,20 +30,18 @@ rpo = np.array([])
 W = params.get_connectivity(1)
 
 for i in range(len(rpo_names)): 
-    for j in range(N_cells):
-        rpo = np.append(rpo, OperatorTemplate(
-            name = f'{rpo_names[i]}', 
-            path = None, 
-            equations = ['d/dt * v = u',
-                        'd/dt * u = H/tau * r - 2 * u/tau - v/(tau**2)'],  
-            variables = {'v': 'output',
-                        'u': 'variable',
-                        'r': 'input',
-                        'tau': tau[0,i],
-                        'H': 1,
-                        'w': W[i,j]},
-            description = "rate-to-potential operator"
-        ))
+    rpo = np.append(rpo, OperatorTemplate(
+        name = f'{rpo_names[i]}', 
+        path = None, 
+        equations = ['d/dt * v = u',
+                    'd/dt * u = H/tau * r - 2 * u/tau - v/(tau**2)'],  
+        variables = {'v': 'output',
+                    'u': 'variable',
+                    'r': 'input',
+                    'tau': tau[0,i],
+                    'H': 1},
+        description = "rate-to-potential operator"
+    ))
 
 
 cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
