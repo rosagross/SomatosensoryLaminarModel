@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy  
 from pyrates.frontend import OperatorTemplate
-from neu_parameters import Parameter
+from parameters import Parameter
 
 params = Parameter()
 tau, N_cells = params.get_params()
@@ -78,7 +78,7 @@ cir = CircuitTemplate(
 )
 
 outputs = {}
-'''
+
 #Membrane potential
 for target_cell in cells:  
     for rpo_name in rpo_names:
@@ -88,7 +88,7 @@ for target_cell in cells:
 for source_cell in cells: 
     for pro_name in pro_names:
         outputs[f'Rate_{source_cell}/{pro_name}'] = f'{source_cell}/{pro_name}/m_out'
-
+'''
 
 simulation_time = 2.0
 step_size = 1e-4
@@ -97,38 +97,39 @@ sampling_step_size = 1e-3
 results = cir.run(simulation_time = simulation_time,
                   step_size = step_size,
                   sampling_step_size=sampling_step_size,
-                  outputs = outputs,
+                  outputs = {'V_out': 'E1/RPO_S1/v'}, #outputs,
                   backend ='default',
                   solver ='scipy',
                   vectorize=False)
 
+results.plot()
+plt.show()
 
 
 time_list = np.arange(0, simulation_time, sampling_step_size)
-print(np.shape(time_list))
-print(np.shape(results))
+# print(np.shape(time_list))
+# print(np.shape(results))
 
 
 cell_potential = np.zeros((N_cells, len(time_list)))
 firing_rate = np.zeros((N_cells, len(time_list)))
 for i,target in enumerate(cells):
     #Membrane Potential
-    '''
+    
     for rpo_name in rpo_names:
-        #plt.plot(time_list, results[f'V_{target}/{rpo_name}'])
+        plt.plot(time_list, results[f'V_{target}/{rpo_name}'])
         #summarized potential of all inputs for one cell
-        cell_potential[i] += results[f'V_{target}/{rpo_name}']
-    plt.plot(time_list, cell_potential[i], label = target)
-    '''
-    #Firing Rate
-    for pro_name in pro_names:
-         firing_rate[i] += results[f'Rate_{target}/{pro_name}']
-    plt.plot(time_list, firing_rate[i], label = target)
-
+        #cell_potential[i] += results[f'V_{target}/{rpo_name}']
+#     #plt.plot(time_list, cell_potential[i], label = target)
+#     '''
+#     #Firing Rate
+#     for pro_name in pro_names:
+#          firing_rate[i] += results[f'Rate_{target}/{pro_name}']
+#     plt.plot(time_list, firing_rate[i], label = target)
+# '''
 plt.xlabel('Time (s)')
 #plt.ylabel('Potential (mV)')
 plt.ylabel('Firing Rate (Hz)')
 plt.legend()
 plt.show()
-
 
