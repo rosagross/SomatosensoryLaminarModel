@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy  
 from pyrates.frontend import OperatorTemplate
 from pyrates.frontend import NodeTemplate
-from neu_parameters import Parameter
+from parameters import Parameter
 from pyrates.frontend import CircuitTemplate
 from pyrates import grid_search
 
@@ -97,25 +97,30 @@ sampling_step_size = 1e-3  #Datenaufzeichnung   1e-3
 
 g = [20, 0.8, 1]
 
-#W_g1 = list(params.get_connectivity(g[0])[:,:-1].flatten())
-W_g1 = params.get_connectivity(g[0]) #(16x17)
-W_g2 = params.get_connectivity(g[1])
-W_g3 = params.get_connectivity(g[2])
+W_g1 = list(params.get_connectivity(g[0])[:,:-1].flatten()) #-1 wegen Inputspalte
+W_g2 = list(params.get_connectivity(g[1])[:,:-1].flatten())
+W_g3 = list(params.get_connectivity(g[2])[:,:-1].flatten())
+#W_g1 = params.get_connectivity(g[0]) #(16x17)
+#W_g2 = params.get_connectivity(g[1])
+#W_g3 = params.get_connectivity(g[2])
 
 all_edges = [(f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo[j].name}/r') for j, cell_j in enumerate(cells) for cell_i in cells]
 #print(all_edges)
 
-#with one edge for all three gs
-results_g, params = grid_search(cir,
-                                param_grid = {'g0': [W_g1[4,0], W_g2[4,0], W_g3[4,0]]},  #3 verschiedene g - Werte für ein edge
-                                param_map = {'g0': {'vars': ['weight'],
-                                                    'edges': all_edges} 
+
+results_g, parameter_map = grid_search(cir,
+                                param_grid = {f'g{[i]}': [W_g3[i]] for i in range(len(W_g3))}, 
+                                param_map = {f'g{[i]}': {'vars': ['weight'],
+                                                    'edges': [all_edges[i]]} for i in range(len(W_g3))
                                                     },
-                                outputs = {'V_out': 'E1/RPO_P1/v'}, #outputs
+                                outputs = {'V_out': 'E1/RPO_S1/v'}, #outputs,
                                 step_size=dt, simulation_time=T, sampling_step_size=sampling_step_size,
-                                cutoff=1.0, permute_grid=False, vectorize = False)
+                                cutoff=0, permute_grid=False, vectorize = False)
 
 print(results_g.shape)
+results_g.plot()
+plt.show()
+
 
 
 
@@ -129,7 +134,4 @@ print(results_g.shape)
 #         cell_potential[i] += results_g[f'V_{target}/{rpo_name}']
 #     plt.plot(time_list, cell_potential[i], label = target)
 #plt.legend()
-#
 
-results_g.plot()
-plt.show()
