@@ -2,8 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy  
 from pyrates.frontend import OperatorTemplate
-from parameters import Parameter
+from pyrates.frontend import NodeTemplate
+from neu_parameters import Parameter
+from pyrates.frontend import CircuitTemplate
 from pyrates import grid_search
+
 
 params = Parameter()
 tau, N_cells = params.get_params()
@@ -31,7 +34,6 @@ rpo = np.array([])
 W = params.get_connectivity(1)
 
 for i in range(len(rpo_names)): 
-    for j in range(N_cells):
         rpo = np.append(rpo, OperatorTemplate(
             name = f'{rpo_names[i]}', 
             path = None, 
@@ -41,15 +43,14 @@ for i in range(len(rpo_names)):
                         'u': 'variable',
                         'r': 'input',
                         'tau': tau[0,i],
-                        'H': 1,
-                        'w': W[i,j]},
+                        'H': 1},
             description = "rate-to-potential operator"
         ))
 
 
 cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
 
-from pyrates.frontend import NodeTemplate
+
 E1 = NodeTemplate(name="E1", path=None, operators=[pro[0]] + list(rpo)) #alle Eingänge
 
 pop = np.array([E1])
@@ -72,7 +73,6 @@ for i, cell_i in enumerate(cells):
         edges.append((f'{cell_j}/{pro[j].name}/m_out', f'{cell_i}/{rpo[j].name}/r', None, {'weight': W[i,j]})) # to x from 
         
 
-from pyrates.frontend import CircuitTemplate
 cir = CircuitTemplate( 
     name="cir", 
     nodes=updated_nodes,
@@ -80,107 +80,56 @@ cir = CircuitTemplate(
     path = None 
 )
 
+
 outputs = {}
 
 #Membrane potential
 for target_cell in cells:  
     for rpo_name in rpo_names:
         outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
-        '''
-#Firing Rate
-for source_cell in cells: 
-    for pro_name in pro_names:
-        outputs[f'Rate_{source_cell}/{pro_name}'] = f'{source_cell}/{pro_name}/m_out'
-'''
-
-T = 2.0
-dt = 1e-4 #numerische Integration
-sampling_step_size = 1e-3  #Datenaufzeichnung
-'''
-results = cir.run(simulation_time = T,
-                  step_size = dt,
-                  sampling_step_size=sampling_step_size,
-                  outputs = outputs,
-                  backend ='default',
-                  solver ='scipy',
-                  vectorize=False)
 
 
-
-time_list = np.arange(0, T, sampling_step_size)
-
-cell_potential = np.zeros((N_cells, len(time_list)))
-firing_rate = np.zeros((N_cells, len(time_list)))
-
-for i,target in enumerate(cells):
-    #Membrane Potential
-    
-    for rpo_name in rpo_names:
-        #plt.plot(time_list, results[f'V_{target}/{rpo_name}'])
-        #summarized potential of all inputs for one cell
-        cell_potential[i] += results[f'V_{target}/{rpo_name}']
-    plt.plot(time_list, cell_potential[i], label = target)
-    
-    #Firing Rate
-    for pro_name in pro_names:
-         firing_rate[i] += results[f'Rate_{target}/{pro_name}']
-    plt.plot(time_list, firing_rate[i], label = target)
-
-plt.xlabel('Time (s)')
-plt.ylabel('Potential (mV)')
-#plt.ylabel('Firing Rate (Hz)')
-plt.legend()
-plt.show()
-'''
+T = 2.0 #das muss irgendwie 2s sein. Nur 1s geht nicht
+dt = 1e-4 #numerische Integration  1e-4
+sampling_step_size = 1e-3  #Datenaufzeichnung   1e-3
 
 ######################################
 
-#W = [16x17xlen(g)]
+g = [20, 0.8, 1]
 
-
-
-g = [0.3, 0.8, 1]
-
-W_g1 = list(params.get_connectivity(g[0])[:,:-1].flatten())
+#W_g1 = list(params.get_connectivity(g[0])[:,:-1].flatten())
+W_g1 = params.get_connectivity(g[0]) #(16x17)
 W_g2 = params.get_connectivity(g[1])
 W_g3 = params.get_connectivity(g[2])
-# Weights = np.stack([W_g1, W_g2, W_g3], axis=0)
-#print(Weights.shape)
 
 all_edges = [(f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo[j].name}/r') for j, cell_j in enumerate(cells) for cell_i in cells]
+#print(all_edges)
 
+#with one edge for all three gs
 results_g, params = grid_search(cir,
-                                param_grid = {f'g0': W_g1},
-                                param_map = {f'g0': {'vars': ['weight'],
-                                            'edges': all_edges}},
-                                outputs = {'V_out' : "E1/RPO_P1/v"},
-                                step_size=dt, simulation_time=T, sampling_step_size=1e-3,
-                                cutoff=1.0, permute_grid=False)
+                                param_grid = {'g0': [W_g1[4,0], W_g2[4,0], W_g3[4,0]]},  #3 verschiedene g - Werte für ein edge
+                                param_map = {'g0': {'vars': ['weight'],
+                                                    'edges': all_edges} 
+                                                    },
+                                outputs = {'V_out': 'E1/RPO_P1/v'}, #outputs
+                                step_size=dt, simulation_time=T, sampling_step_size=sampling_step_size,
+                                cutoff=1.0, permute_grid=False, vectorize = False)
 
-
-'''
-outputs = {}
-for g_value in range(len(g)):
-    # i : target 
-    for i, cell_i in enumerate(cells):
-        # j : source
-        for j, cell_j in enumerate(cells):
-            results_g, params = grid_search(cir,
-                                           param_grid = {f'{cells[i]}_{cells[j]}_g{g_value}': Weights[g_value,i,j]},
-                                           param_map = {f'{cells[i]}_{cells[j]}_g{g_value}': {'vars': ['weight'],
-                                            'edges': [(f'{cell_j}/{pro[j].name}/m_out', f'{cell_i}/{rpo[j].name}/r')]}},
-                                           outputs = {f'V_{cell_j}/{rpo_names[j]}': f'{cell_j}/{rpo_names[j]}/v'},
-                                           step_size=dt, simulation_time=T, sampling_step_size=1e-3,
-                                           cutoff=1.0, permute_grid=False)
-                                                                                      
 print(results_g.shape)
-'''
-'''
-for i,target in enumerate(cells):
-    #Membrane Potential  
-    for rpo_name in rpo_names:
-        #plt.plot(time_list, results[f'V_{target}/{rpo_name}'])
-        #summarized potential of all inputs for one cell
-        cell_potential[i] += results_g[f'V_{target}/{rpo_name}']
-    plt.plot(time_list, cell_potential[i], label = target)
-'''
+
+
+
+# time_list = np.linspace(0,T,len(results_g))
+# cell_potential = np.zeros((N_cells, len(time_list)))
+# firing_rate = np.zeros((N_cells, len(time_list)))
+# plt.figure()
+# for i,target in enumerate(cells):
+#     for rpo_name in rpo_names:
+#         #summarized potential of all inputs for one cell
+#         cell_potential[i] += results_g[f'V_{target}/{rpo_name}']
+#     plt.plot(time_list, cell_potential[i], label = target)
+#plt.legend()
+#
+
+results_g.plot()
+plt.show()
