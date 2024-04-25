@@ -1,8 +1,10 @@
+# %% 
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy  
 from pyrates.frontend import OperatorTemplate
 from parameters import Parameter
+import pandas as pd
 
 params = Parameter()
 tau, N_cells = params.get_params()
@@ -76,6 +78,7 @@ cir = CircuitTemplate(
     edges=edges,
     path = None 
 )
+# %%
 
 outputs = {}
 
@@ -91,24 +94,46 @@ for source_cell in cells:
 '''
 
 simulation_time = 2.0
-step_size = 1e-4
+step_size = 1e-3
 sampling_step_size = 1e-3
 
 results = cir.run(simulation_time = simulation_time,
                   step_size = step_size,
                   sampling_step_size=sampling_step_size,
-                  outputs = {'V_out': 'E1/RPO_S1/v'}, #outputs,
+                  outputs = outputs, #outputs,
                   backend ='default',
                   solver ='scipy',
                   vectorize=False)
 
-results.plot()
+# %% 
+# take sigmoid values for population
+e1_sigm = sigm[0]
+time_list = np.arange(0, simulation_time, sampling_step_size)
+
+all_potentials = []
+for i in cells:
+    sources = results[[f'V_{i}/{rpo_name}' for rpo_name in rpo_names]]
+    all_potentials.append(np.sum(sources, axis=1))
+
+all_potentials = np.array(all_potentials).T
+potential_df = pd.DataFrame(all_potentials, columns=cells)
+potential_df.to_csv('output/pyrates_potential_G1.csv', index=False)
+
+#  r, v_thr, m_max
+fr_e1 = e1_sigm[2]/(1 + np.exp(e1_sigm[0]*(e1_sigm[1]-all_potentials[:, 0])))
+plt.plot(time_list, fr_e1)
 plt.show()
 
+# %% 
+#results.plot()
+#plt.show()
 
-time_list = np.arange(0, simulation_time, sampling_step_size)
+
 # print(np.shape(time_list))
 # print(np.shape(results))
+
+
+
 
 
 cell_potential = np.zeros((N_cells, len(time_list)))
