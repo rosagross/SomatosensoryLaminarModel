@@ -125,6 +125,7 @@ cell_potential = np.zeros((len(g), N_cells, len(results_g))) #g-Wert x Zellen x 
 firing_rate = np.zeros((len(g), N_cells, len(results_g)))
 fr_g = np.zeros((len(g), N_cells))
 
+
 fig, ax = plt.subplots(3,1)
 for p, res in enumerate(all_results):
     for i,target in enumerate(cells):
@@ -135,6 +136,10 @@ for p, res in enumerate(all_results):
             vth = sigm[i,1]
             m_max = sigm[i,2]
             firing_rate[p,i] = m_max/(1 + np.exp(r*(vth-cell_potential[p,i])))
+        
+        
+        
+        
         #ax[p].plot(time_list, cell_potential[p,i], label = target)
         #ax[p].legend()
         ax[p].plot(time_list, firing_rate[p,i], label = target)
