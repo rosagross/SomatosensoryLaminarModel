@@ -14,6 +14,7 @@ sigm = params.get_sigmoid()
 
 pro_names = np.array(['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4', 'PRO_P1', 'PRO_P2', 'PRO_P3', 'PRO_P4', 'PRO_S1', 'PRO_S2', 'PRO_S3', 'PRO_S4', 'PRO_V1', 'PRO_V2', 'PRO_V3', 'PRO_V4'])
 pro = np.array([])
+print('hi')
 
 for i in range(len(pro_names)):
     pro = np.append(pro, OperatorTemplate(
