@@ -3,34 +3,34 @@ import numpy as np
 class Parameter():
 
     def __init__(self, cortex_type='somato'):
-        self.tau, self.nPop = self.get_params(cortex_type)
-        self.S = self.get_connectStrength(cortex_type)
-        self.P = self.get_connectProb(cortex_type)
-        self.C = self.get_cellcounts(cortex_type)
-        self.sigmoid_params = self.get_sigmoid(cortex_type)
         self.cortex_type = cortex_type
+        self.tau, self.nPop = self.get_params()
+        self.S = self.get_connectStrength()
+        self.P = self.get_connectProb()
+        self.C = self.get_cellcounts()
+        self.sigmoid_params = self.get_sigmoid()
 
-    def get_params(self, cortex_type):
+    def get_params(self):
 
-        if cortex_type == 'somato':
+        if self.cortex_type == 'somato':
             # nr. of populations
             nPop = 13   
             # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4  
             tau = np.tile(np.array([6, 3, 10, 15, 6, 3, 20, 6, 3, 20, 6, 3, 20,3])*1e-3, (nPop+1,1)) # sec
 
-        elif cortex_type == 'visual':
+        elif self.cortex_type == 'visual':
             # nr. of populations
             nPop = 16
             # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
-            tau = np.tile(np.array([6, 3, 10, 15,6, 3, 10, 15,6, 3, 10, 15,6, 3, 10, 15,3])*1e-3, (nPop+1,1)) # sec
+            tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,15,15,15,3])*1e-3, (nPop+1,1)) # sec
 
         # synaptic kernel efficacy
         return tau, nPop
 
-    def get_connectProb(self, cortex_type):
+    def get_connectProb(self):
 
         # Connection probabilies
-        if cortex_type == 'somato':
+        if self.cortex_type == 'somato':
             # Connection probabilies
             # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4, Thalamus
             P = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0,  6.2 ],
@@ -48,7 +48,7 @@ class Parameter():
                         [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6, 0]])*1e-2               
             P = P[:, :-1] # ToDo: for now we do it without thalamc connection probability, change this later!
         
-        elif cortex_type == 'visual':
+        elif self.cortex_type == 'visual':
         # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
             P = np.array([[0.110000000000000,	0.494409448818898,	0.319464566929134,	0.0836692913385827,	0.170000000000000,	0.532440944881890,	0.463984251968504,	0,	0, 0.380314960629921, 0.220582677165354, 0, 0,	0,	0,	0],
                         [0.621051968503937, 0.788569291338583, 0.439203149606299, 0.0399275590551181, 0.416655118110236, 0.529040157480315, 0, 0, 0.0776893006021306, 0.449185039370079, 0, 0, 0, 0.459166929133858, 0, 0],
@@ -70,10 +70,10 @@ class Parameter():
         return P
 
 
-    def get_connectStrength(self, cortex_type):
+    def get_connectStrength(self):
 
         # Synaptic strength
-        if cortex_type == 'somato':
+        if self.cortex_type == 'somato':
             # The postsynaptic currents are computed using synaptical time constants and timeconstant for the membrane
             # synaptical time constants (all incoming EPSPs and all IPSPS have the same)
             # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
@@ -120,7 +120,7 @@ class Parameter():
             psc[12, 1] = 0        
             psp = psp[:, :-1] # ToDo: for now we do it without thalamci synaptic strength, change this later!
             
-        elif cortex_type == 'visual':
+        elif self.cortex_type == 'visual':
 
             psp = np.array([[0.36,	1.49,	0.86,	1.31,	0.34,	1.39,	0.69,	0.91,	0.74,	1.32,	0.53,	0,	0,	0,	0,	0],
                             [0.48,	0.68,	0.42,	0.41,	0.56,	0.68,	0.42,	0.41,	0.2,	0.79,	0,	0,	0,	0,	0,	0],
@@ -141,17 +141,17 @@ class Parameter():
             
         return psp
 
-    def get_cellcounts(self, cortex_type):
+    def get_cellcounts(self):
         
         # Cell counts
-        if cortex_type == 'somato':
+        if self.cortex_type == 'somato':
             # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
             C_absolute = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
             
             # translate in proportion
             C = C_absolute/np.sum(C_absolute)
             
-        elif cortex_type == 'visual':
+        elif self.cortex_type == 'visual':
             # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
             C = np.array([0.317584074016321, 0.0173259178404976, 0.0131590345998579, 0.0138260824367171, 0.175424918135038, 0.00974582878527990, 
                         0.00594278981929068, 0.00315331704697056, 0.166432766775820, 0.0216573973006220, 0.0127345496127657, 
@@ -159,12 +159,12 @@ class Parameter():
 
         return C 
 
-    def get_connectivity(self, g, cortex_type, include_Iext=True):
+    def get_connectivity(self, g, include_Iext=True):
         # g is a scaling factor scaling the general coupling strength
 
-        S = self.get_connectStrength(cortex_type)
-        P = self.get_connectProb(cortex_type)
-        C = self.get_cellcounts(cortex_type)
+        S = self.get_connectStrength()
+        P = self.get_connectProb()
+        C = self.get_cellcounts()
 
         # Final connectivity matrix 
         # PS = P * S (16 x 16) --> Connectivity probability if all cells were equally distributed
@@ -173,21 +173,62 @@ class Parameter():
         nPop = len(PS)
         W = PS * np.tile(C, (nPop,1))
 
+        # sort the values like this: 
+        if self.cortex_type == 'visual':
+            iE = np.arange(0, 16, 4)  # E1, E2, E3, E4
+            iP = np.arange(1, 16, 4)  # PV1, PV2, PV3, PV4
+            iS = np.arange(2, 16, 4)  # SOM1, SOM2, SOM3, SOM4
+            iV = np.arange(3, 16, 4)  # VIP1, VIP2, VIP3, VIP4
+
+            # Extracting submatrices based on the defined index sets
+            Wee = W[np.ix_(iE, iE)]
+            Wpe = W[np.ix_(iP, iE)]
+            Wse = W[np.ix_(iS, iE)]
+            Wve = W[np.ix_(iV, iE)]
+
+            Wep = W[np.ix_(iE, iP)]
+            Wpp = W[np.ix_(iP, iP)]
+            Wsp = W[np.ix_(iS, iP)]
+            Wvp = W[np.ix_(iV, iP)]
+
+            Wes = W[np.ix_(iE, iS)]
+            Wps = W[np.ix_(iP, iS)]
+            Wss = W[np.ix_(iS, iS)]
+            Wvs = W[np.ix_(iV, iS)]
+
+            Wev = W[np.ix_(iE, iV)]
+            Wpv = W[np.ix_(iP, iV)]
+            Wsv = W[np.ix_(iS, iV)]
+            Wvv = W[np.ix_(iV, iV)]
+
+            # put them back together
+            # Reconstructing W0 from the submatrices, negating where indicated
+            row1 = np.hstack([Wee, -Wep, -Wes, -Wev])
+            row2 = np.hstack([Wpe, -Wpp, -Wps, -Wpv])
+            row3 = np.hstack([Wse, -Wsp, -Wss, -Wsv])
+            row4 = np.hstack([Wve, -Wvp, -Wvs, -Wvv])
+
+            # Vertically stack the rows to form W0
+            W = np.vstack([row1, row2, row3, row4])
+
+
         if include_Iext:
             # now append the external input matrix 
             Wext = np.zeros((nPop,1))
-            Wext[4] = 1
+            Wext[1] = 1
             W = np.concatenate((W*g, Wext), axis=1)
         else:
             W = W*g
 
+
+
         return W
 
 
-    def get_sigmoid(self, cortex_type):
+    def get_sigmoid(self):
         # sigmoid function (nPop x 3) --> 3 stands for parameters: r, v_thr, m_max
         # 
-        if cortex_type == 'somato':
+        if self.cortex_type == 'somato':
             sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
                                        [  0.14218422,  40.03107351, 166.82960408],
                                        [  0.07937015,  42.01276379,  56.95305832],
@@ -202,23 +243,23 @@ class Parameter():
                                        [  0.14218422,  40.03107351, 166.82960408],
                                        [  0.07937015,  42.01276379,  56.95305832],])
                                        
-        elif cortex_type == 'visual':
+        elif self.cortex_type == 'visual':
             sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
-                                       [  0.14218422,  40.03107351, 166.82960408],
-                                       [  0.07937015,  42.01276379,  56.95305832],
-                                       [  0.0704119 ,  37.86409387,  38.52689646],
-                                       [  0.12782346,  32.10540543,  31.39696397],
-                                       [  0.14218422,  40.03107351, 166.82960408],
-                                       [  0.07937015,  42.01276379,  56.95305832],
-                                       [  0.0704119 ,  37.86409387,  38.52689646],
-                                       [  0.12782346,  32.10540543,  31.39696397],
-                                       [  0.14218422,  40.03107351, 166.82960408],
-                                       [  0.07937015,  42.01276379,  56.95305832],
-                                       [  0.0704119 ,  37.86409387,  38.52689646],
-                                       [  0.12782346,  32.10540543,  31.39696397],
-                                       [  0.14218422,  40.03107351, 166.82960408],
-                                       [  0.07937015,  42.01276379,  56.95305832],
-                                       [  0.0704119 ,  37.86409387,  38.52689646],])
+                                    [  0.12782346,  32.10540543,  31.39696397],
+                                    [  0.12782346,  32.10540543,  31.39696397],
+                                    [  0.12782346,  32.10540543,  31.39696397],
+                                    [  0.14218422,  40.03107351, 166.82960408],
+                                    [  0.14218422,  40.03107351, 166.82960408],
+                                    [  0.14218422,  40.03107351, 166.82960408],
+                                    [  0.14218422,  40.03107351, 166.82960408],
+                                    [  0.07937015,  42.01276379,  56.95305832],
+                                    [  0.07937015,  42.01276379,  56.95305832],
+                                    [  0.07937015,  42.01276379,  56.95305832],
+                                    [  0.07937015,  42.01276379,  56.95305832],
+                                    [  0.0704119 ,  37.86409387,  38.52689646],
+                                    [  0.0704119 ,  37.86409387,  38.52689646],
+                                    [  0.0704119 ,  37.86409387,  38.52689646],
+                                    [  0.0704119 ,  37.86409387,  38.52689646]])
 
         return sigmoid_params
     
