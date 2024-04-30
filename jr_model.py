@@ -4,10 +4,11 @@ from parameters import Parameter
 
 class JR_Model():
 
-    def __init__(self, Iext, step_size=0.001, simulation_time=1):
+    def __init__(self, Iext, cortex_type, step_size=0.001, simulation_time=1):
         
         # load in all parameters
-        self.p = Parameter()
+        self.p = Parameter(cortex_type)
+        self.cortex_type = cortex_type
 
         # Simulation parameters
         self.tau = self.p.tau
@@ -42,7 +43,7 @@ class JR_Model():
         self.u_t = np.zeros((self.nPop, self.nPop+1)) # the initial first-order derivative: v'(t) = u(t)
 
         # Weight matrix [to x from]
-        W = self.p.get_connectivity(g) 
+        W = self.p.get_connectivity(g, self.cortex_type) 
 
         for timestep, time in enumerate(self.steps):
             
