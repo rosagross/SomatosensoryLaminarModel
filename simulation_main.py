@@ -2,6 +2,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 from jr_model import JR_Model
+import pandas as pd 
 
 def plot_minmax(rates, coupling_strengths):
     minRate = np.min(rates[:,:,-100:],axis=2)
@@ -76,8 +77,8 @@ def main():
 
     # directory to where to save the results
     output_dir = os.path.join('../data', 'firing_rates')
-    safe_results = False
-    plot = True
+    safe_results = True
+    plot = False
 
     # set coupling strengths and step size
     coupling_strengths =  np.arange(0, 100, 5)
@@ -90,6 +91,7 @@ def main():
 
     # arrays to store rate
     all_rates = []
+    all_potentials = []
 
     model = JR_Model(Iext, step_size, simulation_time)
 
@@ -100,8 +102,10 @@ def main():
         
         # append results 
         all_rates.append(rate)
+        all_potentials.append(potential)
     
     all_rates = np.array(all_rates)
+    all_potentials = np.array(all_potentials)
 
     if plot:
         if len(coupling_strengths) == 1:
@@ -111,13 +115,20 @@ def main():
             # used to plot with coupling strength on the x-axis and max/min rate on the y
             plot_minmax(all_rates, coupling_strengths)
 
+    if safe_results:
+        cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
+        for j, g in enumerate(coupling_strengths):
+            rates_df = pd.DataFrame(all_rates[j].T, columns=cells)
+            rates_df.to_csv(f'output/rates_G{g}.csv', index=False)
+            
+            potential_sum = np.zeros((all_rates.shape[1], all_rates.shape[-1])) # (16x1000)
+            
+            for i in range(all_rates.shape[1]):
+                potential_sum[i] = np.sum(all_potentials[j][i], axis=0)
+
+            potential_df = pd.DataFrame(potential_sum.T, columns=cells)
+            potential_df.to_csv(f'output/potentials_G{g}.csv', index=False)
     
-    # TODO: Safe results in csv
-    #if safe_results:
-        # store them in a csv file 
-        #rates_df = pd.DataFrame(all_rates, columns=['Emodel'])
-        
-        #rates_df.to_csv(op.join(self.output_dir, f'frateE_{self.file_addon}{self.session}.csv'), index=False)
         
 
 if __name__ == '__main__':
