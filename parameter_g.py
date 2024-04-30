@@ -90,48 +90,76 @@ for target_cell in cells:
 
 
 T = 2.0 #das muss irgendwie 2s sein. Nur 1s geht nicht
-dt = 1e-4 #numerische Integration  1e-4
-sampling_step_size = 1e-3  #Datenaufzeichnung   1e-3
+dt = 1e-3 #numerische Integration  1e-4
+sampling_step_size = dt  #Datenaufzeichnung   1e-3
 
-######################################
 
-g = [20, 0.8, 1]
+g = [0.5,1,20]
 
-W_g1 = list(params.get_connectivity(g[0])[:,:-1].flatten()) #-1 wegen Inputspalte
-W_g2 = list(params.get_connectivity(g[1])[:,:-1].flatten())
-W_g3 = list(params.get_connectivity(g[2])[:,:-1].flatten())
-#W_g1 = params.get_connectivity(g[0]) #(16x17)
-#W_g2 = params.get_connectivity(g[1])
-#W_g3 = params.get_connectivity(g[2])
 
 all_edges = [(f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo[j].name}/r') for j, cell_j in enumerate(cells) for cell_i in cells]
-#print(all_edges)
 
 
-results_g, parameter_map = grid_search(cir,
-                                param_grid = {f'g{[i]}': [W_g3[i]] for i in range(len(W_g3))}, 
-                                param_map = {f'g{[i]}': {'vars': ['weight'],
-                                                    'edges': [all_edges[i]]} for i in range(len(W_g3))
-                                                    },
-                                outputs = {'V_out': 'E1/RPO_S1/v'}, #outputs,
-                                step_size=dt, simulation_time=T, sampling_step_size=sampling_step_size,
-                                cutoff=0, permute_grid=False, vectorize = False)
+all_results = []
+all_parameters = []
 
-print(results_g.shape)
-results_g.plot()
+for g_val in g:
+     W_g = list(params.get_connectivity(g_val)[:,:-1].flatten(order = 'F')) # -1 wegen Inputspalte (16x17)
+
+     results_g, parameter_map = grid_search(cir,
+                                    param_grid = {f'g{[i]}': [W_g[i]] for i in range(len(W_g))}, 
+                                    param_map = {f'g{[i]}': {'vars': ['weight'],
+                                                        'edges': [all_edges[i]]} for i in range(len(W_g))
+                                                        },
+                                    outputs = outputs,
+                                    step_size=dt, simulation_time=T, sampling_step_size=sampling_step_size,
+                                    cutoff=0, permute_grid=False, vectorize = False)
+     
+     all_results.append(results_g)
+     all_parameters.append(parameter_map)
+
+# results in csv file speichern
+
+time_list = np.linspace(0,T,len(results_g))
+cell_potential = np.zeros((len(g), N_cells, len(results_g))) #g-Wert x Zellen x Zeitschritte
+firing_rate = np.zeros((len(g), N_cells, len(results_g)))
+fr_g = np.zeros((len(g), N_cells))
+
+
+fig, ax = plt.subplots(3,1)
+for p, res in enumerate(all_results):
+    for i,target in enumerate(cells):
+        for rpo_name in rpo_names:
+            cell_potential[p,i] += res[f'V_{target}/{rpo_name}']
+
+            r = sigm[i,0]
+            vth = sigm[i,1]
+            m_max = sigm[i,2]
+            firing_rate[p,i] = m_max/(1 + np.exp(r*(vth-cell_potential[p,i])))
+        
+        
+        
+        
+        #ax[p].plot(time_list, cell_potential[p,i], label = target)
+        #ax[p].legend()
+        ax[p].plot(time_list, firing_rate[p,i], label = target)
+        ax[p].legend()
 plt.show()
 
+print(firing_rate)
+
+
+fr_g = np.mean(firing_rate[:,:,-50:],axis = 2) #Durchschnitt der letzten 50 Feuerraten für jede Feuerrate
+print(fr_g)
+
+#plt.plot(g, fr_g)
+#plt.show()
 
 
 
-# time_list = np.linspace(0,T,len(results_g))
-# cell_potential = np.zeros((N_cells, len(time_list)))
-# firing_rate = np.zeros((N_cells, len(time_list)))
-# plt.figure()
-# for i,target in enumerate(cells):
-#     for rpo_name in rpo_names:
-#         #summarized potential of all inputs for one cell
-#         cell_potential[i] += results_g[f'V_{target}/{rpo_name}']
-#     plt.plot(time_list, cell_potential[i], label = target)
-#plt.legend()
 
+
+# alle Membranpotentiale für jede Population zusammenrechnen
+# danach letztes Membranpotential umrechnen in Feuerrate und abhängig von g plotten
+# Cooler wäre es, direkt auf die Feuerrate zugreifen zu können und z.B. den Durchschnitt der letzten 50 Feuerraten abhängig von g zu plotten
+# bevor ich einen Input hinzufüge, würde ich lieber diesen Code besser und schneller haben
