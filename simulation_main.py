@@ -37,11 +37,11 @@ def plot_results(rates, Iext, step_size, simulation_time):
 
     plot_rates = rates[0, 0:4, :]
     
-    axs[0].plot(steps[0:700], Iext[0:700])
+    axs[0].plot(steps[0:200], Iext[0:200])
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs[1:], start=1):
-        ax.plot(steps[0:700], rates[0, (i-1)*4:i*4, 0:700].T, linewidth=1)
+        ax.plot(steps[0:200], rates[0, (i-1)*4:i*4, 0:200].T, linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -80,7 +80,7 @@ def main():
     plot = True
 
     # set coupling strengths and step size
-    coupling_strengths = [1] # np.arange(0, 100, 5)
+    coupling_strengths =  np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1
 
