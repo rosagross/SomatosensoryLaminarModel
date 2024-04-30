@@ -31,18 +31,18 @@ def plot_minmax(rates, coupling_strengths):
 
 def plot_results(rates, Iext, step_size, simulation_time):
 
-    steps = np.arange(step_size, simulation_time+step_size, step_size)
+    steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
 
     # plot results
     fig, axs = plt.subplots(5, 1, figsize=(3, 6))  # Set figure size
 
     plot_rates = rates[0, 0:4, :]
     
-    axs[0].plot(steps[0:200], Iext[0:200])
+    axs[0].plot(steps, Iext)
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs[1:], start=1):
-        ax.plot(steps[0:200], rates[0, (i-1)*4:i*4, 0:200].T, linewidth=1)
+        ax.plot(steps, rates[0, (i-1)*4:i*4].T, linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -68,7 +68,7 @@ def create_Iext(simulation_time, step_size, input_type):
 
     if input_type == "step":
         # after 50 ms for 50ms
-        #x  = int(0.02/step_size)
+        x  = 50
         Iext[501:520] = 5
 
     return Iext
@@ -77,13 +77,14 @@ def main():
 
     # directory to where to save the results
     output_dir = os.path.join('../data', 'firing_rates')
-    safe_results = True
-    plot = False
+    safe_results = False
+    plot = True
 
-    # set coupling strengths and step size
-    coupling_strengths =  np.arange(0, 100, 5)
+    # set coupling strengths, step size and cortex type (visual or somato)
+    coupling_strengths = [1] # np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1
+    cortex_type = 'visual'
 
     # define input
     input_type = "baseline" # other options are "baseline"
@@ -93,7 +94,7 @@ def main():
     all_rates = []
     all_potentials = []
 
-    model = JR_Model(Iext, step_size, simulation_time)
+    model = JR_Model(Iext, cortex_type, step_size, simulation_time)
 
     for g in coupling_strengths:
 
