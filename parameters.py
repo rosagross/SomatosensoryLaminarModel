@@ -15,8 +15,8 @@ class Parameter():
         if self.cortex_type == 'somato':
             # nr. of populations
             nPop = 13   
-            # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4  
-            tau = np.tile(np.array([6, 3, 10, 15, 6, 3, 20, 6, 3, 20, 6, 3, 20,3])*1e-3, (nPop+1,1)) # sec
+            #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, Thal
+            tau = np.tile(np.array([6,6,6,6,3,3,3,20,20,20,15,15,15,3])*1e-3, (nPop+1,1)) # sec
 
         elif self.cortex_type == 'visual':
             # nr. of populations
@@ -103,6 +103,8 @@ class Parameter():
                             [0.25, -2.0, -2.0, -2.0, 0.25, -2.0, -2.0, 0.25, -2.0, -2.0, 0.25, -2.0, -2.0, 0.49], # PV4
                             [0.25, -2.0, -2.0, -2.0, 0.25, -2.0, -2.0, 0.25, -2.0, -2.0, 0.25, -3.0, -2.0, 0.245], # SST4                        
                             ])
+            
+            psp = np.absolute(psp)
         
             # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
             # psc is a (13x14) matrix
@@ -121,7 +123,7 @@ class Parameter():
             psp = psp[:, :-1] # ToDo: for now we do it without thalamci synaptic strength, change this later!
             
         elif self.cortex_type == 'visual':
-
+            # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
             psp = np.array([[0.36,	1.49,	0.86,	1.31,	0.34,	1.39,	0.69,	0.91,	0.74,	1.32,	0.53,	0,	0,	0,	0,	0],
                             [0.48,	0.68,	0.42,	0.41,	0.56,	0.68,	0.42,	0.41,	0.2,	0.79,	0,	0,	0,	0,	0,	0],
                             [0.31,	0.5,	0.15,	0.52,	0.3,	0.5,	0.15,	0.52,	0.22,	0,	0,	0,	0,	0,	0,	0],
@@ -180,45 +182,51 @@ class Parameter():
             iS = np.arange(2, 16, 4)  # SOM1, SOM2, SOM3, SOM4
             iV = np.arange(3, 16, 4)  # VIP1, VIP2, VIP3, VIP4
 
-            # Extracting submatrices based on the defined index sets
-            Wee = W[np.ix_(iE, iE)]
-            Wpe = W[np.ix_(iP, iE)]
-            Wse = W[np.ix_(iS, iE)]
-            Wve = W[np.ix_(iV, iE)]
+        elif self.cortex_type == 'somato':
+            iE = np.array([0, 4, 7, 10])  # E1, E2, E3, E4
+            iP = iE+1  # PV1, PV2, PV3, PV4
+            iS = iE+2  # SOM1, SOM2, SOM3, SOM4
+            iV = [3]  # VIP1
 
-            Wep = W[np.ix_(iE, iP)]
-            Wpp = W[np.ix_(iP, iP)]
-            Wsp = W[np.ix_(iS, iP)]
-            Wvp = W[np.ix_(iV, iP)]
+        # Extracting submatrices based on the defined index sets
+        Wee = W[np.ix_(iE, iE)]
+        Wpe = W[np.ix_(iP, iE)]
+        Wse = W[np.ix_(iS, iE)]
+        Wve = W[np.ix_(iV, iE)]
 
-            Wes = W[np.ix_(iE, iS)]
-            Wps = W[np.ix_(iP, iS)]
-            Wss = W[np.ix_(iS, iS)]
-            Wvs = W[np.ix_(iV, iS)]
+        Wep = W[np.ix_(iE, iP)]
+        Wpp = W[np.ix_(iP, iP)]
+        Wsp = W[np.ix_(iS, iP)]
+        Wvp = W[np.ix_(iV, iP)]
 
-            Wev = W[np.ix_(iE, iV)]
-            Wpv = W[np.ix_(iP, iV)]
-            Wsv = W[np.ix_(iS, iV)]
-            Wvv = W[np.ix_(iV, iV)]
+        Wes = W[np.ix_(iE, iS)]
+        Wps = W[np.ix_(iP, iS)]
+        Wss = W[np.ix_(iS, iS)]
+        Wvs = W[np.ix_(iV, iS)]
 
-            # put them back together
-            # Reconstructing W0 from the submatrices, negating where indicated
-            row1 = np.hstack([Wee, -Wep, -Wes, -Wev])
-            row2 = np.hstack([Wpe, -Wpp, -Wps, -Wpv])
-            row3 = np.hstack([Wse, -Wsp, -Wss, -Wsv])
-            row4 = np.hstack([Wve, -Wvp, -Wvs, -Wvv])
+        Wev = W[np.ix_(iE, iV)]
+        Wpv = W[np.ix_(iP, iV)]
+        Wsv = W[np.ix_(iS, iV)]
+        Wvv = W[np.ix_(iV, iV)]
 
-            # Vertically stack the rows to form W0
-            W = np.vstack([row1, row2, row3, row4])
+        # put them back together
+        # Reconstructing W0 from the submatrices, negating where indicated
+        row1 = np.hstack([Wee, -Wep, -Wes, -Wev])
+        row2 = np.hstack([Wpe, -Wpp, -Wps, -Wpv])
+        row3 = np.hstack([Wse, -Wsp, -Wss, -Wsv])
+        row4 = np.hstack([Wve, -Wvp, -Wvs, -Wvv])
+
+        # Vertically stack the rows to form W0
+        W0 = np.vstack([row1, row2, row3, row4])
 
 
         if include_Iext:
             # now append the external input matrix 
             Wext = np.zeros((nPop,1))
             Wext[1] = 1
-            W = np.concatenate((W*g, Wext), axis=1)
+            W = np.concatenate((W0*g, Wext), axis=1)
         else:
-            W = W*g
+            W = W0*g
 
 
 
