@@ -21,7 +21,7 @@ pro_names = ['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4', 'PRO_P1', 'PRO_P2',
 pro = OperatorTemplate(
     name = 'pro', 
     path = None, 
-    equations = ["m_out = m_max/(1 + exp(r*(vth-v)))"], 
+    equations = ["m_out = m_max/(1 + exp(r*(vth-(v))))"], #von V zu mV
     variables = {'m_out': 'output',
                     'v': 'input',
                     'r': 0.14218422,  
@@ -116,7 +116,7 @@ for i in cells:
 
 all_potentials = np.array(all_potentials).T
 potential_df = pd.DataFrame(all_potentials, columns=cells)
-potential_df.to_csv('output/pyrates_potential_G1.csv', index=False)
+potential_df.to_csv('output/pyrates_potential_G1_ohne1000.csv', index=False)
 
 # take sigmoid values for population
 e1_sigm = sigm[0]
