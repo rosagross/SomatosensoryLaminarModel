@@ -2,82 +2,78 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from copy import deepcopy  
-from pyrates.frontend import OperatorTemplate
+from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from parameters import Parameter
 import pandas as pd
 
-params = Parameter()
+# Load parameters
+cortex_type = 'visual'
+params = Parameter(cortex_type)
 tau, N_cells = params.get_params()
 sigm = params.get_sigmoid()
+W = params.get_connectivity(1, include_Iext=False)
 
-pro_names = np.array(['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4', 'PRO_P1', 'PRO_P2', 'PRO_P3', 'PRO_P4', 'PRO_S1', 'PRO_S2', 'PRO_S3', 'PRO_S4', 'PRO_V1', 'PRO_V2', 'PRO_V3', 'PRO_V4'])
-pro = np.array([])
+# Define Potential-to-Rate operators
+pro_names = ['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4', 'PRO_P1', 'PRO_P2', 
+             'PRO_P3', 'PRO_P4', 'PRO_S1', 'PRO_S2', 'PRO_S3', 'PRO_S4',
+             'PRO_V1', 'PRO_V2', 'PRO_V3', 'PRO_V4']
+             
+pro = OperatorTemplate(
+    name = 'pro', 
+    path = None, 
+    equations = ["m_out = m_max/(1 + exp(r*(vth-v)))"], 
+    variables = {'m_out': 'output',
+                    'v': 'input',
+                    'r': 0.14218422,  
+                    'vth': 40.03107351,
+                    'm_max': 166.82960408}, 
+    description = "sigmoidal potential-to-rate operator")
+pros = [deepcopy(pro).update_template(name=pro_names[i],
+                	                    variables={"r": sigm[i,0], 'vth': sigm[i,1],
+                                                   'm_max': sigm[i,2]}) for i in range(N_cells)]
 
-for i in range(len(pro_names)):
-    pro = np.append(pro, OperatorTemplate(
-        name = f'{pro_names[i]}', 
-        path = None, 
-        equations = ["m_out = m_max/(1 + exp(r*(vth-v)))"], 
-        variables = {'m_out': 'output',
-                     'v': 'input',
-                     'r': sigm[i,0],
-                     'vth': sigm[i,1],
-                     'm_max': sigm[i,2]}, 
-        description = "sigmoidal potential-to-rate operator"
-    ))
 
-rpo_names = np.array(['RPO_E1', 'RPO_E2', 'RPO_E3', 'RPO_E4', 'RPO_P1', 'RPO_P2', 'RPO_P3', 'RPO_P4', 'RPO_S1', 'RPO_S2', 'RPO_S3', 'RPO_S4', 'RPO_V1', 'RPO_V2', 'RPO_V3', 'RPO_V4'])#, 'RPO_INPUT'])
-rpo = np.array([])
-
-W = params.get_connectivity(1)
-
-for i in range(len(rpo_names)): 
-    rpo = np.append(rpo, OperatorTemplate(
-        name = f'{rpo_names[i]}', 
+# Define Rate-to-Potential operators
+rpo_names = ['RPO_E1', 'RPO_E2', 'RPO_E3', 'RPO_E4', 'RPO_P1', 'RPO_P2',
+             'RPO_P3', 'RPO_P4', 'RPO_S1', 'RPO_S2', 'RPO_S3', 'RPO_S4',
+             'RPO_V1', 'RPO_V2', 'RPO_V3', 'RPO_V4']
+rpo = OperatorTemplate(
+        name = 'rpo', 
         path = None, 
         equations = ['d/dt * v = u',
                     'd/dt * u = H/tau * r - 2 * u/tau - v/(tau**2)'],  
         variables = {'v': 'output',
                     'u': 'variable',
                     'r': 'input',
-                    'tau': tau[0,i],
+                    'tau': 1,
                     'H': 1},
-        description = "rate-to-potential operator"
-    ))
+        description = "rate-to-potential operator")
 
+# ToDo: is tau maybe from the target cell? 
+rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": 0.01}) for i in range(N_cells)]
 
-cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
+# Define network nodes
+cells = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4']
+# every population has the same operators (since they are fully connected)
+node = NodeTemplate(name="node", path=None, operators=list(pros) + list(rpos)) 
 
-from pyrates.frontend import NodeTemplate
-E1 = NodeTemplate(name="E1", path=None, operators=[pro[0]] + list(rpo)) #alle Eingänge
-
-pop = np.array([E1])
-
-for i in range(1,N_cells):
-    pop = np.append(pop, deepcopy(E1).update_template(
-        name = f'{cells[i]}', operators=[pro[i]] + list(rpo)
-    ))
-pop = list(pop)
-
- 
-updated_nodes={}
-for i in range(N_cells):
-    updated_nodes[cells[i]] = pop[i]
+# Define edges
 edges=[]
 # i : target 
 for i, cell_i in enumerate(cells):
     # j : source
     for j, cell_j in enumerate(cells):
-        edges.append((f'{cell_j}/{pro[j].name}/m_out', f'{cell_i}/{rpo[j].name}/r', None, {'weight': W[i,j]})) # to x from 
+        edges.append((f'{cell_j}/{pros[j].name}/m_out', f'{cell_i}/{rpos[j].name}/r', None, {'weight': W[i,j]})) # to x from 
 
-        
-from pyrates.frontend import CircuitTemplate
+# Define circuit
 cir = CircuitTemplate( 
     name="cir", 
-    nodes=updated_nodes,
+    nodes={name: node for name in cells},
     edges=edges,
     path = None 
 )
+
+ 
 # %%
 
 outputs = {}
@@ -100,14 +96,17 @@ sampling_step_size = 1e-3
 results = cir.run(simulation_time = simulation_time,
                   step_size = step_size,
                   sampling_step_size=sampling_step_size,
-                  outputs = outputs, #outputs,
+                  outputs = outputs,
                   backend ='default',
                   solver ='scipy',
                   vectorize=False)
 
 # %% 
-# take sigmoid values for population
-e1_sigm = sigm[0]
+test_potentials1 = []
+sources = results[[f'V_E2/{rpo_name}' for rpo_name in rpo_names]]
+test_potentials1.append(np.sum(sources, axis=1))
+
+# %%
 time_list = np.arange(0, simulation_time, sampling_step_size)
 
 all_potentials = []
@@ -119,22 +118,14 @@ all_potentials = np.array(all_potentials).T
 potential_df = pd.DataFrame(all_potentials, columns=cells)
 potential_df.to_csv('output/pyrates_potential_G1.csv', index=False)
 
+# take sigmoid values for population
+e1_sigm = sigm[0]
 #  r, v_thr, m_max
-fr_e1 = e1_sigm[2]/(1 + np.exp(e1_sigm[0]*(e1_sigm[1]-all_potentials[:, 0])))
-plt.plot(time_list, fr_e1)
-plt.show()
-
-# %% 
-#results.plot()
+#fr_e1 = e1_sigm[2]/(1 + np.exp(e1_sigm[0]*(e1_sigm[1]-all_potentials[:, 0])))
+#plt.plot(time_list, fr_e1)
 #plt.show()
 
-
-# print(np.shape(time_list))
-# print(np.shape(results))
-
-
-
-
+# %% 
 
 cell_potential = np.zeros((N_cells, len(time_list)))
 firing_rate = np.zeros((N_cells, len(time_list)))

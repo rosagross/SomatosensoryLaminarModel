@@ -20,14 +20,16 @@ def adjust_matrix(matrix):
     return matrix
 
 # Plot difference between Visual and Somatosensory connectivity
-params = Parameter()
+params_visual = Parameter('visual')
+params_somato = Parameter('somato')
 
 # Synaptic strengths
-visual_S = params.get_connectStrength('visual')
-somato_S = np.abs(params.get_connectStrength('somato'))
+visual_S = params_visual.get_connectStrength()
+somato_S = np.abs(params_somato.get_connectStrength())
 
 # make the somatosensory matrix the same size as the visual one (where the VIP cells are insert a row/column of zeros)
 somato_S = adjust_matrix(somato_S)
+
 # %%
 population_names = ['E1','PV1','SST1','VIP1','E2','PV2','SST2','VIP2','E3','PV3','SST3','VIP3','E4','PV4','SST4','VIP4']
 df_somato_S = pd.DataFrame(somato_S, index=population_names, columns=population_names)
@@ -36,29 +38,29 @@ df_visual_S = pd.DataFrame(visual_S, index=population_names, columns=population_
 df_visual_S['cortex_type'] = 'visual' 
 df_S = pd.concat((df_somato_S, df_visual_S), ignore_index=False)
 
-# %% 
+# %% Plot Connection strengths
+
 fig, axs = plt.subplots(4, 4, figsize=(10,10), sharey=False)
-x = population_names
+plot_populations = ['E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1','VIP2','VIP3','VIP4']
 for i, ax in enumerate(axs.flatten()):
     y = visual_S[i]
     y2 = somato_S[i]
-    sns.barplot(data=df_S, ax=ax, x=df_S.index, y=population_names[i], hue='cortex_type', 
-                palette=[colors['somato'], colors['visual']])
-    #sns.barplot(x=x, y=y, ax=ax, color=colors['visual'])
-    #sns.barplot(x=x, y=y2, ax=ax, color=colors['somato'])
-    ax.set_ylabel("Synaptic Strength", fontsize=15)
-    ax.set_title(f'from {population_names[i]}', size=15)
+    sns.barplot(data=df_S, ax=ax, x=population_names*2, y=plot_populations[i], hue='cortex_type', palette=[colors['somato'], colors['visual']])
+    ax.set_ylabel("Synaptic Strength")
+    ax.set_title(f'from {plot_populations[i]}')
+    ax.tick_params(axis='x', labelsize=8, rotation=60)
 
 sns.despine(fig, trim=True, bottom=False)
 plt.tight_layout(h_pad=1)
-plt.legend('cortex type')
+plt.legend(title='cortex type')
+#plt.savefig("Figures/Synaptic_strength.pdf")
 plt.show()
 
 # %%
 # Connectivity Probabilities
 
-visual_P = params.get_connectProb('visual')
-somato_P = params.get_connectProb('somato')
+visual_P = params_visual.get_connectProb()
+somato_P = params_somato.get_connectProb()
 somato_P = adjust_matrix(somato_P)
 df_somato_P = pd.DataFrame(somato_P, index=population_names, columns=population_names)
 df_somato_P['cortex_type'] = 'somato'
@@ -69,22 +71,26 @@ df_P = pd.concat((df_somato_P, df_visual_P), ignore_index=False)
 # %% PLOT
 fig, axs = plt.subplots(4, 4, figsize=(10,10), sharey=False)
 for i, ax in enumerate(axs.flatten()):
-    sns.barplot(data=df_P, ax=ax, x=df_P.index, y=population_names[i], hue='cortex_type', palette=[colors['somato'], colors['visual']])
+    sns.barplot(data=df_P, ax=ax, x=population_names*2, y=plot_populations[i], hue='cortex_type', palette=[colors['somato'], colors['visual']])
     ax.set_ylabel("Connection Probabilities")
-    ax.set_title(f'from {population_names[i]}')
-    ax.get_legend().remove()
-    ax.set_xlabel('Populations')
-axs[0,0].legend(title='cortex type')
+    ax.set_title(f'from {plot_populations[i]}')
+    legend = ax.legend(title='cortex type', facecolor='white', edgecolor='black', framealpha=1)
+    if not i%4 == 0:
+        ax.get_legend().remove()
+    ax.set_xlabel('')
+    ax.tick_params(axis='x', labelsize=8, rotation=60)
+
 sns.despine(fig, trim=True, bottom=False)
 plt.tight_layout(h_pad=1)
+plt.savefig("Figures/Connect_Probability.pdf")
 plt.show()
 
 # %%
 # Cell Counts
-somato_C = params.get_cellcounts('somato')
+somato_C = params_somato.get_cellcounts()
 somato_C = pd.DataFrame(np.insert(somato_C, [7, 10, 13], 0), index=population_names, columns=['cellcount'])
 somato_C['cortex_type'] = 'somato'
-visual_C = pd.DataFrame(params.get_cellcounts('visual'), index=population_names, columns=['cellcount'])
+visual_C = pd.DataFrame(params_visual.get_cellcounts('visual'), index=population_names, columns=['cellcount'])
 visual_C['cortex_type'] = 'visual'
 
 df_C = pd.concat((somato_C, visual_C))
@@ -101,28 +107,36 @@ plt.show()
 # %% 
 # Connectivity matrix
 
-visual_W = pd.DataFrame(params.get_connectivity(1, 'visual', False), index=population_names, columns=population_names)
-somato_W = adjust_matrix(params.get_connectivity(1, 'somato', False))
-somato_W = pd.DataFrame(somato_W, index=population_names, columns=population_names)
+visual_W = pd.DataFrame(np.abs(params_visual.get_connectivity(1, False)), index=plot_populations, columns=plot_populations)
+somato_W_matrix = np.abs(params_somato.get_connectivity(1, False))
+somato_W = pd.DataFrame(adjust_matrix(somato_W_matrix), index=plot_populations, columns=plot_populations)
+W_diff = np.array(somato_W) - np.array(visual_W)
 somato_W['cortex_type'] = 'somato'
 visual_W['cortex_type'] = 'visual' 
 df_W = pd.concat((visual_W, somato_W), ignore_index=False)
 
+sns.heatmap(W_diff, annot=True, cmap='coolwarm')
 
 # %% 
 
 fig, axs = plt.subplots(4, 4, figsize=(10,10), sharey=False)
 x = population_names
 for i, ax in enumerate(axs.flatten()):
-    sns.barplot(data=df_W, ax=ax, x=df_S.index, y=population_names[i], hue='cortex_type', palette=[colors['visual'], colors['somato']])
+    sns.barplot(data=df_W, ax=ax, x=plot_populations*2, y=plot_populations[i], hue='cortex_type', palette=[colors['visual'], colors['somato']])
+
     #sns.barplot(x=x, y=y, ax=ax, color=colors['visual'])
     #sns.barplot(x=x, y=y2, ax=ax, color=colors['somato'])
     ax.set_ylabel("Connection weight")
-    ax.set_title(f'from {population_names[i]}')
+    ax.set_title(f'from {plot_populations[i]}')
+    legend = ax.legend(title='cortex type', facecolor='white', edgecolor='black', framealpha=1)
+    if not i%4 == 0:
+        ax.get_legend().remove()
+    ax.set_xlabel('')
+    ax.tick_params(axis='x', labelsize=8, rotation=60)
 
 sns.despine(fig, trim=True, bottom=False)
 plt.tight_layout()
-plt.legend('cortex type')
+plt.savefig('Figures/Connection_weight.pdf')
 plt.show()
 
 # %%

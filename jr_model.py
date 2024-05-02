@@ -71,7 +71,7 @@ class JR_Model():
                 # Add external input 
                 v_dot = self.u_t[i, -1]
                 self.v_current[i, -1] = self.v_current[i, -1] + v_dot * self.step_size
-                u_dot = (self.H[i,-1]/self.tau[i,-1]) * ((W[i, -1]) * self.Iext[i, timestep]) - 2 * self.u_t[i, -1]/self.tau[i,-1] - self.potential[i, -1, timestep]/(self.tau[i,-1]**2)
+                u_dot = (self.H[i,-1]/self.tau[i,-1]) * (W[i, -1] * self.Iext[i, timestep]) - 2 * self.u_t[i, -1]/self.tau[i,-1] - self.potential[i, -1, timestep]/(self.tau[i,-1]**2)
                 self.u_t[i, -1] = self.u_t[i,-1] + u_dot * self.step_size
         
         

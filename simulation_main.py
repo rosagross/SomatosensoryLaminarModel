@@ -81,7 +81,7 @@ def main():
     plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths = [1] # np.arange(0, 100, 5)
+    coupling_strengths = [1] #np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1
     cortex_type = 'visual'
@@ -120,7 +120,7 @@ def main():
         cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
         for j, g in enumerate(coupling_strengths):
             rates_df = pd.DataFrame(all_rates[j].T, columns=cells)
-            rates_df.to_csv(f'output/rates_G{g}.csv', index=False)
+            rates_df.to_csv(f'output/rates_G{g}_{cortex_type}.csv', index=False)
             
             potential_sum = np.zeros((all_rates.shape[1], all_rates.shape[-1])) # (16x1000)
             
@@ -128,9 +128,8 @@ def main():
                 potential_sum[i] = np.sum(all_potentials[j][i], axis=0)
 
             potential_df = pd.DataFrame(potential_sum.T, columns=cells)
-            potential_df.to_csv(f'output/potentials_G{g}.csv', index=False)
+            potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}.csv', index=False)
     
-        
 
 if __name__ == '__main__':
    main()
