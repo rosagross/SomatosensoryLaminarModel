@@ -13,10 +13,9 @@ class Parameter():
 
         # time constants
         # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
-        tau = np.tile(np.array([])*1e-3, (17,1)) # sec
-
         # nr. of populations
         nPop = 13
+        tau = np.tile(np.array([6, 3, 10, 15, 6, 3, 20, 6, 3, 20, 6, 3, 20,3])*1e-3, (nPop+1,1)) # sec
 
         # synaptic kernel efficacy
         return tau, nPop
@@ -29,7 +28,7 @@ class Parameter():
                       [28.5, 31.8, 11.8,  5.5,  0.4,  1.7,  3.2,  0.05,  0.1,  1.4,  0.01, 0.01, 0.6,  6.2 ],
                       [24.3, 29.1,  0., 27.1,  0.4, 1.2, 4.4, 0.03, 0.1, 2.1, 0., 0., 0, 0],
                       [16., 20.6, 46.3,  6.3,  0.2,  1.,  1.7,  0.02,  0.1,  0.6, 0, 0.01,  0.5, 0],
-                      [ 1.3,  3.5,  5.9,  7.,  9.9, 37.4, 19.8,  0.6,  2.8,  5.2, 0, 0.2, 40.],
+                      [ 1.3,  3.5,  5.9,  7.,  9.9, 37.4, 19.8,  0.6,  2.8,  5.2, 0, 0.2, 2.4, 40.],
                       [ 3.6,  1.6,  2.3,  5.3, 37.4, 28.8, 36.3,  0.9,  2.8,  4.7,  0.1, 0.3, 1.8, 40.],
                       [ 3.6,  1.8,  2.4,  4.9, 19., 33.2,  1.2,  0.9,  3.2,  4.7,  0.2, 0.2, 2.3, 20.],
                       [ 8.6,  4.2,  9.4,  6.2,  8.7,  7.,  7.6,  9.8, 39.6, 15.1,  1., 1.8, 5.1, 25.9],
@@ -45,9 +44,8 @@ class Parameter():
 
     def get_connectStrength(self):
 
-        # The postsynaptic currents are computed using the following formula
-
-        # synaptical time constants (all E and all I have the same)
+        # The postsynaptic currents are computed using synaptical time constants and timeconstant for the membrane
+        # synaptical time constants (all incoming EPSPs and all IPSPS have the same)
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         tau_syn = np.tile(np.array([2, 4, 4, 4, 2, 4, 4, 2, 4, 4, 2, 4, 4]),(self.nPop, 1))
 
@@ -58,7 +56,7 @@ class Parameter():
 
         # (13x13)
         a = (tau_syn/tau_m)
-        Cm = np.array([229.8, 93.9, 123.3, 86.5, 229.8, 93.9, 123.3, 269.2, 81.0, 146.8, 269.2, 81.0, 146.8])
+        Cm = np.tile(np.array([229.8, 93.9, 123.3, 86.5, 229.8, 93.9, 123.3, 269.2, 81.0, 146.8, 269.2, 81.0, 146.8]),(self.nPop, 1)).T
 
         # Postsynaptic potential (13x14), input from: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4, Thalamus
         psp = np.array([[0.25, -2, -2, -2.0, 0.25, -2.0, -2.0, 0.25, -2.0, -2.0, 0.25, -2.0, -2.0, 0.49], # E1 
@@ -80,14 +78,27 @@ class Parameter():
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         # psc is a (13x14) matrix
         psc = (Cm*(a-1)) * psp[:, :-1] / (tau_syn * ((a**(1/(1-a))) - a**(a/(1-a))))
-        print(psc.shape)
+
+        # set connection where probability is zero to 0 
+        psc[0, 10:] = 0
+        psc[2, 10:] = 0
+        psc[2, 2] = 0
+        psc[3, 10] = 0
+        psc[4, 10] = 0
+        psc[10, 0] = 0
+        psc[11, 8] = 0
+        psc[12, 8] = 0
+        psc[12, 1] = 0
+
         return psc
 
     def get_cellcounts(self):
         # Cell counts (only VIP in first layer!)
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        C = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
-        # TODO: Scale the values so that they are between 0 and 1!
+        C_absolute = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
+        
+        # translate in proportion
+        C = C_absolute/np.sum(C_absolute)
 
         return C 
 
@@ -97,11 +108,12 @@ class Parameter():
         # Final connectivity matrix 
         # PS = P * S (16 x 16) --> Connectivity probability if all cells were equally distributed
         # W = PS * C (16 x 16) --> make sure that cell counts are accounted for! C is shaped (16 x 1) so tile it before multiplying  
-        PS = self.P * self.S
-        W = PS * np.tile(self.C, (16,1))
+        PS = self.P[:, :13] * self.S
+        W = PS * np.tile(self.C, (self.nPop,1))
 
         # sort so that this order yields:  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
         # define index for E, PV, SOM, and VIP
+        '''
         iE = np.arange(0, 16, 4)  # E1, E2, E3, E4
         iP = np.arange(1, 16, 4)  # PV1, PV2, PV3, PV4
         iS = np.arange(2, 16, 4)  # SOM1, SOM2, SOM3, SOM4
@@ -137,18 +149,31 @@ class Parameter():
 
         # Vertically stack the rows to form W0
         W0 = np.vstack([row1, row2, row3, row4])
-
+        '''
         # now append the external input matrix 
-        Wext = np.zeros((16,1))
+        Wext = np.zeros((self.nPop, 1))
         Wext[1] = 1
-        W = np.concatenate((W0*g, Wext), axis=1)
+
+        W = np.concatenate((W*g, Wext), axis=1)
 
         return W
 
 
     def get_sigmoid(self):
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
-        sigmoid_params = np.array([[]])
+        sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
+                                    [  0.14218422,  40.03107351, 166.82960408],
+                                    [  0.07937015,  42.01276379,  56.95305832],
+                                    [  0.0704119 ,  37.86409387,  38.52689646],
+                                    [  0.12782346,  32.10540543,  31.39696397],
+                                    [  0.14218422,  40.03107351, 166.82960408],
+                                    [  0.07937015,  42.01276379,  56.95305832],
+                                    [  0.12782346,  32.10540543,  31.39696397],
+                                    [  0.14218422,  40.03107351, 166.82960408],
+                                    [  0.07937015,  42.01276379,  56.95305832],
+                                    [  0.12782346,  32.10540543,  31.39696397],
+                                    [  0.14218422,  40.03107351, 166.82960408],
+                                    [  0.07937015,  42.01276379,  56.95305832],])
 
         return sigmoid_params
     

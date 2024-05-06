@@ -31,18 +31,18 @@ def plot_minmax(rates, coupling_strengths):
 
 def plot_results(rates, Iext, step_size, simulation_time):
 
-    steps = np.arange(step_size, simulation_time+step_size, step_size)
+    steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
 
     # plot results
     fig, axs = plt.subplots(5, 1, figsize=(3, 6))  # Set figure size
 
     plot_rates = rates[0, 0:4, :]
     
-    axs[0].plot(steps[0:700], Iext[0:700])
+    axs[0].plot(steps, Iext)
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs[1:], start=1):
-        ax.plot(steps[0:700], rates[0, (i-1)*4:i*4, 0:700].T, linewidth=1)
+        ax.plot(steps, rates[0, (i-1)*4:i*4].T, linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -68,7 +68,7 @@ def create_Iext(simulation_time, step_size, input_type):
 
     if input_type == "step":
         # after 50 ms for 50ms
-        #x  = int(0.02/step_size)
+        x  = 50
         Iext[501:520] = 5
 
     return Iext
@@ -80,10 +80,11 @@ def main():
     safe_results = True
     plot = False
 
-    # set coupling strengths and step size
-    coupling_strengths = [1] #  np.arange(0, 100, 5)
+    # set coupling strengths, step size and cortex type (visual or somato)
+    coupling_strengths = [1] #np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1
+    cortex_type = 'visual'
 
     # define input
     input_type = "baseline" # other options are "baseline"
@@ -93,7 +94,7 @@ def main():
     all_rates = []
     all_potentials = []
 
-    model = JR_Model(Iext, step_size, simulation_time)
+    model = JR_Model(Iext, cortex_type, step_size, simulation_time)
 
     for g in coupling_strengths:
 
@@ -119,7 +120,7 @@ def main():
         cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
         for j, g in enumerate(coupling_strengths):
             rates_df = pd.DataFrame(all_rates[j].T, columns=cells)
-            rates_df.to_csv(f'output/rates_G{g}.csv', index=False)
+            rates_df.to_csv(f'output/rates_G{g}_{cortex_type}.csv', index=False)
             
             potential_sum = np.zeros((all_rates.shape[1], all_rates.shape[-1])) # (16x1000)
             
@@ -127,9 +128,8 @@ def main():
                 potential_sum[i] = np.sum(all_potentials[j][i], axis=0)
 
             potential_df = pd.DataFrame(potential_sum.T, columns=cells)
-            potential_df.to_csv(f'output/potentials_G{g}.csv', index=False)
+            potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}_sameparameter.csv', index=False)
     
-        
 
 if __name__ == '__main__':
    main()

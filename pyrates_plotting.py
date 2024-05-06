@@ -5,12 +5,13 @@ import matplotlib.pyplot as plt
 import pandas as pd 
 
 
-potential_G1 = pd.read_csv('output/potentials_G1.csv')
-pyrates_potential_G1 = pd.read_csv('output/pyrates_potential_G1.csv')
-
-
+python = pd.read_csv('output/python_up_syn.csv')
+pyrates = pd.read_csv('output/pyrates_up_syn.csv')
 # %%
-plt.plot(potential_G1['P1'])
-plt.plot(pyrates_potential_G1['P1'][:1000])
+plt.plot(python[:][:500], label='python')
+plt.plot(pyrates[:][:500], label='pyrates')
+
+plt.legend()
+plt.show()
 
 # %%
