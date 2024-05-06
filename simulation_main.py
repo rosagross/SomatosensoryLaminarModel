@@ -128,7 +128,7 @@ def main():
                 potential_sum[i] = np.sum(all_potentials[j][i], axis=0)
 
             potential_df = pd.DataFrame(potential_sum.T, columns=cells)
-            potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}.csv', index=False)
+            potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}_sameparameter.csv', index=False)
     
 
 if __name__ == '__main__':
