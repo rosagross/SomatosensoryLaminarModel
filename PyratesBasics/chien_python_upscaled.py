@@ -100,10 +100,10 @@ for iter, time in enumerate(steps):
 
 #%%
 
-plt.plot(potential[4, 0], label='E1') #Eingänge nach P1 (target, source)
-plt.plot(potential[4, 4], label='P1')
-plt.plot(potential[4, 8], label='S1')
-plt.plot(potential[4, 12], label='V1')
+plt.plot(potential[15, 0], label='E1') #Eingänge nach P1 (target, source)
+plt.plot(potential[15, 1], label='P1')
+plt.plot(potential[15, 2], label='S1')
+plt.plot(potential[15, 3], label='V1')
 plt.legend()
 plt.show()
 

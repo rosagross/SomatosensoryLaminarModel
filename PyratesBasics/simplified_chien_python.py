@@ -14,14 +14,14 @@ cortex_type = 'visual'
 params = Parameter(cortex_type)
 sigm = params.get_sigmoid()
 
+nPop = 4
 r = []
 v_thr = []
 m_max = []
-for row in range(len(sigm)):
-    if row%4 == 0:  #jedes 4. ist E1, P1, S1 und V1
-        r.append(sigm[row,0])      
-        v_thr.append(sigm[row,1]) 
-        m_max.append(sigm[row,2]) 
+for row in range(nPop):
+    r.append(sigm[row,0])      
+    v_thr.append(sigm[row,1]) 
+    m_max.append(sigm[row,2]) 
 
 r = np.array(r)
 v_thr = np.array(v_thr)
@@ -40,7 +40,6 @@ tau_I = 0.01
 steps = np.arange(2*step_size, simulation_time+step_size, step_size)
 
 # rates & potentials (E, IIN , EIN) 
-nPop = 4
 rate = np.zeros((nPop, len(steps)))
 potential = np.zeros((nPop, nPop, len(steps))) 
 

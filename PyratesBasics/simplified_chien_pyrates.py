@@ -10,16 +10,15 @@ import numpy as np
 cortex_type = 'visual'
 params = Parameter(cortex_type)
 sigm = params.get_sigmoid()
-
+N_cells = 4
 
 r = []
 v_thr = []
 m_max = []
-for row in range(len(sigm)):
-    if row%4 == 0:  #jedes 4. ist E1, P1, S1 und V1
-        r.append(sigm[row,0])      
-        v_thr.append(sigm[row,1]) 
-        m_max.append(sigm[row,2]) 
+for row in range(N_cells):
+    r.append(sigm[row,0])      
+    v_thr.append(sigm[row,1]) 
+    m_max.append(sigm[row,2]) 
 
 
 tau,_ = params.get_params()                  
@@ -29,7 +28,7 @@ tau = tau[0]
 W = params.get_connectivity(1, include_Iext=False)
 # %%
 # Operator template for the PRO
-N_cells = 4
+
 pro_names = ['PRO_E1', 'PRO_P1', 'PRO_S1', 'PRO_V1']
 rpo_names = ['RPO_E1', 'RPO_P1', 'RPO_S1', 'RPO_V1']
 
