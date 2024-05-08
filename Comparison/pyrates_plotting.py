@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 import pandas as pd 
 
 
-python = pd.read_csv('output/python_16.csv')
-pyrates = pd.read_csv('output/pyrates_16.csv')
+python = pd.read_csv('output/python_upscaled.csv')
+pyrates = pd.read_csv('output/pyrates_upscaled.csv')
 
 python_15 = pd.read_csv('output/python_15.csv')
 pyrates_15 = pd.read_csv('output/pyrates_15.csv')

@@ -114,7 +114,7 @@ for i in cells:
 
 all_potentials = np.array(all_potentials).T
 potential_df = pd.DataFrame(all_potentials, columns=cells)
-potential_df.to_csv('Comparison/output/pyrates_4.csv', index=False)
+potential_df.to_csv('output/pyrates_4.csv', index=False)
 
 results.plot()
 plt.show()
