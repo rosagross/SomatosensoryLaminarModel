@@ -46,3 +46,31 @@ plt.show()
 #Unterschied zwischen 10 & 11 bei E1, E3, E3, P1, P2, P3, S1, S2
 #Unterschied erst zwischen 11 & 16 bei E4, P4
 
+# %%
+import matplotlib.pyplot as plt
+
+cells = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2']
+
+fig, ax = plt.subplots(5, 2, figsize=(10, 20))
+fig.suptitle('PyRates(--) vs pure Python(-) with 10, 11 and 16 populations')
+
+for i, cell in enumerate(cells):
+    row = i // 2
+    col = i % 2
+    ax[row, col].set_title(cell)
+    
+    ax[row, col].plot(python_10[cell][:], label='Python 10', color='darkblue', alpha=0.6)
+    ax[row, col].plot(pyrates_10[cell][:], label='Pyrates 10', color='darkblue', ls='--', alpha=0.6)
+    ax[row, col].plot(python_11[cell][:], label='Python 11', color='darkgreen', alpha=0.8)
+    ax[row, col].plot(pyrates_11[cell][:], label='Pyrates 11', color='darkgreen', ls='--', alpha=0.8)
+    ax[row, col].plot(python[cell][:], label='Python 16', color='darkorange', alpha=0.4)
+    ax[row, col].plot(pyrates[cell][:], label='Pyrates 16', color='darkorange', ls='--', alpha=0.4)
+       
+    #ax[row, col].plot(python_15[cell][:], label='15', color='r', alpha=0.7)
+    #ax[row, col].plot(pyrates_15[cell][:], label='pyrates 15', color='r', ls='--', alpha=0.7)
+
+    ax[0, 0].legend()
+plt.savefig('output/compare.pdf') 
+plt.show()
+
+# %%

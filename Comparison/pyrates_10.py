@@ -101,7 +101,7 @@ for target_cell in cells:
 
 results = jrc.run(simulation_time=2.0,
                   step_size=1e-4,
-                  sampling_step_size=1e-5,
+                  sampling_step_size=1e-4,
                   outputs= outputs, #{'V_E1': 'V4/RPO_E1/v', #Eingänge nach P1
                                     # 'V_P1': 'V4/RPO_E2/v',
                                     # 'V_S1': 'V4/RPO_E3/v',
