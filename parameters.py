@@ -23,7 +23,6 @@ class Parameter():
             nPop = 16
             # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
             tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,15,15,15,3])*1e-3, (nPop+1,1)) # sec
-
         # synaptic kernel efficacy
         return tau, nPop
 
@@ -228,13 +227,11 @@ class Parameter():
         else:
             W = W0*g
 
-
-
         return W
 
 
     def get_sigmoid(self):
-        # sigmoid function (nPop x 3) --> 3 stands for parameters: r, v_thr, m_max
+        # sigmoid function (nPop x 3) --> 3 stands for parameters: r(1/mV), v_thr(mV), m_max (1/s)
         # 
         if self.cortex_type == 'somato':
             sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
@@ -268,7 +265,7 @@ class Parameter():
                                     [  0.0704119 ,  37.86409387,  38.52689646],
                                     [  0.0704119 ,  37.86409387,  38.52689646],
                                     [  0.0704119 ,  37.86409387,  38.52689646]])
-
+            
         return sigmoid_params
     
 
