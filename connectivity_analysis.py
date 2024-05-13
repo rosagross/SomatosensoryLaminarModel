@@ -19,6 +19,15 @@ def adjust_matrix(matrix):
 
     return matrix
 
+def adjust_connectivity_matrix(conmatrix):
+    conmatrix = np.append(conmatrix, np.zeros((13, 1)), axis=1)
+    conmatrix = np.append(conmatrix, np.zeros((1, 14)), axis=0)
+    conmatrix = np.append(conmatrix, np.zeros((14, 1)), axis=1)
+    conmatrix = np.append(conmatrix, np.zeros((1, 15)), axis=0)
+    conmatrix = np.append(conmatrix, np.zeros((15, 1)), axis=1)
+    conmatrix = np.append(conmatrix, np.zeros((1, 16)), axis=0)
+    return conmatrix
+
 # Plot difference between Visual and Somatosensory connectivity
 params_visual = Parameter('visual')
 params_somato = Parameter('somato')
@@ -109,13 +118,13 @@ plt.show()
 
 visual_W = pd.DataFrame(np.abs(params_visual.get_connectivity(1, False)), index=plot_populations, columns=plot_populations)
 somato_W_matrix = np.abs(params_somato.get_connectivity(1, False))
-somato_W = pd.DataFrame(adjust_matrix(somato_W_matrix), index=plot_populations, columns=plot_populations)
+somato_W = pd.DataFrame(adjust_connectivity_matrix(somato_W_matrix), index=plot_populations, columns=plot_populations)
 W_diff = np.array(somato_W) - np.array(visual_W)
 somato_W['cortex_type'] = 'somato'
 visual_W['cortex_type'] = 'visual' 
 df_W = pd.concat((visual_W, somato_W), ignore_index=False)
 
-sns.heatmap(W_diff, annot=True, cmap='coolwarm')
+#sns.heatmap(W_diff, annot=True, cmap='coolwarm')
 
 # %% 
 
