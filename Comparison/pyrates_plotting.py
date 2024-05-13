@@ -56,7 +56,7 @@ plt.show()
 cells = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2']
 
 fig, ax = plt.subplots(5, 2, figsize=(10, 20))
-fig.suptitle('PyRates(--) vs pure Python(-) with 10, 11 and 16 populations')
+fig.suptitle('Total cell potentials compared between PyRates(--) and pure Python(-) with 10, 11, and 16 populations')
 
 for i, cell in enumerate(cells):
     row = i // 2
@@ -73,7 +73,7 @@ for i, cell in enumerate(cells):
     ax[row,col].set_xlabel('time (s)')
     ax[row,col].set_ylabel('potential (mV)') 
 
-    ax[0, 0].legend()
+    ax[0, 0].legend(loc='upper right')
 
 plt.tight_layout(rect=[0, 0, 1, 0.96])
 plt.subplots_adjust(hspace=0.8)
