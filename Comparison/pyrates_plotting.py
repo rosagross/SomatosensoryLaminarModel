@@ -19,6 +19,7 @@ pyrates_10 = pd.read_csv('output/pyrates_10.csv')
 
 python_4 = pd.read_csv('output/python_4.csv')
 pyrates_4 = pd.read_csv('output/pyrates_4.csv')
+
 # %%
 fig, ax = plt.subplots(4,1)
 ax[0].set_title('16')
@@ -54,23 +55,26 @@ cells = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2']
 fig, ax = plt.subplots(5, 2, figsize=(10, 20))
 fig.suptitle('PyRates(--) vs pure Python(-) with 10, 11 and 16 populations')
 
+time_r = np.linspace(0,2,len(python_10)+1)
+time = np.linspace(0,2,len(python_10))
+
 for i, cell in enumerate(cells):
     row = i // 2
     col = i % 2
     ax[row, col].set_title(cell)
-    
-    ax[row, col].plot(python_10[cell][:], label='Python 10', color='darkblue', alpha=0.6)
-    ax[row, col].plot(pyrates_10[cell][:], label='Pyrates 10', color='darkblue', ls='--', alpha=0.6)
-    ax[row, col].plot(python_11[cell][:], label='Python 11', color='darkgreen', alpha=0.8)
-    ax[row, col].plot(pyrates_11[cell][:], label='Pyrates 11', color='darkgreen', ls='--', alpha=0.8)
-    ax[row, col].plot(python[cell][:], label='Python 16', color='darkorange', alpha=0.4)
-    ax[row, col].plot(pyrates[cell][:], label='Pyrates 16', color='darkorange', ls='--', alpha=0.4)
-       
-    #ax[row, col].plot(python_15[cell][:], label='15', color='r', alpha=0.7)
-    #ax[row, col].plot(pyrates_15[cell][:], label='pyrates 15', color='r', ls='--', alpha=0.7)
+
+    ax[row, col].plot(time,python_10[cell][:], label='Python 10', color='darkblue', alpha=0.6)
+    ax[row, col].plot(time_r,pyrates_10[cell][:], label='Pyrates 10', color='darkblue', ls='--', alpha=0.6)
+    ax[row, col].plot(time,python_11[cell][:], label='Python 11', color='darkgreen', alpha=0.8)
+    ax[row, col].plot(time_r,pyrates_11[cell][:], label='Pyrates 11', color='darkgreen', ls='--', alpha=0.8)
+    ax[row, col].plot(time,python[cell][:], label='Python 16', color='darkorange', alpha=0.4)
+    ax[row, col].plot(time_r,pyrates[cell][:], label='Pyrates 16', color='darkorange', ls='--', alpha=0.4)
+
+    ax[row,col].set_xlabel('time (s)')
+    ax[row,col].set_ylabel('potential (mV)') 
 
     ax[0, 0].legend()
+
+plt.tight_layout(h_pad=7)
 plt.savefig('output/compare.pdf') 
 plt.show()
-
-# %%

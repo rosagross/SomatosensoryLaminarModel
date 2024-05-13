@@ -78,7 +78,7 @@ def main():
     # directory to where to save the results
     output_dir = os.path.join('../data', 'firing_rates')
     safe_results = True
-    plot = False
+    plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
     coupling_strengths = [1] #np.arange(0, 100, 5)
