@@ -21,7 +21,7 @@ pro_names = ['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4', 'PRO_P1', 'PRO_P2',
 pro = OperatorTemplate(
     name = 'pro', 
     path = None, 
-    equations = ["m_out = m_max/(1 + exp(r*(vth-v)))"], 
+    equations = ["m_out = m_max/(1 + exp(r*(vth-(v*1000))))"], #von V zu mV
     variables = {'m_out': 'output',
                     'v': 'input',
                     'r': 0.14218422,  
@@ -29,8 +29,8 @@ pro = OperatorTemplate(
                     'm_max': 166.82960408}, 
     description = "sigmoidal potential-to-rate operator")
 pros = [deepcopy(pro).update_template(name=pro_names[i],
-                	                    variables={"r": sigm[i,0], 'vth': sigm[i,1],
-                                                   'm_max': sigm[i,2]}) for i in range(N_cells)]
+                	                    variables={"r": 0.1, 'vth': 35, #sigm[i,0] sigm[i,1]
+                                                   'm_max': 70}) for i in range(N_cells)] #sigm[i,2]
 
 
 # Define Rate-to-Potential operators
@@ -63,7 +63,7 @@ edges=[]
 for i, cell_i in enumerate(cells):
     # j : source
     for j, cell_j in enumerate(cells):
-        edges.append((f'{cell_j}/{pros[j].name}/m_out', f'{cell_i}/{rpos[j].name}/r', None, {'weight': W[i,j]})) # to x from 
+        edges.append((f'{cell_j}/{pros[j].name}/m_out', f'{cell_i}/{rpos[j].name}/r', None, {'weight': 10})) # to x from  #W[i,j]
 
 # Define circuit
 cir = CircuitTemplate( 
@@ -89,7 +89,7 @@ for source_cell in cells:
         outputs[f'Rate_{source_cell}/{pro_name}'] = f'{source_cell}/{pro_name}/m_out'
 '''
 
-simulation_time = 2.0
+simulation_time = 1.0
 step_size = 1e-3
 sampling_step_size = 1e-3
 
@@ -116,7 +116,7 @@ for i in cells:
 
 all_potentials = np.array(all_potentials).T
 potential_df = pd.DataFrame(all_potentials, columns=cells)
-potential_df.to_csv('output/pyrates_potential_G1.csv', index=False)
+potential_df.to_csv('output/pyrates_potential_G1_mit1000_sameparameter.csv', index=False)
 
 # take sigmoid values for population
 e1_sigm = sigm[0]
