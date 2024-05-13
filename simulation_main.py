@@ -77,8 +77,8 @@ def main():
 
     # directory to where to save the results
     output_dir = os.path.join('../data', 'firing_rates')
-    safe_results = False
-    plot = True
+    safe_results = True
+    plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
     coupling_strengths = [1] #np.arange(0, 100, 5)
@@ -118,14 +118,14 @@ def main():
 
     if safe_results:
         cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
-        for j, g in enumerate(coupling_strengths):
-            rates_df = pd.DataFrame(all_rates[j].T, columns=cells)
+        for k, g in enumerate(coupling_strengths):
+            rates_df = pd.DataFrame(all_rates[k].T, columns=cells)
             rates_df.to_csv(f'output/rates_G{g}_{cortex_type}.csv', index=False)
             
             potential_sum = np.zeros((all_rates.shape[1], all_rates.shape[-1])) # (16x1000)
             
             for i in range(all_rates.shape[1]):
-                potential_sum[i] = np.sum(all_potentials[j][i], axis=0)
+                potential_sum[i] = np.sum(all_potentials[k][i], axis=0)
 
             potential_df = pd.DataFrame(potential_sum.T, columns=cells)
             potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}.csv', index=False)
