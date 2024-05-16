@@ -39,7 +39,7 @@ def jrc(C):
     C1 = C
     C2 = 0.8 * C
     C3 = C4 = 0.25 * C
-    W = np.array([[0, C4, C2, 1],[C3, 0, 0, 0],[C1, 0, 0, 0]]) # PYR, I, E, Input (welches Weight?)
+    W = np.array([[0, C4, C2, 0],[C3, 0, 0, 0],[C1, 0, 0, 0]]) # PYR, I, E, Input (welches Weight?)
 
     # Simulation loop 
 
@@ -60,13 +60,18 @@ def jrc(C):
         # RPO: update the population's membrane potential (calculated using the previous rate): u'(t) = v''(t)
         for i in range(nPop):
             for j in range(nPop):
-                u_dot[i,j] = H[j]/tau[j] * (W[i,j]*rate_current[j])  - 2 * u_t[i, j]/tau[j] - v_current[i,j]/(tau[j]**2)
-        
-            #external Input durch PRO:
-            v_dot = u_t[i, -1]
-            v_current[i, -1] = v_current[i, -1] + v_dot * step_size
-            u_dot[i,-1] = H[i]/tau[i] * (W[i, -1] * Iext[i, iter]) - 2 * u_t[i, -1]/tau[i] - v_current[i, -1]/(tau[i]**2)
-            u_t[i, -1] = u_t[i,-1] + u_dot[i,-1] * step_size
+
+                if i == 0 and j == 2:
+                    u_dot[i,j] = H[j]/tau[j] * (W[i,j]*(rate_current[j]+Iext[i,iter]))  - 2 * u_t[i, j]/tau[j] - v_current[i,j]/(tau[j]**2)
+                else:
+                    u_dot[i,j] = H[j]/tau[j] * (W[i,j]*rate_current[j])  - 2 * u_t[i, j]/tau[j] - v_current[i,j]/(tau[j]**2)
+
+
+            #external Input durch RPO:
+            #v_dot = u_t[i, -1]
+            #v_current[i, -1] = v_current[i, -1] + v_dot * step_size
+            #u_dot[i,-1] = H[-1]/tau[-1] * (W[i, -1] * Iext[i, iter]) - 2 * u_t[i, -1]/tau[-1] - v_current[i, -1]/(tau[-1]**2)
+            #u_t[i, -1] = u_t[i,-1] + u_dot[i,-1] * step_size
 
         v_current = v_current + u_t * step_size
         u_t = u_t + u_dot * step_size
@@ -77,11 +82,11 @@ def jrc(C):
         rate[:,iter] = rate_current
         potential[:, :, iter] = v_current
 
-    # plt.plot(potential[0, 1]+potential[0, 2], label='P')
-    # plt.plot(potential[0, 1], label='I')
-    # plt.plot(potential[0, 2], label='E')
-    # plt.legend()
-    # plt.show()
+    plt.plot(potential[0, 1]+potential[0, 2], label='P')
+    plt.plot(potential[0, 1], label='I')
+    plt.plot(potential[0, 2], label='E')
+    plt.legend()
+    plt.show()
 
     PYR = potential[0, 1]+potential[0, 2]
     return PYR
@@ -98,7 +103,7 @@ def bifurcation_diagram(C_values):
 
 
 # C variieren
-C_values = np.linspace(20, 1200, 100)
+C_values =  [68, 128, 135, 270, 675, 1350] # np.linspace(20, 1200, 100)
 bifurcation_data = bifurcation_diagram(C_values)
 
 # Diagramm erstellen
