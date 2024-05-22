@@ -13,6 +13,7 @@ pyrates_15 = pd.read_csv('output/pyrates_15.csv')
 
 python_11 = pd.read_csv('output/python_11.csv')
 pyrates_11 = pd.read_csv('output/pyrates_11.csv')
+pyrates_11_copy = pd.read_csv('output/pyrates_11_copy.csv')
 
 python_10 = pd.read_csv('output/python_10.csv') 
 pyrates_10 = pd.read_csv('output/pyrates_10.csv')
@@ -35,8 +36,10 @@ ax[1].plot(time, python_15['S1'][:], label='python')
 ax[1].plot(time_r, pyrates_15['S1'][:], label='pyrates')
 
 ax[2].set_title('11 cells')
-ax[2].plot(time, python_11['S1'][:], label='python')
-ax[2].plot(time_r, pyrates_11['S1'][:], label='pyrates')
+ax[2].plot(time, python_11['S1'][:], label='python', color = 'b', alpha = 0.5)
+ax[2].plot(time_r, pyrates_11['S1'][:], label='pyrates', color = 'r', alpha= 0.5)
+ax[2].plot(time_r, pyrates_11_copy['S1'][:], label= 'pyrates_copy', color = 'g', alpha = 0.9)
+ax[2].legend()
   
 ax[3].set_title('10 cells')
 ax[3].plot(time, python_10['S1'][:], label='python')

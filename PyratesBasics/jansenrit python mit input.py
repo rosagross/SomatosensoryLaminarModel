@@ -7,6 +7,9 @@ import time
 
 start_time = time.time()
 
+def sigmoid(m_max, r, v_thr, v):
+    return 2*m_max / (1 + np.exp(r*(v_thr - np.sum(v, axis=1)))) # All populations have the same PRO
+
 def jrc(C): 
     # Simulation parameters
     simulation_time = 2 # in s
@@ -39,7 +42,7 @@ def jrc(C):
     C1 = C
     C2 = 0.8 * C
     C3 = C4 = 0.25 * C
-    W = np.array([[0, C4, C2, 0],[C3, 0, 0, 0],[C1, 0, 0, 0]]) # PYR, I, E, Input (welches Weight?)
+    W = np.array([[0, C4, C2, 1],[C3, 0, 0, 0],[C1, 0, 0, 0]]) # PYR, I, E, Input (welches Weight?)
 
     # Simulation loop 
 
@@ -60,24 +63,20 @@ def jrc(C):
         # RPO: update the population's membrane potential (calculated using the previous rate): u'(t) = v''(t)
         for i in range(nPop):
             for j in range(nPop):
-
-                if i == 0 and j == 2:
-                    u_dot[i,j] = H[j]/tau[j] * (W[i,j]*(rate_current[j]+Iext[i,iter]))  - 2 * u_t[i, j]/tau[j] - v_current[i,j]/(tau[j]**2)
-                else:
-                    u_dot[i,j] = H[j]/tau[j] * (W[i,j]*rate_current[j])  - 2 * u_t[i, j]/tau[j] - v_current[i,j]/(tau[j]**2)
+                u_dot[i,j] = H[j]/tau[j] * (W[i,j]*rate_current[j])  - 2 * u_t[i, j]/tau[j] - v_current[i,j]/(tau[j]**2)
 
 
             #external Input durch RPO:
-            #v_dot = u_t[i, -1]
-            #v_current[i, -1] = v_current[i, -1] + v_dot * step_size
-            #u_dot[i,-1] = H[-1]/tau[-1] * (W[i, -1] * Iext[i, iter]) - 2 * u_t[i, -1]/tau[-1] - v_current[i, -1]/(tau[-1]**2)
-            #u_t[i, -1] = u_t[i,-1] + u_dot[i,-1] * step_size
+            v_dot = u_t[i, -1]
+            v_current[i, -1] = v_current[i, -1] + v_dot * step_size
+            u_dot[i,-1] = H[-1]/tau[-1] * (W[i, -1] * Iext[i, iter]) - 2 * u_t[i, -1]/tau[-1] - v_current[i, -1]/(tau[-1]**2)
+            u_t[i, -1] = u_t[i,-1] + u_dot[i,-1] * step_size
 
         v_current = v_current + u_t * step_size
         u_t = u_t + u_dot * step_size
 
         # PRO: update the population's RATE (calculated from the calculated **updated** potential)
-        rate_current = 2*m_max / (1 + np.exp(r*(v_thr - np.sum(v_current, axis=1)))) # All populations have the same PRO
+        rate_current = sigmoid(m_max, r, v_thr, v_current)
 
         rate[:,iter] = rate_current
         potential[:, :, iter] = v_current
