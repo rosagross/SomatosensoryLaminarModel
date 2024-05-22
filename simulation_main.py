@@ -77,14 +77,14 @@ def main():
 
     # directory to where to save the results
     output_dir = os.path.join('../data', 'firing_rates')
-    safe_results = True
-    plot = False
+    safe_results = False
+    plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
     coupling_strengths = [1] #np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1
-    cortex_type = 'visual'
+    cortex_type = 'somato'
 
     # define input
     input_type = "baseline" # other options are "baseline"
@@ -101,7 +101,7 @@ def main():
         # perform simulation with current coupling strength g
         rate, potential = model.run_simulation(g)
         
-        # append results 
+        # append results
         all_rates.append(rate)
         all_potentials.append(potential)
     

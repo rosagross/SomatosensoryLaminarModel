@@ -47,10 +47,11 @@ df_visual_S = pd.DataFrame(visual_S, index=population_names, columns=population_
 df_visual_S['cortex_type'] = 'visual' 
 df_S = pd.concat((df_somato_S, df_visual_S), ignore_index=False)
 
-# %% Plot Connection strengths
+# %% Plot Synaptic strengths
 
 fig, axs = plt.subplots(4, 4, figsize=(10,10), sharey=False)
 plot_populations = ['E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1','VIP2','VIP3','VIP4']
+
 for i, ax in enumerate(axs.flatten()):
     y = visual_S[i]
     y2 = somato_S[i]
@@ -91,7 +92,7 @@ for i, ax in enumerate(axs.flatten()):
 
 sns.despine(fig, trim=True, bottom=False)
 plt.tight_layout(h_pad=1)
-plt.savefig("Figures/Connect_Probability.pdf")
+#plt.savefig("Figures/Connect_Probability.pdf")
 plt.show()
 
 # %%
@@ -99,7 +100,7 @@ plt.show()
 somato_C = params_somato.get_cellcounts()
 somato_C = pd.DataFrame(np.insert(somato_C, [7, 10, 13], 0), index=population_names, columns=['cellcount'])
 somato_C['cortex_type'] = 'somato'
-visual_C = pd.DataFrame(params_visual.get_cellcounts('visual'), index=population_names, columns=['cellcount'])
+visual_C = pd.DataFrame(params_visual.get_cellcounts(), index=population_names, columns=['cellcount'])
 visual_C['cortex_type'] = 'visual'
 
 df_C = pd.concat((somato_C, visual_C))
@@ -145,7 +146,7 @@ for i, ax in enumerate(axs.flatten()):
 
 sns.despine(fig, trim=True, bottom=False)
 plt.tight_layout()
-plt.savefig('Figures/Connection_weight.pdf')
+#plt.savefig('Figures/Connection_weight.pdf')
 plt.show()
 
 # %%
