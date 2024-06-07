@@ -8,7 +8,7 @@ import time
 start_time = time.time()
 
 def sigmoid(m_max, r, v_thr, v):
-    return 2*m_max / (1 + np.exp(r*(v_thr - np.sum(v, axis=1)))) # All populations have the same PRO
+    return m_max / (1 + np.exp(r*(v_thr - np.sum(v, axis=1)))) # All populations have the same PRO
 
 def jrc(C): 
     # Simulation parameters
@@ -16,7 +16,7 @@ def jrc(C):
     step_size = 1e-4 # in s
 
     # Model parameters
-    m_max = 2.5 # in s^-1! (so 1 means 1 per second)
+    m_max = 5 # in s^-1! (so 1 means 1 per second)
     r = 0.56 # sigmoidal steepness in V^-1 (560 here means 0.56 mV^-1)
     v_thr = 6 # v0
     H_E = 3.25 # A
