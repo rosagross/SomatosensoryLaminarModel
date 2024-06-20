@@ -46,6 +46,7 @@ class JR_Model():
 
         for timestep, time in enumerate(self.steps):
             
+            
             # Update RATE (calculated from the current potential)
             # technically this could also go to the end of the for-loop but we need a rate value calculated from the initial potential value
             for i in range(self.nPop):
@@ -55,6 +56,7 @@ class JR_Model():
             # Save the new values
             self.rate[:, timestep] = self.rate_current 
             self.potential[:, :, timestep] = self.v_current
+            
 
             # We go through every population and evaluate the new membrane potential based on the connectivity
             for i in range(self.nPop):

@@ -29,7 +29,7 @@ def plot_minmax(rates, coupling_strengths):
     plt.legend()
     plt.show()
 
-def plot_results(rates, Iext, step_size, simulation_time):
+def plot_results(rates, Iext, step_size, simulation_time, start_plot):
 
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
 
@@ -38,11 +38,11 @@ def plot_results(rates, Iext, step_size, simulation_time):
 
     plot_rates = rates[0, 0:4, :]
     
-    axs[0].plot(steps, Iext)
+    axs[0].plot(steps[start_plot:], Iext[start_plot:])
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs[1:], start=1):
-        ax.plot(steps, rates[0, (i-1)*4:i*4].T, linewidth=1)
+        ax.plot(steps[start_plot:], rates[0, (i-1)*4:i*4].T[start_plot:], linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -61,22 +61,40 @@ def plot_results(rates, Iext, step_size, simulation_time):
     plt.legend()
     plt.show()
 
-def create_Iext(simulation_time, step_size, input_type):
+def create_Iext(simulation_time, step_size, input_onset, input_duration, input_strength, input_type):
     ''' Creates external input.'''
 
     Iext = np.zeros(int(simulation_time/step_size))
 
     if input_type == "step":
         # after 50 ms for 50ms
-        x  = 50
-        Iext[501:520] = 5
+        t  = int(input_duration/step_size)
+        t0 = int(input_onset/step_size)
+        Iext[t0:t0+t] = input_strength
 
     return Iext
 
+def safe_results_csv(coupling_strengths, rates, potentials, cortex_type, d, s):
+    '''
+    Safe the simulated data in a csv file
+    '''    
+    cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
+    if cortex_type == 'somato':
+        cells = cells[:13]
+
+    for k, g in enumerate(coupling_strengths):
+        rates_df = pd.DataFrame(rates[k].T, columns=cells)
+        rates_df.to_csv(f'output/rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}.csv', index=False)
+        
+        potential_sum = np.zeros((rates.shape[1], rates.shape[-1])) # (16x1000)
+        for i in range(rates.shape[1]):
+            potential_sum[i] = np.sum(potentials[k][i], axis=0)
+
+        potential_df = pd.DataFrame(potential_sum.T, columns=cells)
+        potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}_Iduration{d}_Istrength{s}.csv', index=False)
+
 def main():
 
-    # directory to where to save the results
-    output_dir = os.path.join('../data', 'firing_rates')
     safe_results = False
     plot = True
 
@@ -84,51 +102,52 @@ def main():
     coupling_strengths = [1] #np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1
-    cortex_type = 'somato'
+    cortex_type = 'visual'
 
     # define input
-    input_type = "baseline" # other options are "baseline"
-    Iext = create_Iext(simulation_time, step_size, input_type)
+    input_type = "step" # other options are "baseline"
+    input_onset = 0.501 # in sec
+    input_durations = [0.02] #np.arange(0, 0.2, 0.02) # in sec 
+    input_strengths = [5] #np.arange(0, 20, 2)
 
-    # arrays to store rate
-    all_rates = []
-    all_potentials = []
 
-    model = JR_Model(Iext, cortex_type, step_size, simulation_time)
 
-    for g in coupling_strengths:
+    for d in input_durations:
+        for s in input_strengths:
 
-        # perform simulation with current coupling strength g
-        rate, potential = model.run_simulation(g)
-        
-        # append results
-        all_rates.append(rate)
-        all_potentials.append(potential)
+            # arrays to store rate
+            all_rates = []
+            all_potentials = []
+
+            for g in coupling_strengths:
+                
+                # create input array 
+                Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
+                model = JR_Model(Iext, cortex_type, step_size, simulation_time)
+
+                # perform simulation with current coupling strength g
+                rate, potential = model.run_simulation(g)
+                
+                # append results
+                all_rates.append(rate)
+                all_potentials.append(potential)
     
-    all_rates = np.array(all_rates)
-    all_potentials = np.array(all_potentials)
+            all_rates = np.array(all_rates)
+            all_potentials = np.array(all_potentials)
+
+            if safe_results:
+                safe_results_csv(coupling_strengths, all_rates, all_potentials, cortex_type, d, s)
+
 
     if plot:
         if len(coupling_strengths) == 1:
+            # when to start plotting (in ms)
+            start_plot = 500
             # plot only one coupling strength value with time on the x-axis
-            plot_results(all_rates, Iext, step_size, simulation_time)
+            plot_results(all_rates, Iext, step_size, simulation_time, start_plot)
         else: 
             # used to plot with coupling strength on the x-axis and max/min rate on the y
             plot_minmax(all_rates, coupling_strengths)
-
-    if safe_results:
-        cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
-        for k, g in enumerate(coupling_strengths):
-            rates_df = pd.DataFrame(all_rates[k].T, columns=cells)
-            rates_df.to_csv(f'output/rates_G{g}_{cortex_type}.csv', index=False)
-            
-            potential_sum = np.zeros((all_rates.shape[1], all_rates.shape[-1])) # (16x1000)
-            
-            for i in range(all_rates.shape[1]):
-                potential_sum[i] = np.sum(all_potentials[k][i], axis=0)
-
-            potential_df = pd.DataFrame(potential_sum.T, columns=cells)
-            potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}_sameparameter.csv', index=False)
     
 
 if __name__ == '__main__':
