@@ -74,7 +74,7 @@ def create_Iext(simulation_time, step_size, input_onset, input_duration, input_s
 
     return Iext
 
-def safe_results_csv(coupling_strengths, rates, potentials, cortex_type, d, s):
+def safe_results_csv(coupling_strengths, rates, potentials, cortex_type, d, s, o):
     '''
     Safe the simulated data in a csv file
     '''    
@@ -84,14 +84,14 @@ def safe_results_csv(coupling_strengths, rates, potentials, cortex_type, d, s):
 
     for k, g in enumerate(coupling_strengths):
         rates_df = pd.DataFrame(rates[k].T, columns=cells)
-        rates_df.to_csv(f'output/rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}.csv', index=False)
+        rates_df.to_csv(f'output/rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{o}.csv', index=False)
         
         potential_sum = np.zeros((rates.shape[1], rates.shape[-1])) # (16x1000)
         for i in range(rates.shape[1]):
             potential_sum[i] = np.sum(potentials[k][i], axis=0)
 
         potential_df = pd.DataFrame(potential_sum.T, columns=cells)
-        potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}_Iduration{d}_Istrength{s}.csv', index=False)
+        potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{o}.csv', index=False)
 
 def main():
 
@@ -101,8 +101,8 @@ def main():
     # set coupling strengths, step size and cortex type (visual or somato)
     coupling_strengths = [1] #np.arange(0, 100, 5)
     step_size = 0.001 
-    simulation_time = 1
-    cortex_type = 'visual'
+    simulation_time = 1.5
+    cortex_type = 'somato'
 
     # define input
     input_type = "step" # other options are "baseline"
@@ -136,7 +136,7 @@ def main():
             all_potentials = np.array(all_potentials)
 
             if safe_results:
-                safe_results_csv(coupling_strengths, all_rates, all_potentials, cortex_type, d, s)
+                safe_results_csv(coupling_strengths, all_rates, all_potentials, cortex_type, d, s, input_onset)
 
 
     if plot:
