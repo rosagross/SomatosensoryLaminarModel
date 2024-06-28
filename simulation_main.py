@@ -3,6 +3,7 @@ import os
 import matplotlib.pyplot as plt
 from jr_model import JR_Model
 import pandas as pd 
+import csv 
 
 def plot_minmax(rates, coupling_strengths):
     minRate = np.min(rates[:,:,-100:],axis=2)
@@ -74,70 +75,85 @@ def create_Iext(simulation_time, step_size, input_onset, input_duration, input_s
 
     return Iext
 
-def safe_results_csv(coupling_strengths, rates, potentials, cortex_type, d, s, o):
+def save_results_csv(rates, potentials, cortex_type, filedir, filename, summed=True):
     '''
     Safe the simulated data in a csv file
     '''    
+
     cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
     if cortex_type == 'somato':
         cells = cells[:13]
 
-    for k, g in enumerate(coupling_strengths):
-        rates_df = pd.DataFrame(rates[k].T, columns=cells)
-        rates_df.to_csv(f'output/rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{o}.csv', index=False)
-        
-        potential_sum = np.zeros((rates.shape[1], rates.shape[-1])) # (16x1000)
-        for i in range(rates.shape[1]):
-            potential_sum[i] = np.sum(potentials[k][i], axis=0)
-
+    rates_df = pd.DataFrame(rates.T, columns=cells)
+    filename = 'rates' + filename + '.csv'
+    rates_df.to_csv(os.path.join(filedir, filename), index=False)
+    
+    if summed:
+        potential_sum = np.zeros((rates.shape[0], rates.shape[-1])) # (16x1000)
+        for i in range(rates.shape[0]):
+            potential_sum[i] = np.sum(potentials[i], axis=0)
         potential_df = pd.DataFrame(potential_sum.T, columns=cells)
-        potential_df.to_csv(f'output/potentials_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{o}.csv', index=False)
+        filename = 'potentials' + filename + '.csv'
+        potential_df.to_csv(os.path.join(filedir, filename), index=False)
+    else: 
+        psp_filename = 'full_potentials' + filename + '.csv'
+        write_3D_csv(os.path.join(filedir, psp_filename), potentials)
+
+
+def write_3D_csv(filename, data):
+    '''
+    Write results in form of a 3D numpy array into a csv file. 
+    '''
+    data = data.tolist()
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile, delimiter=',')
+        writer.writerows(data)
 
 def main():
 
-    safe_results = False
+    save_results = True
+    save_summed_potentials = True # if True the potential matrix is 2D, otherwise 3D
+
     plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths = [1] #np.arange(0, 100, 5)
+    coupling_strengths = [0, 10, 20, 30, 40, 50] #np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1.5
     cortex_type = 'somato'
+    filedir = 'output'
 
     # define input
     input_type = "step" # other options are "baseline"
     input_onset = 0.501 # in sec
-    input_durations = [0.02] #np.arange(0, 0.2, 0.02) # in sec 
-    input_strengths = [5] #np.arange(0, 20, 2)
-
-
+    input_durations = np.arange(0, 0.04, 0.001) # in sec 
+    input_strengths = np.arange(0, 20, 2)
 
     for d in input_durations:
         for s in input_strengths:
 
-            # arrays to store rate
+            # arrays to store rate (for plotting)
             all_rates = []
             all_potentials = []
 
             for g in coupling_strengths:
-                
+                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}'
+
                 # create input array 
                 Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
-                model = JR_Model(Iext, cortex_type, step_size, simulation_time)
+                model = JR_Model(Iext, cortex_type, g, filedir, filename, step_size, simulation_time)
 
                 # perform simulation with current coupling strength g
-                rate, potential = model.run_simulation(g)
-                
+                rate, potential = model.run_simulation()
                 # append results
                 all_rates.append(rate)
                 all_potentials.append(potential)
-    
+
+                if save_results:
+                    save_results_csv(rate, potential, cortex_type, filedir, filename, save_summed_potentials)
+
             all_rates = np.array(all_rates)
             all_potentials = np.array(all_potentials)
-
-            if safe_results:
-                safe_results_csv(coupling_strengths, all_rates, all_potentials, cortex_type, d, s, input_onset)
-
 
     if plot:
         if len(coupling_strengths) == 1:
