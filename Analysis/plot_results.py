@@ -32,9 +32,9 @@ figure_dir = "../Figures"
 # %%
 
 # read in data
-input_durations = np.arange(0, 0.2, 0.04) # in sec 
-input_strengths = np.arange(0, 20, 2)
-coupling_strengths = np.arange(0, 100, 10)
+input_durations = np.arange(0, 0.04, 0.005) # in sec 
+input_strengths = [0, 5, 10, 15, 20] # np.arange(0, 20, 2)
+coupling_strengths = [20] # np.arange(0, 100, 10)
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 0.501
@@ -139,7 +139,7 @@ plt.show()
 '''
 
 # choose a coupling strength and a population
-coupling_strength = 50
+coupling_strength = 20
 population = 'E1'
 data_df = summary_df[summary_df['coupling_strength']==coupling_strength]
 data_df = data_df[data_df['population']==population]
@@ -158,8 +158,8 @@ sns.heatmap(data_heatmap, cmap='magma')
 '''
 
 rate_measure = 'diffRate_duringInput'
-coupling_strengths = [0, 10, 20]
-populations = np.array(['P1', 'P2', 'P3', 'P4']) #, 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1'])#, 'V2', 'V3', 'V4'])
+coupling_strengths = [20, 0]
+populations = np.array(['E1', 'E2', 'E3', 'E4']) #, 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1'])#, 'V2', 'V3', 'V4'])
 
 fig, axes = plt.subplots(len(coupling_strengths), len(populations), figsize=(20,15) ,sharex=True, sharey=True)
 

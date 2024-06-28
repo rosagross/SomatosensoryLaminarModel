@@ -1,4 +1,5 @@
 import numpy as np
+import yaml
 
 class Parameter():
 
@@ -200,13 +201,6 @@ class Parameter():
             psp_visual = np.delete(psp_visual, 10, 0)
             psp_visual = np.delete(psp_visual, 13, 0)
 
-
-            # synaptic strengths from Isbister 
-            # from E1, 
-            #toE1 = []
-
-
-
         elif self.cortex_type == 'visual':
             # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
             psp = np.array([[0.36,	1.49,	0.86,	1.31,	0.34,	1.39,	0.69,	0.91,	0.74,	1.32,	0.53,	0,	0,	0,	0,	0],
@@ -364,6 +358,26 @@ class Parameter():
                                     [  0.0704119 ,  37.86409387,  38.52689646]])
             
         return sigmoid_params
+    
+    def save_to_yaml(self, filename, g):
+        
+        S = self.get_connectStrength()
+        P = self.get_connectProb()
+        C = self.get_cellcounts()
+        W = self.get_connectivity(g)
+
+        # Convert numpy arrays to lists
+        parameters = {
+            'S': S.tolist(),
+            'P': P.tolist(),
+            'C': C.tolist(),
+            'W': W.tolist()
+        }
+
+        # Save parameters to a YAML file
+        with open(filename + '.yaml', 'w') as file:
+            yaml.dump(parameters, file)
+
     
 
 
