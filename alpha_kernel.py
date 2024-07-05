@@ -13,3 +13,18 @@ alpha_kernel = H * t/tau * np.exp(-t/tau)
 
 plt.plot(t, alpha_kernel)
 plt.show()
+
+
+# %% Sigmoid curve visualization 
+
+
+r = 0.62
+v0 = 2
+max_firing = 1
+v = np.arange(20, 40, 0.01)
+sigm = max_firing / (1 + r*np.exp((v0-v)))
+
+plt.plot(v, sigm)
+plt.show()
+
+# %%

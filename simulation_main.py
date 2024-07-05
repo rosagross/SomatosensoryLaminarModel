@@ -117,7 +117,7 @@ def main():
     plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths = [0, 10, 20, 30, 40, 50] #np.arange(0, 100, 5)
+    coupling_strengths = [0, 10, 20, 30, 40, 50] # np.arange(0, 100, 5)
     step_size = 0.001 
     simulation_time = 1.5
     cortex_type = 'somato'
