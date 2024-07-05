@@ -18,6 +18,7 @@ Plots:
 # %% 
 import numpy as np
 import os
+from matplotlib.ticker import FormatStrFormatter
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -32,9 +33,9 @@ figure_dir = "../Figures"
 # %%
 
 # read in data
-input_durations = np.arange(0, 0.04, 0.005) # in sec 
-input_strengths = [0, 5, 10, 15, 20] # np.arange(0, 20, 2)
-coupling_strengths = [20] # np.arange(0, 100, 10)
+input_durations = np.arange(0, 0.04, 0.001) # in sec 
+input_strengths = np.arange(0, 20, 2)
+coupling_strengths = [0, 20, 40] # np.arange(0, 100, 10)
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 0.501
@@ -91,9 +92,9 @@ for d in input_durations:
 # %% Make plots that demonstrate the sampling time line 
 
 # choose example settings
-coupling_strength = 50
+coupling_strength = 40
 population = 'S4'
-input_duration = 0.1
+input_duration = 0.02
 input_strength = 8
 line_df = time_data_df[time_data_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
@@ -158,7 +159,7 @@ sns.heatmap(data_heatmap, cmap='magma')
 '''
 
 rate_measure = 'diffRate_duringInput'
-coupling_strengths = [20, 0]
+coupling_strengths = [0, 20, 40]
 populations = np.array(['E1', 'E2', 'E3', 'E4']) #, 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1'])#, 'V2', 'V3', 'V4'])
 
 fig, axes = plt.subplots(len(coupling_strengths), len(populations), figsize=(20,15) ,sharex=True, sharey=True)
@@ -187,6 +188,7 @@ for i,g in enumerate(coupling_strengths):
         axes[i, j].set_xlabel('')
         axes[i, j].tick_params(axis='both', labelsize=12)
         axes[len(coupling_strengths)-1, j].set_xlabel('Input Duration')
+        axes[len(coupling_strengths)-1, j].xaxis.set_major_formatter(FormatStrFormatter('%.4f'))
         axes[0,j].set_title(f'pop: {p}')
         axes[i,0].set_ylabel(f'G: {g}', rotation=0, labelpad=60)
 
