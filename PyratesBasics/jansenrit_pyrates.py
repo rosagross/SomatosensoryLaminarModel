@@ -1,6 +1,7 @@
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
 
+print('hä')
 # %%
 # Operator template for the PRO
 
@@ -28,6 +29,18 @@ rpo_e = OperatorTemplate(
                'H': 0.00325},
     description="excitatory rate-to-potential operator")
 
+rpo_ein = OperatorTemplate(
+    name='RPO_ein', path=None,
+    equations=['d/dt * v = i',
+               'd/dt * i = H/tau * (m_in+u) - 2 * i/tau - v/tau^2'],
+    variables={'v': 'output',
+               'i': 'variable',
+               'm_in': 'input',
+               'tau': 0.01,
+               'H': 0.00325,
+               'u': 220},
+    description="excitatory rate-to-potential operator")
+
 # %%
 # Node templates
 ein = NodeTemplate(name="EIN", path=None, operators=[pro, rpo_e])
@@ -36,21 +49,21 @@ iin = NodeTemplate(name="IIN", path=None, operators=[pro, rpo_e])
 rpo_i = deepcopy(rpo_e).update_template(
     name='RPO_i', path=None, variables={'H': -0.022, 'tau': 0.02}
 )
-pc = NodeTemplate(name="PC", path=None, operators=[pro, rpo_e, rpo_i])
+pc = NodeTemplate(name="PC", path=None, operators=[pro, rpo_i, rpo_ein])
 # Set up the Model Circuit 
 jrc = CircuitTemplate(
     name="JRC", nodes={'PC': pc, 'EIN': ein, 'IIN': iin},
-    edges=[("PC/PRO/m_out", "IIN/RPO_e/m_in", None, {'weight': 33.75}),
-           ("PC/PRO/m_out", "EIN/RPO_e/m_in", None, {'weight': 135.}),
-           ("EIN/PRO/m_out", "PC/RPO_e/m_in", None, {'weight': 108.}),
-           ("IIN/PRO/m_out", "PC/RPO_i/m_in", None, {'weight': 33.75})],
+    edges=[("PC/PRO/m_out", "IIN/RPO_e/m_in", None, {'weight': 168.75}),
+           ("PC/PRO/m_out", "EIN/RPO_e/m_in", None, {'weight': 675.}),
+           ("EIN/PRO/m_out", "PC/RPO_ein/m_in", None, {'weight': 540.}),
+           ("IIN/PRO/m_out", "PC/RPO_i/m_in", None, {'weight': 168.75})],
     path=None)
 
 # Run the simulation 
 results = jrc.run(simulation_time=2.0,
                   step_size=1e-4,
                   sampling_step_size=1e-3,
-                  outputs={'V_PCE': 'PC/RPO_e/v',
+                  outputs={'V_PCE': 'PC/RPO_ein/v',
                            'V_PCI': 'PC/RPO_i/v'},
                   backend='default',
                   solver='scipy')
