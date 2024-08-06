@@ -18,8 +18,10 @@ Plots:
 # %% 
 import numpy as np
 import os
-from matplotlib.ticker import FormatStrFormatter
+from matplotlib.ticker import FormatStrFormatter, FuncFormatter, FormatStrFormatter
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap, Normalize
+from scipy.signal import find_peaks
 import seaborn as sns
 import pandas as pd
 from plotting_style import figure_style
@@ -33,15 +35,15 @@ figure_dir = "../Figures"
 # %%
 
 # read in data
-input_durations = np.arange(0, 0.04, 0.001) # in sec 
-input_strengths = np.arange(0, 20, 2)
-coupling_strengths = [0, 20, 40] # np.arange(0, 100, 10)
+input_durations = [0.02] #np.arange(0, 0.04, 0.001) # in sec 
+input_strengths = [12] #np.arange(0, 20, 2)
+coupling_strengths = [0, 20, 40, 60] #np.arange(0, 100, 20)
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 0.501
 sample_dur = 0.1 # amount of time in sec in which we look at the long term firing rate (min and max)
 cortex_type = 'somato'
-load_trajectory = False
+load_trajectory = True
 
 # create summary matrix: should include (max/min_value x population   
 min_data = []
@@ -55,7 +57,7 @@ for d in input_durations:
             df = pd.DataFrame()
 
             # read data matrix (datapoints x populations)
-            filename = f"rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}.csv"
+            filename = f"rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual.csv"
             data_df = pd.read_csv(os.path.join(output_dir, filename))
 
             # LONG TERM (sample for 100ms starting at 0.5 sec after offset)
@@ -65,11 +67,28 @@ for d in input_durations:
             df['maxRate_longterm'] = data_df.iloc[start_sample:stop_sample].max()
             df['diffRate_longterm'] = df['maxRate_longterm'] - df['minRate_longterm']
             
+            # DURING INPUT
             start_sample_during = int((input_onset)/step_size)
             stop_sample_during = int((input_onset+d)/step_size)
             df['minRate_duringInput'] = data_df.iloc[start_sample_during:stop_sample_during].min()
             df['maxRate_duringInput'] = data_df.iloc[start_sample_during:stop_sample_during].max()
             df['diffRate_duringInput'] = df['maxRate_duringInput'] - df['minRate_duringInput']
+        
+            # BASELINE SAMPLE
+            offset = 0.1 # time between baseline sampling and start of input 
+            baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
+            baseline_stop = int(baseline_start + sample_dur/step_size)
+            df['minRate_baseline'] = data_df.iloc[baseline_start:baseline_stop].min()
+            df['maxRate_baseline'] = data_df.iloc[baseline_start:baseline_stop].max()
+            df['diffRate_baseline'] = df['maxRate_baseline'] - df['minRate_baseline']
+            plt.plot(df['diffRate_baseline'], label= f'coupling{g}')
+            plt.legend()
+            
+            # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
+            # oscillate and we want to compare if the long term activity is still larger than baseline)
+            df['longtermVSbaseline'] = df['maxRate_longterm'] - df['minRate_baseline']
+            
+            # set info in data frame
             df['population'] = df.index.values
             df['coupling_strength'] = g
             df['InputDuration'] = d
@@ -93,9 +112,9 @@ for d in input_durations:
 
 # choose example settings
 coupling_strength = 40
-population = 'S4'
-input_duration = 0.02
-input_strength = 8
+population = 'E1'
+input_duration = 0.12
+input_strength = 4
 line_df = time_data_df[time_data_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
@@ -104,9 +123,12 @@ line_df = line_df[line_df['InputStrength']==input_strength]
 
 # Add a red vertical line at time of input offset (start of sampling) and stop of sampling
 simulation_time = len(line_df)*1e-3
-start_sample = input_onset+input_duration+sample_delay
+start_sample = input_onset + input_duration + sample_delay
 stop_sample = start_sample + sample_dur
-input_offset = input_onset+input_duration
+input_offset = input_onset + input_duration
+offset = 0.1 # time between baseline sampling and start of input 
+baseline_start = input_onset - (sample_dur+offset)
+baseline_stop = baseline_start + sample_dur
 
 # plot the input
 steps = np.arange(step_size, simulation_time+step_size, step_size)
@@ -114,20 +136,41 @@ input_line = np.zeros(len(line_df))
 input_line[int((input_onset)/step_size):int(input_offset/step_size)] = input_strength
 plt.plot(steps, input_line, color='green', linewidth=2)
 sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
+plt.axvline(x=baseline_start, color='purple', linestyle='--', linewidth=1, label='Baseline Sample')
+plt.axvline(x=baseline_stop, color='purple', linestyle='--', linewidth=1, label='')
 plt.axvline(x=start_sample, color='red', linestyle='--', linewidth=1, label='Long Term Sample')
 plt.axvline(x=stop_sample, color='red', linestyle='--', linewidth=1, label='')
-plt.axvline(x=input_onset, color='blue', linestyle='--', linewidth=1, label='Sample During Input')
+plt.axvline(x=input_onset, color='blue', linestyle='--', linewidth=1, label='During Input Sample')
 plt.axvline(x=input_offset, color='blue', linestyle='--', linewidth=1, label='')
 plt.legend()
 #plt.savefig('../Figures/plotting_windows.pdf')
 plt.show()
 
-# DURING INPUT
-
 # %% OSCIALLTIONS
 
 # Find the combination in which the output is oscillatory
 # For this plot the difference values 
+
+rate_measure = 'diffRate_duringInput'
+coupling_strengths = [0, 20, 40]
+input_duration = 0.02
+input_strengths = [10, 12, 14]
+populations = np.array(['E1'])#,  'E2', 'E3', 'E4']) 
+#populations = np.array(['P1', 'P2', 'P3', 'P4']) 
+#populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
+
+for k, s in enumerate(input_strengths):
+    for i,g in enumerate(coupling_strengths):
+        for j,p in enumerate(populations):
+
+            # get the summary data frame
+            waves_df = summary_df[summary_df['coupling_strength']==g]
+            waves_df_strength = minmax_df[minmax_df['input_strength']==s]
+
+            # plot the trajctory
+            plt.plot()
+
+            # compute the amount of peaks
 
 
 # %%
@@ -158,9 +201,11 @@ sns.heatmap(data_heatmap, cmap='magma')
     - subplot rows: coupling strengths
 '''
 
-rate_measure = 'diffRate_duringInput'
+rate_measure = 'diffRate_baseline'
 coupling_strengths = [0, 20, 40]
-populations = np.array(['E1', 'E2', 'E3', 'E4']) #, 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1'])#, 'V2', 'V3', 'V4'])
+populations = np.array(['E1', 'E2', 'E3', 'E4']) 
+#populations = np.array(['P1', 'P2', 'P3', 'P4']) 
+#populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
 
 fig, axes = plt.subplots(len(coupling_strengths), len(populations), figsize=(20,15) ,sharex=True, sharey=True)
 
@@ -174,12 +219,16 @@ for i,g in enumerate(coupling_strengths):
 
         minmax_df = summary_df[summary_df['coupling_strength']==g]
         minmax_df = minmax_df[minmax_df['population']==p]
+        minmax_df['InputDuration'] = minmax_df['InputDuration'].round(4)
 
         data_heatmap = minmax_df.pivot(index='InputStrength',columns='InputDuration', values=rate_measure)
-        sns.heatmap(data_heatmap, cmap='magma', ax=axes[i,j])
-                    #, cbar=(i == 0 and j == len(populations) - 1),
-                    #cbar_ax=None if (i != 0 or j != len(populations) - 1) else cbar_ax)
-        
+
+        if (minmax_df[rate_measure].isna() | (minmax_df[rate_measure] == 0)).all().all():
+            print('black')
+            sns.heatmap(data_heatmap, cmap=ListedColormap(['black']), ax=axes[i,j], norm = Normalize(vmin=0, vmax=1))
+        else:
+            sns.heatmap(data_heatmap, cmap='magma', ax=axes[i,j])
+
         cbar = axes[i, j].collections[0].colorbar
         # here set the labelsize by 20
         cbar.ax.tick_params(labelsize=12)
@@ -188,7 +237,6 @@ for i,g in enumerate(coupling_strengths):
         axes[i, j].set_xlabel('')
         axes[i, j].tick_params(axis='both', labelsize=12)
         axes[len(coupling_strengths)-1, j].set_xlabel('Input Duration')
-        axes[len(coupling_strengths)-1, j].xaxis.set_major_formatter(FormatStrFormatter('%.4f'))
         axes[0,j].set_title(f'pop: {p}')
         axes[i,0].set_ylabel(f'G: {g}', rotation=0, labelpad=60)
 
@@ -197,9 +245,19 @@ fig.text(0.04, 0.5, 'Input Strength', va='center', rotation='vertical')
 fig.text(0.04, 0.83, 'Input Strength', va='center', rotation='vertical')
 
 plt.tight_layout(h_pad=1)
-figure_name = f'inputDurationVSinputStrength_{populations[0][0]}pop_{rate_measure}.png'
+figure_name = f'inputDurationVSinputStrength_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
 plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
+
+# %% investigate one specific population and see how this behaves..
+# .. during input
+# .. on the long term behaviour
+# .. is the long term behaviour over baseline? 
+# .. frequency of oscillations
+
+
+
+
 # %%
 
 '''
@@ -209,15 +267,19 @@ plt.show()
 '''
 
 # For this I need a dataframe with all timepoints
-coupling_strength = 10
+coupling_strength = [0, 20, 40, 60]
 population = 'E1'
-input_duration = 0.1
-line_df = time_data_df[time_data_df['coupling_strength']==coupling_strength]
+input_duration = 0.02
+input_strength = 12
+line_df = time_data_df.loc[time_data_df['coupling_strength'].isin(coupling_strength)]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
-#line_df = line_df[line_df['InputStrength']==0]
+line_df = line_df[line_df['InputStrength']==input_strength]
+plt.title(f'Population:{population} Input Duration:{input_duration} Input Strength{input_strength}')
+sns.lineplot(data=line_df, x='time', y='rate', hue='coupling_strength')
 
-sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength')
+figure_name = f'population{population}_inputDur{input_duration}_inputStrength{input_strength}.png'
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 
 # %%
 populations = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1'])#, 'V2', 'V3', 'V4'])
@@ -244,5 +306,7 @@ Look at the change of rate difference comparing populations
 - x axis: input duration 
 - y axis: firing rate diff
 - hue: populations 
-
 '''
+
+# %% Plot the difference to the baseline
+

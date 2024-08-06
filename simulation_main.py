@@ -14,8 +14,8 @@ def plot_minmax(rates, coupling_strengths):
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs, start=1):
-        ax.plot(coupling_strengths, minRate[:,(i-1)*4:i*4], linewidth=1)
-        ax.plot(coupling_strengths, maxRate[:,(i-1)*4:i*4], linewidth=2)
+        ax.plot(coupling_strengths, minRate[:,(i-1)*4:i*4], linewidth=2)
+        ax.plot(coupling_strengths, maxRate[:,(i-1)*4:i*4], linewidth=0.5)
         ax.grid(True)
         ax.set_ylabel('Hz')
         ax.legend(['L2/3', 'L4', 'L5', 'L6'])
@@ -68,7 +68,6 @@ def create_Iext(simulation_time, step_size, input_onset, input_duration, input_s
     Iext = np.zeros(int(simulation_time/step_size))
 
     if input_type == "step":
-        # after 50 ms for 50ms
         t  = int(input_duration/step_size)
         t0 = int(input_onset/step_size)
         Iext[t0:t0+t] = input_strength
@@ -96,7 +95,7 @@ def save_results_csv(rates, potentials, cortex_type, filedir, filename, summed=T
         filename = 'potentials' + filename + '.csv'
         potential_df.to_csv(os.path.join(filedir, filename), index=False)
     else: 
-        psp_filename = 'full_potentials' + filename + '.csv'
+        psp_filename = 'full_potentials_' + filename + '.csv'
         write_3D_csv(os.path.join(filedir, psp_filename), potentials)
 
 
@@ -113,11 +112,10 @@ def main():
 
     save_results = True
     save_summed_potentials = True # if True the potential matrix is 2D, otherwise 3D
-
-    plot = True
+    plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths = [0, 10, 20, 30, 40, 50] # np.arange(0, 100, 5)
+    coupling_strengths = np.arange(0, 100, 20)
     step_size = 0.001 
     simulation_time = 1.5
     cortex_type = 'somato'
@@ -126,10 +124,11 @@ def main():
     # define input
     input_type = "step" # other options are "baseline"
     input_onset = 0.501 # in sec
-    input_durations = np.arange(0, 0.04, 0.001) # in sec 
+    input_durations = np.arange(0.04, 0.2, 0.1) # in sec 
     input_strengths = np.arange(0, 20, 2)
 
     for d in input_durations:
+        print('Input duration:', d)
         for s in input_strengths:
 
             # arrays to store rate (for plotting)
@@ -137,7 +136,7 @@ def main():
             all_potentials = []
 
             for g in coupling_strengths:
-                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}'
+                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual'
 
                 # create input array 
                 Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
