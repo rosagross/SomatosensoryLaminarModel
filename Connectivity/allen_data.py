@@ -104,6 +104,10 @@ for sweep_number in sweep_numbers:
     v = sweep_data["response"][0:index_range[1]+1] # in V
     i *= 1e12 # to pA
     v *= 1e3 # to mV
+ 
+    #print(np.unique(i)) # every sweep there are different intensities applied.
+    # I need the mV response for each intensity
+    #vi_curve.append((stimulus_intensity, ))
 
     sampling_rate = sweep_data["sampling_rate"] # in Hz
     t = np.arange(0, len(v)) * (1.0 / sampling_rate)
@@ -117,7 +121,14 @@ for sweep_number in sweep_numbers:
     else:
         firing_rate = 0
     stimulus_intensity = np.max(i)
-    fi_curve.append((stimulus_intensity, firing_rate))
+    fi_curve.append((i, v))
+
+# %% 
+
+for curve in fi_curve:
+    plt.scatter(curve[0], curve[1])
+
+plt.show()
 
 #fi_curve = calculate_fi_curve(data_set, sweep_numbers)
 
