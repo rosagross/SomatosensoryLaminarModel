@@ -35,9 +35,9 @@ figure_dir = "../Figures"
 # %%
 
 # read in data
-input_durations = [0.02] #np.arange(0, 0.04, 0.001) # in sec 
-input_strengths = [12] #np.arange(0, 20, 2)
-coupling_strengths = [0, 20, 40, 60] #np.arange(0, 100, 20)
+input_durations = np.arange(0.15, 0.6, 0.05) #  np.arange(0, 0.04, 0.001) # in sec 
+input_strengths = np.arange(0, 20, 5)
+coupling_strengths = np.arange(0, 100, 40)
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 0.501
@@ -63,6 +63,7 @@ for d in input_durations:
             # LONG TERM (sample for 100ms starting at 0.5 sec after offset)
             start_sample = int((input_onset+d+sample_delay)/step_size)
             stop_sample = int(start_sample + sample_dur/step_size)
+            df['rate_longterm'] = data_df.iloc[start_sample:stop_sample].mean()
             df['minRate_longterm'] = data_df.iloc[start_sample:stop_sample].min()
             df['maxRate_longterm'] = data_df.iloc[start_sample:stop_sample].max()
             df['diffRate_longterm'] = df['maxRate_longterm'] - df['minRate_longterm']
@@ -78,15 +79,11 @@ for d in input_durations:
             offset = 0.1 # time between baseline sampling and start of input 
             baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
             baseline_stop = int(baseline_start + sample_dur/step_size)
-            df['minRate_baseline'] = data_df.iloc[baseline_start:baseline_stop].min()
-            df['maxRate_baseline'] = data_df.iloc[baseline_start:baseline_stop].max()
-            df['diffRate_baseline'] = df['maxRate_baseline'] - df['minRate_baseline']
-            plt.plot(df['diffRate_baseline'], label= f'coupling{g}')
-            plt.legend()
+            df['rate_baseline'] = data_df.iloc[baseline_start:baseline_stop].mean()
             
             # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
             # oscillate and we want to compare if the long term activity is still larger than baseline)
-            df['longtermVSbaseline'] = df['maxRate_longterm'] - df['minRate_baseline']
+            df['longtermVSbaseline'] = df['rate_longterm'] - df['rate_baseline']
             
             # set info in data frame
             df['population'] = df.index.values
@@ -153,7 +150,7 @@ plt.show()
 
 rate_measure = 'diffRate_duringInput'
 coupling_strengths = [0, 20, 40]
-input_duration = 0.02
+input_duration = 0.14
 input_strengths = [10, 12, 14]
 populations = np.array(['E1'])#,  'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
@@ -201,8 +198,8 @@ sns.heatmap(data_heatmap, cmap='magma')
     - subplot rows: coupling strengths
 '''
 
-rate_measure = 'diffRate_baseline'
-coupling_strengths = [0, 20, 40]
+rate_measure = 'longtermVSbaseline'
+coupling_strengths = [0, 40, 80]
 populations = np.array(['E1', 'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
 #populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
@@ -267,10 +264,10 @@ plt.show()
 '''
 
 # For this I need a dataframe with all timepoints
-coupling_strength = [0, 20, 40, 60]
-population = 'E1'
-input_duration = 0.02
-input_strength = 12
+coupling_strength = [0, 40, 80]
+population = 'P1'
+input_duration = 0.15
+input_strength = 15
 line_df = time_data_df.loc[time_data_df['coupling_strength'].isin(coupling_strength)]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
@@ -279,7 +276,7 @@ plt.title(f'Population:{population} Input Duration:{input_duration} Input Streng
 sns.lineplot(data=line_df, x='time', y='rate', hue='coupling_strength')
 
 figure_name = f'population{population}_inputDur{input_duration}_inputStrength{input_strength}.png'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 
 # %%
 populations = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1'])#, 'V2', 'V3', 'V4'])
