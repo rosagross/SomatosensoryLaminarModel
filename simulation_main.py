@@ -115,7 +115,7 @@ def main():
     plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths = np.arange(0, 100, 20)
+    coupling_strengths = np.arange(0, 100, 40)
     step_size = 0.001 
     simulation_time = 1.5
     cortex_type = 'somato'
@@ -124,8 +124,8 @@ def main():
     # define input
     input_type = "step" # other options are "baseline"
     input_onset = 0.501 # in sec
-    input_durations = np.arange(0.04, 0.2, 0.1) # in sec 
-    input_strengths = np.arange(0, 20, 2)
+    input_durations = np.arange(0.15, 0.6, 0.05) # in sec 
+    input_strengths = np.arange(0, 20, 5)
 
     for d in input_durations:
         print('Input duration:', d)
