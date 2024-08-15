@@ -84,18 +84,20 @@ def save_results_csv(rates, potentials, cortex_type, filedir, filename, summed=T
         cells = cells[:13]
 
     rates_df = pd.DataFrame(rates.T, columns=cells)
-    filename = 'rates' + filename + '.csv'
-    rates_df.to_csv(os.path.join(filedir, filename), index=False)
+    filename = filename + '.csv'
+    filename_rates = 'rates' + filename + '.csv'
+    rates_df.to_csv(os.path.join(filedir, filename_rates), index=False)
     
     if summed:
         potential_sum = np.zeros((rates.shape[0], rates.shape[-1])) # (16x1000)
         for i in range(rates.shape[0]):
             potential_sum[i] = np.sum(potentials[i], axis=0)
         potential_df = pd.DataFrame(potential_sum.T, columns=cells)
-        filename = 'potentials' + filename + '.csv'
+        filename = 'potentials' + filename
         potential_df.to_csv(os.path.join(filedir, filename), index=False)
     else: 
-        psp_filename = 'full_potentials_' + filename + '.csv'
+        psp_filename = 'full_potentials' + filename
+        print(potentials.shape)
         write_3D_csv(os.path.join(filedir, psp_filename), potentials)
 
 
@@ -104,6 +106,7 @@ def write_3D_csv(filename, data):
     Write results in form of a 3D numpy array into a csv file. 
     '''
     data = data.tolist()
+    print(len(data[0]))
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerows(data)
@@ -111,21 +114,21 @@ def write_3D_csv(filename, data):
 def main():
 
     save_results = True
-    save_summed_potentials = True # if True the potential matrix is 2D, otherwise 3D
+    save_summed_potentials = False # if True the potential matrix is 2D, otherwise 3D
     plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
     coupling_strengths = np.arange(0, 100, 40)
-    step_size = 0.001 
-    simulation_time = 1.5
+    step_size = 0.001
+    simulation_time = 3
     cortex_type = 'somato'
     filedir = 'output'
 
     # define input
     input_type = "step" # other options are "baseline"
-    input_onset = 0.501 # in sec
-    input_durations = np.arange(0.15, 0.6, 0.05) # in sec 
-    input_strengths = np.arange(0, 20, 5)
+    input_onset = 1.001 # in sec
+    input_durations = np.arange(0.5, 1.5, 0.5) # in sec 
+    input_strengths = np.arange(10, 50, 5)
 
     for d in input_durations:
         print('Input duration:', d)
@@ -136,7 +139,7 @@ def main():
             all_potentials = []
 
             for g in coupling_strengths:
-                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual'
+                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalPSPsJiang'
 
                 # create input array 
                 Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
