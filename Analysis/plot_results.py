@@ -25,6 +25,7 @@ from scipy.signal import find_peaks
 import seaborn as sns
 import pandas as pd
 from plotting_style import figure_style
+import ast
 
 colors, _ = figure_style() 
 
@@ -35,21 +36,24 @@ figure_dir = "../Figures"
 # %%
 
 # read in data
-input_durations = np.arange(0.15, 0.6, 0.05) #  np.arange(0, 0.04, 0.001) # in sec 
-input_strengths = np.arange(0, 20, 5)
+input_durations = np.arange(0.5, 1.5, 0.5) #  np.arange(0, 0.04, 0.001) # in sec 
+input_strengths = np.arange(10, 50, 5)
 coupling_strengths = np.arange(0, 100, 40)
 step_size = 0.001
 sample_delay = 0.5
-input_onset = 0.501
+input_onset = 1.001
 sample_dur = 0.1 # amount of time in sec in which we look at the long term firing rate (min and max)
 cortex_type = 'somato'
 load_trajectory = True
+load_full_potentials = True
+load_population_potential = 3 # the 3rd population is E3, the output layer
 
 # create summary matrix: should include (max/min_value x population   
 min_data = []
 max_data = []
 summary_df = pd.DataFrame()
 time_data_df = pd.DataFrame()
+potential_data_df = pd.DataFrame()
 
 for d in input_durations:
     for s in input_strengths:
@@ -57,7 +61,7 @@ for d in input_durations:
             df = pd.DataFrame()
 
             # read data matrix (datapoints x populations)
-            filename = f"rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual.csv"
+            filename = f"rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalPSPsJiang.csv"
             data_df = pd.read_csv(os.path.join(output_dir, filename))
 
             # LONG TERM (sample for 100ms starting at 0.5 sec after offset)
@@ -105,13 +109,37 @@ for d in input_durations:
                     pop_df['InputStrength'] = s 
                     time_data_df = pd.concat([time_data_df, pop_df])
 
+            if load_full_potentials:
+                # load potential of selected population
+                filename = f"full_potentials_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalPSPsJiang.csv"
+                potential_df = pd.read_csv(os.path.join(output_dir, filename), sep=',', header=None)
+                potential_df = potential_df.applymap(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('[') and x.endswith(']') else x)
+                potential_df = potential_df.iloc[load_population_potential]
+                longterm_pot_df = pd.DataFrame()
+
+                longterm_input = []
+                for sourcepop in potential_df:
+                    # extract the longterm behaviour
+                    longterm_input.append(sourcepop[start_sample:stop_sample])
+                
+                longterm_input = np.sum(np.array(longterm_input), axis=0)
+                longterm_mean = np.sum(longterm_input)
+                print(longterm_input.shape)
+
+                longterm_pot_df['lt_potential'] = longterm_input
+                longterm_pot_df['population'] = load_population_potential
+                longterm_pot_df['coupling_strength'] = g
+                longterm_pot_df['InputDuration'] = d
+                longterm_pot_df['InputStrength'] = s 
+                potential_data_df = pd.concat([potential_data_df, longterm_pot_df])                
+           
 # %% Make plots that demonstrate the sampling time line 
 
 # choose example settings
-coupling_strength = 40
+coupling_strength = 80
 population = 'E1'
-input_duration = 0.12
-input_strength = 4
+input_duration = 1
+input_strength = 5
 line_df = time_data_df[time_data_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
@@ -150,8 +178,8 @@ plt.show()
 
 rate_measure = 'diffRate_duringInput'
 coupling_strengths = [0, 20, 40]
-input_duration = 0.14
-input_strengths = [10, 12, 14]
+input_duration = 0.5
+input_strengths = [5, 10, 15]
 populations = np.array(['E1'])#,  'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
 #populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
@@ -162,7 +190,7 @@ for k, s in enumerate(input_strengths):
 
             # get the summary data frame
             waves_df = summary_df[summary_df['coupling_strength']==g]
-            waves_df_strength = minmax_df[minmax_df['input_strength']==s]
+            waves_df_strength = waves_df[waves_df['input_strength']==s]
 
             # plot the trajctory
             plt.plot()
@@ -180,7 +208,7 @@ for k, s in enumerate(input_strengths):
 '''
 
 # choose a coupling strength and a population
-coupling_strength = 20
+coupling_strength = 40
 population = 'E1'
 data_df = summary_df[summary_df['coupling_strength']==coupling_strength]
 data_df = data_df[data_df['population']==population]
@@ -243,7 +271,7 @@ fig.text(0.04, 0.83, 'Input Strength', va='center', rotation='vertical')
 
 plt.tight_layout(h_pad=1)
 figure_name = f'inputDurationVSinputStrength_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 # %% investigate one specific population and see how this behaves..
@@ -265,8 +293,8 @@ plt.show()
 
 # For this I need a dataframe with all timepoints
 coupling_strength = [0, 40, 80]
-population = 'P1'
-input_duration = 0.15
+population = 'P4'
+input_duration = 1
 input_strength = 15
 line_df = time_data_df.loc[time_data_df['coupling_strength'].isin(coupling_strength)]
 line_df = line_df[line_df['population']==population]
@@ -278,11 +306,36 @@ sns.lineplot(data=line_df, x='time', y='rate', hue='coupling_strength')
 figure_name = f'population{population}_inputDur{input_duration}_inputStrength{input_strength}.png'
 #plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 
+
+# %%  
+'''
+Fixed point plot
+In this plot I use the potential instead of the firing rates.
+    - x axis: input strengths 
+    - y axis: response (steady-state/longterm) in mV
+'''
+
+mean_lt = potential_data_df.groupby(['InputDuration', 'coupling_strength', 'InputStrength'], as_index=False).mean()
+
+# For this I need a dataframe with all timepoints
+coupling_strength = 80
+population = 3
+input_duration = 0.5
+input_strength = np.arange(10, 50, 5)
+line_df = mean_lt[mean_lt['coupling_strength']==coupling_strength]
+line_df = line_df[line_df['population']==population]
+line_df = line_df[line_df['InputDuration']==input_duration]
+plt.title(f'Population:{population} Input Duration:{input_duration} Input Strength{input_strength}')
+sns.lineplot(data=line_df, x='InputStrength', y='lt_potential') # , hue='coupling_strength')
+
+figure_name = f'fixedPointCurve_population{population}_inputDur{input_duration}_G{coupling_strength}.png'
+#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+
 # %%
 populations = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1'])#, 'V2', 'V3', 'V4'])
 
 fig, axes = plt.subplots(4, 4 ,sharex=True, sharey=False)
-
+coupling_strength = 40
 for ax, pop in zip(axes.flatten(), populations):
     line_df = time_data_df[time_data_df['coupling_strength']==coupling_strength]
     line_df = line_df[line_df['population']==pop]
@@ -305,5 +358,7 @@ Look at the change of rate difference comparing populations
 - hue: populations 
 '''
 
-# %% Plot the difference to the baseline
+
+
+# %% 
 
