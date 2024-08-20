@@ -158,5 +158,5 @@ fig = plt.figure(figsize=[2,10])
 
 somato_Wext = params_somato.get_connectivity(1, include_Iext=True)[:, -1:]
 sns.heatmap(somato_Wext, yticklabels=plot_populations[:-3])
-plt.savefig('Figures/Wext_somato.pdf', bbox_inches='tight')
+#plt.savefig('Figures/Wext_somato.pdf', bbox_inches='tight')
 plt.show()
