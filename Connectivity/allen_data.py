@@ -6,7 +6,9 @@ from allensdk.api.queries.cell_types_api import CellTypesApi
 from allensdk.core.cell_types_cache import ReporterStatus as RS
 import pandas as pd
 import numpy as np
+import seaborn as sns
 import matplotlib.pyplot as plt
+from scipy.interpolate import BPoly
 from pathlib import Path
 output_dir = '.'
 import os
@@ -37,7 +39,7 @@ L4 = [585058163, 577821067]
 L5 = [585018101, 584635140]
 L6b = 504179737
 
-current_specifmen_id = L4[0]
+current_specifmen_id = L23
 data_set = ctc.get_ephys_data(current_specifmen_id)
 
 
@@ -50,7 +52,13 @@ print("Ephys. features available for %d cells" % len(ef_df))
 cell_ephys_features = ef_df[ef_df['specimen_id']== current_specifmen_id]
 
 # %% 
+# Extract sweep numbers
+# Make sure that data_set contains the sweep information, check documentation for exact methods
+sweep_numbers = data_set.get_sweep_numbers()
 
+print("Available Sweep Numbers:", sweep_numbers)
+
+# %% EXAMPLE of one sweep
 sweep_number = 38
 sweep_data = data_set.get_sweep(sweep_number)
 
@@ -84,8 +92,7 @@ axes[1].set_ylabel("pA")
 axes[1].set_xlabel("seconds")
 plt.show()
 
-# %% Plot the f-i curve 
-# Example usage
+# %% ALL SWEEPS
 
 # Fetch the sweep table to find sweeps of interest
 sweep_info = ctc.get_ephys_sweeps(current_specifmen_id)
@@ -121,16 +128,58 @@ for sweep_number in sweep_numbers:
     else:
         firing_rate = 0
     stimulus_intensity = np.max(i)
-    fi_curve.append((i, v))
+    fi_curve.append((stimulus_intensity, firing_rate))
+    
+    vi_curve.append((i, v))
 
-# %% 
 
-for curve in fi_curve:
-    plt.scatter(curve[0], curve[1])
+# %% Plot VI-curve
+total_v = np.array([])
+total_i = np.array([])
+for curve in vi_curve:
+    #plt.scatter(curve[0], curve[1])
+    array_curve = np.array(curve)
+    sorted_inputs = np.argsort(array_curve[0])
+    sorted_curve = array_curve[:, sorted_inputs]
+    total_i = np.concatenate([total_i, sorted_curve[0]])
+    total_v = np.concatenate([total_v, sorted_curve[1]])
 
-plt.show()
+vi_array = pd.DataFrame(np.array([total_i,total_v]).T, columns=['I', 'V'])
+vi_array = vi_array.groupby(['I'], as_index=False).mean()
+vi_array = vi_array[vi_array['I']<150]
+sns.lineplot(vi_array, x='I', y='V')
+sns.scatterplot(vi_array, x='I', y='V')
 
 #fi_curve = calculate_fi_curve(data_set, sweep_numbers)
+
+# %% Extrapolate curve 
+# the goal is to get the relationship between potential and firing rate
+# to extract the steepness of the sigmoidal curve
+
+x = vi_array['I']
+y = vi_array['V']
+
+# Define the degree of the polynomial
+degree = 3  # Change this based on how complex you believe the relationship is
+coefficients = np.polyfit(x,y,degree)
+polynomial = np.poly1d(coefficients)
+
+# Extrapolate up to I=300
+extrapolated_I = np.linspace(min(x), 300, num=100)  # More points for smoother plot
+extrapolated_V = polynomial(extrapolated_I)
+
+plt.figure(figsize=(10, 5))
+plt.plot(x, y, 'o', label='Original data')
+plt.plot(extrapolated_I, extrapolated_V, '-', label='Extrapolated data')
+plt.xlabel('I')
+plt.ylabel('V')
+plt.title('Extrapolation of Electrical Data')
+plt.legend()
+plt.grid(True)
+plt.show()
+
+# Sample values from the extrapolated graph
+extrapolated_VIcurve = 
 
 # %%
 currents, firing_rates = zip(*fi_curve)

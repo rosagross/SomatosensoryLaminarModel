@@ -74,7 +74,7 @@ def create_Iext(simulation_time, step_size, input_onset, input_duration, input_s
 
     return Iext
 
-def save_results_csv(rates, potentials, cortex_type, filedir, filename, summed=True):
+def save_results_csv(rates, potentials, cortex_type, filedir, filename, full=False):
     '''
     Safe the simulated data in a csv file
     '''    
@@ -85,19 +85,20 @@ def save_results_csv(rates, potentials, cortex_type, filedir, filename, summed=T
 
     rates_df = pd.DataFrame(rates.T, columns=cells)
     filename = filename + '.csv'
-    filename_rates = 'rates' + filename + '.csv'
+    filename_rates = 'rates' + filename
     rates_df.to_csv(os.path.join(filedir, filename_rates), index=False)
-    
-    if summed:
-        potential_sum = np.zeros((rates.shape[0], rates.shape[-1])) # (16x1000)
-        for i in range(rates.shape[0]):
-            potential_sum[i] = np.sum(potentials[i], axis=0)
-        potential_df = pd.DataFrame(potential_sum.T, columns=cells)
-        filename = 'potentials' + filename
-        potential_df.to_csv(os.path.join(filedir, filename), index=False)
-    else: 
+
+    # sum the potentials together and save them 
+    potential_sum = np.zeros((rates.shape[0], rates.shape[-1])) # (16x1000)
+    for i in range(rates.shape[0]):
+        potential_sum[i] = np.sum(potentials[i], axis=0)
+    potential_df = pd.DataFrame(potential_sum.T, columns=cells)
+    filename = 'potentials' + filename
+    potential_df.to_csv(os.path.join(filedir, filename), index=False)
+
+    if full:
+        # save all potentials additionally
         psp_filename = 'full_potentials' + filename
-        print(potentials.shape)
         write_3D_csv(os.path.join(filedir, psp_filename), potentials)
 
 
@@ -106,7 +107,6 @@ def write_3D_csv(filename, data):
     Write results in form of a 3D numpy array into a csv file. 
     '''
     data = data.tolist()
-    print(len(data[0]))
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerows(data)
@@ -114,11 +114,11 @@ def write_3D_csv(filename, data):
 def main():
 
     save_results = True
-    save_summed_potentials = False # if True the potential matrix is 2D, otherwise 3D
+    save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
     plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths = np.arange(0, 100, 40)
+    coupling_strengths = np.arange(0, 50, 10)
     step_size = 0.001
     simulation_time = 3
     cortex_type = 'somato'
@@ -127,8 +127,8 @@ def main():
     # define input
     input_type = "step" # other options are "baseline"
     input_onset = 1.001 # in sec
-    input_durations = np.arange(0.5, 1.5, 0.5) # in sec 
-    input_strengths = np.arange(10, 50, 5)
+    input_durations = np.arange(0, 1.5, 0.25) # in sec 
+    input_strengths = np.arange(0, 20, 2)
 
     for d in input_durations:
         print('Input duration:', d)
@@ -139,7 +139,7 @@ def main():
             all_potentials = []
 
             for g in coupling_strengths:
-                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalPSPsJiang'
+                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalJi'
 
                 # create input array 
                 Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
@@ -152,7 +152,7 @@ def main():
                 all_potentials.append(potential)
 
                 if save_results:
-                    save_results_csv(rate, potential, cortex_type, filedir, filename, save_summed_potentials)
+                    save_results_csv(rate, potential, cortex_type, filedir, filename, save_full_potentials)
 
             all_rates = np.array(all_rates)
             all_potentials = np.array(all_potentials)

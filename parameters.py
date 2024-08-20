@@ -183,8 +183,9 @@ class Parameter():
             #Wext[1] = 1
 
             # TODO: implement thalamus connectivity based on Ji et al. 2016
-            #Wext = np.([0.225, 1, ])
-
+            Wext = np.array([0.8488, 1, 0.44019, 0.2856, 0.9095, 2.5837, 1.3860, 0.7833, 0, 0.0140, 0, 0, 0])
+            Wext = np.expand_dims(Wext,1)
+            
 
         # Extracting submatrices based on the defined index sets
         Wee = W[np.ix_(iE, iE)]

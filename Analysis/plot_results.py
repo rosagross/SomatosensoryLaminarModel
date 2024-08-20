@@ -1,11 +1,11 @@
 '''
 Plots:
-1) Effect of input intensity and duration on firing rates
+1) Effect of input intensity and duration on firing rates and potentials
     - plot style: heatmap
     - y axis: intensity
     - x axis: duration
-    1.1) SINGLE PLOT
-    1.2) MULTI PLOT
+    1.1) SINGLE PLOT - RATES
+    1.2) SINGLE PLOT - POTENTIALS
     1.3) Line Plot: 
         - x axis: time  
         - y axis: rate (Hz)
@@ -20,11 +20,13 @@ import numpy as np
 import os
 from matplotlib.ticker import FormatStrFormatter, FuncFormatter, FormatStrFormatter
 import matplotlib.pyplot as plt
+import matplotlib.patches as mpatches
 from matplotlib.colors import ListedColormap, Normalize
 from scipy.signal import find_peaks
 import seaborn as sns
 import pandas as pd
 from plotting_style import figure_style
+from helper_functions import *
 import ast
 
 colors, _ = figure_style() 
@@ -36,111 +38,30 @@ figure_dir = "../Figures"
 # %%
 
 # read in data
-input_durations = np.arange(0.5, 1.5, 0.5) #  np.arange(0, 0.04, 0.001) # in sec 
-input_strengths = np.arange(10, 50, 5)
-coupling_strengths = np.arange(0, 100, 40)
+input_durations = [0.25] # np.arange(0, 1.5, 0.25) # in sec 
+input_strengths = [4, 16] #np.arange(0, 20, 2)
+coupling_strengths = [20, 40] # np.arange(0, 50, 10)
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 1.001
 sample_dur = 0.1 # amount of time in sec in which we look at the long term firing rate (min and max)
 cortex_type = 'somato'
+thalamus_source = 'thalJi'
 load_trajectory = True
-load_full_potentials = True
+load_full_potentials = False
 load_population_potential = 3 # the 3rd population is E3, the output layer
 
-# create summary matrix: should include (max/min_value x population   
-min_data = []
-max_data = []
-summary_df = pd.DataFrame()
-time_data_df = pd.DataFrame()
-potential_data_df = pd.DataFrame()
-
-for d in input_durations:
-    for s in input_strengths:
-        for g in coupling_strengths:
-            df = pd.DataFrame()
-
-            # read data matrix (datapoints x populations)
-            filename = f"rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalPSPsJiang.csv"
-            data_df = pd.read_csv(os.path.join(output_dir, filename))
-
-            # LONG TERM (sample for 100ms starting at 0.5 sec after offset)
-            start_sample = int((input_onset+d+sample_delay)/step_size)
-            stop_sample = int(start_sample + sample_dur/step_size)
-            df['rate_longterm'] = data_df.iloc[start_sample:stop_sample].mean()
-            df['minRate_longterm'] = data_df.iloc[start_sample:stop_sample].min()
-            df['maxRate_longterm'] = data_df.iloc[start_sample:stop_sample].max()
-            df['diffRate_longterm'] = df['maxRate_longterm'] - df['minRate_longterm']
-            
-            # DURING INPUT
-            start_sample_during = int((input_onset)/step_size)
-            stop_sample_during = int((input_onset+d)/step_size)
-            df['minRate_duringInput'] = data_df.iloc[start_sample_during:stop_sample_during].min()
-            df['maxRate_duringInput'] = data_df.iloc[start_sample_during:stop_sample_during].max()
-            df['diffRate_duringInput'] = df['maxRate_duringInput'] - df['minRate_duringInput']
-        
-            # BASELINE SAMPLE
-            offset = 0.1 # time between baseline sampling and start of input 
-            baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
-            baseline_stop = int(baseline_start + sample_dur/step_size)
-            df['rate_baseline'] = data_df.iloc[baseline_start:baseline_stop].mean()
-            
-            # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
-            # oscillate and we want to compare if the long term activity is still larger than baseline)
-            df['longtermVSbaseline'] = df['rate_longterm'] - df['rate_baseline']
-            
-            # set info in data frame
-            df['population'] = df.index.values
-            df['coupling_strength'] = g
-            df['InputDuration'] = d
-            df['InputStrength'] = s
-            summary_df = pd.concat([summary_df, df])
-
-            if load_trajectory:
-                # load entire trajectory in data frame
-                for pop_name, pop in data_df.items():
-                    #print(pop_name)
-                    pop_df = pd.DataFrame()
-                    pop_df['population'] = [pop_name]*len(pop)
-                    pop_df['rate'] = pop
-                    pop_df['time'] = pop.index.values * 1e-3 # time in s
-                    pop_df['coupling_strength'] = g
-                    pop_df['InputDuration'] = d
-                    pop_df['InputStrength'] = s 
-                    time_data_df = pd.concat([time_data_df, pop_df])
-
-            if load_full_potentials:
-                # load potential of selected population
-                filename = f"full_potentials_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalPSPsJiang.csv"
-                potential_df = pd.read_csv(os.path.join(output_dir, filename), sep=',', header=None)
-                potential_df = potential_df.applymap(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('[') and x.endswith(']') else x)
-                potential_df = potential_df.iloc[load_population_potential]
-                longterm_pot_df = pd.DataFrame()
-
-                longterm_input = []
-                for sourcepop in potential_df:
-                    # extract the longterm behaviour
-                    longterm_input.append(sourcepop[start_sample:stop_sample])
-                
-                longterm_input = np.sum(np.array(longterm_input), axis=0)
-                longterm_mean = np.sum(longterm_input)
-                print(longterm_input.shape)
-
-                longterm_pot_df['lt_potential'] = longterm_input
-                longterm_pot_df['population'] = load_population_potential
-                longterm_pot_df['coupling_strength'] = g
-                longterm_pot_df['InputDuration'] = d
-                longterm_pot_df['InputStrength'] = s 
-                potential_data_df = pd.concat([potential_data_df, longterm_pot_df])                
-           
+summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, 
+                        step_size, sample_delay, input_onset, sample_dur, cortex_type, thalamus_source, load_trajectory, load_full_potentials, load_population_potential)
+    
 # %% Make plots that demonstrate the sampling time line 
 
 # choose example settings
-coupling_strength = 80
-population = 'E1'
-input_duration = 1
-input_strength = 5
-line_df = time_data_df[time_data_df['coupling_strength']==coupling_strength]
+coupling_strength = 20
+population = 'E3'
+input_duration = 0.25
+input_strength = 16
+line_df = trajectory_df[trajectory_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
 line_df = line_df[line_df['InputStrength']==input_strength]
@@ -154,57 +75,37 @@ input_offset = input_onset + input_duration
 offset = 0.1 # time between baseline sampling and start of input 
 baseline_start = input_onset - (sample_dur+offset)
 baseline_stop = baseline_start + sample_dur
+plotting_cut = 400
 
 # plot the input
 steps = np.arange(step_size, simulation_time+step_size, step_size)
 input_line = np.zeros(len(line_df))
 input_line[int((input_onset)/step_size):int(input_offset/step_size)] = input_strength
-plt.plot(steps, input_line, color='green', linewidth=2)
-sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
+fig = plt.figure(figsize=(10,5))
+plt.plot(steps[:-plotting_cut], input_line[:-plotting_cut], color='green', linewidth=2)
+sns.lineplot(data=line_df[:-plotting_cut], x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
+#sns.lineplot(data=line_df[:-plotting_cut], x='time', y='potential', hue='InputStrength', legend='', palette=['grey'])
 plt.axvline(x=baseline_start, color='purple', linestyle='--', linewidth=1, label='Baseline Sample')
 plt.axvline(x=baseline_stop, color='purple', linestyle='--', linewidth=1, label='')
 plt.axvline(x=start_sample, color='red', linestyle='--', linewidth=1, label='Long Term Sample')
 plt.axvline(x=stop_sample, color='red', linestyle='--', linewidth=1, label='')
 plt.axvline(x=input_onset, color='blue', linestyle='--', linewidth=1, label='During Input Sample')
 plt.axvline(x=input_offset, color='blue', linestyle='--', linewidth=1, label='')
+
+plt.ylabel('Rate (Hz)')
+plt.xlabel('Time (sec)')
 plt.legend()
-#plt.savefig('../Figures/plotting_windows.pdf')
+plt.savefig('../Figures/plotting_windows.pdf')
 plt.show()
-
-# %% OSCIALLTIONS
-
-# Find the combination in which the output is oscillatory
-# For this plot the difference values 
-
-rate_measure = 'diffRate_duringInput'
-coupling_strengths = [0, 20, 40]
-input_duration = 0.5
-input_strengths = [5, 10, 15]
-populations = np.array(['E1'])#,  'E2', 'E3', 'E4']) 
-#populations = np.array(['P1', 'P2', 'P3', 'P4']) 
-#populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
-
-for k, s in enumerate(input_strengths):
-    for i,g in enumerate(coupling_strengths):
-        for j,p in enumerate(populations):
-
-            # get the summary data frame
-            waves_df = summary_df[summary_df['coupling_strength']==g]
-            waves_df_strength = waves_df[waves_df['input_strength']==s]
-
-            # plot the trajctory
-            plt.plot()
-
-            # compute the amount of peaks
-
 
 # %%
 
 '''
-1.1) SINGLE PLOT: Effect of input intensity and duration on firing rates
+1.1) SINGLE PLOT: Effect of input intensity and duration on firing rates in the steady state in comparison to the baseline
     - plot style: heatmap
     - y axis: intensity
     - x axis: duration
+    - measure: longtermVSbaseline rate
 '''
 
 # choose a coupling strength and a population
@@ -212,8 +113,66 @@ coupling_strength = 40
 population = 'E1'
 data_df = summary_df[summary_df['coupling_strength']==coupling_strength]
 data_df = data_df[data_df['population']==population]
-data_heatmap = data_df.pivot(index='InputDuration',columns='InputStrength', values='minRate_duringInput')
+data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_rate')
 sns.heatmap(data_heatmap, cmap='magma')
+
+# %%
+'''
+1.2) SINGLE PLOT: Effect of input intensity and duration on potentials in the steady state in comparison to the baseline
+    - plot style: heatmap
+    - y axis: intensity
+    - x axis: duration
+    - measure: longtermVSbaseline potential
+'''
+
+# choose a coupling strength and a population
+coupling_strength = 40
+population = 'E1'
+data_df = summary_df[summary_df['coupling_strength']==coupling_strength]
+data_df = data_df[data_df['population']==population]
+data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_potential')
+sns.heatmap(data_heatmap, cmap='magma')
+
+# %% 
+'''
+1.3) MULTI PLOT: Effect of input intensity and duration on dynamic behaviour (non-responsive, transfer and memory)
+    - plot style: heatmap
+    - y axis: intensity
+    - x axis: duration
+    - plotwise: coupling strength
+    - measure: dynamic function 
+'''
+
+# choose a coupling strength and a population
+coupling_strengths = [20,40]
+population = 'E3'
+data_df = summary_df[summary_df['population']==population]
+
+fig, ax = plt.subplots(2, 1)
+
+n = 3 # there are three different functions of the dynamics --> make discrete colormap
+cmap = sns.color_palette("Pastel2", n)
+for axis, G in zip(ax, coupling_strengths):
+    plot_df = data_df[data_df['coupling_strength']==G]
+    data_heatmap = plot_df.pivot(index='InputStrength',columns='InputDuration', values='dynamic_function_potential')
+    sns.heatmap(data_heatmap, cmap=cmap, cbar=False, ax=axis)
+
+# reconstruct color map
+# add legend
+box = ax[-1].get_position()
+ax[-1].set_position([box.x0, box.y0, box.width * 0.7, box.height])
+
+# add color map to legend
+legend_ax = fig.add_axes([.7, .5, 1, .1])
+legend_ax.axis('off')
+patches = [mpatches.Patch(facecolor=c, edgecolor=c) for c in cmap]
+legend = legend_ax.legend(patches,
+    ['non-responsive', 'transfer', 'memory'],
+    handlelength=0.8, loc='lower left')
+for t in legend.get_texts():
+    t.set_ha("left")
+
+#plt.show()
 
 # %%
 
@@ -296,7 +255,7 @@ coupling_strength = [0, 40, 80]
 population = 'P4'
 input_duration = 1
 input_strength = 15
-line_df = time_data_df.loc[time_data_df['coupling_strength'].isin(coupling_strength)]
+line_df = trajectory_df.loc[trajectory_df['coupling_strength'].isin(coupling_strength)]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
 line_df = line_df[line_df['InputStrength']==input_strength]
@@ -315,11 +274,11 @@ In this plot I use the potential instead of the firing rates.
     - y axis: response (steady-state/longterm) in mV
 '''
 
-mean_lt = potential_data_df.groupby(['InputDuration', 'coupling_strength', 'InputStrength'], as_index=False).mean()
+mean_lt = potentials_df.groupby(['InputDuration', 'coupling_strength', 'InputStrength'], as_index=False).mean()
 
 # For this I need a dataframe with all timepoints
 coupling_strength = 80
-population = 3
+population = 1
 input_duration = 0.5
 input_strength = np.arange(10, 50, 5)
 line_df = mean_lt[mean_lt['coupling_strength']==coupling_strength]
@@ -337,7 +296,7 @@ populations = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S
 fig, axes = plt.subplots(4, 4 ,sharex=True, sharey=False)
 coupling_strength = 40
 for ax, pop in zip(axes.flatten(), populations):
-    line_df = time_data_df[time_data_df['coupling_strength']==coupling_strength]
+    line_df = trajectory_df[trajectory_df['coupling_strength']==coupling_strength]
     line_df = line_df[line_df['population']==pop]
     line_df = line_df[line_df['InputDuration']==input_duration]
     sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength', ax=ax)
