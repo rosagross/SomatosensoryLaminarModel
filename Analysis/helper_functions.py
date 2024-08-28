@@ -71,7 +71,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                 df['duringInputVSbaseline_potential'] = df['potential_duringInput'] - df['potential_baseline']
                 
                 # name the behaviour switch through, memory and non reponsive
-                #! TODO: adjust the thrshold values for dynamic functions 
+                #! TODO: adjust the threshold values for dynamic functions 
                 non_responsive = np.abs(df['duringInputVSbaseline_rate'])<0.1
                 transfer = ((np.abs(df['duringInputVSbaseline_rate'])>0.1) & (np.abs(df['longtermVSbaseline_rate'])<0.1))
                 memory = (np.abs(df['longtermVSbaseline_rate'])>0.1)
@@ -79,9 +79,12 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                 df.loc[transfer,'dynamic_function_rate'] = 2 # 'transfer'
                 df.loc[memory,'dynamic_function_rate'] = 3 # 'memory'
                 
-                non_responsive = np.abs(df['duringInputVSbaseline_potential'])<0.1
-                transfer = ((np.abs(df['duringInputVSbaseline_potential'])>0.1) & (np.abs(df['longtermVSbaseline_potential'])<0.1))
-                memory = (np.abs(df['longtermVSbaseline_potential'])>0.1)
+                non_responsive = np.abs(df['duringInputVSbaseline_potential'])<0.001
+                transfer = ((np.abs(df['duringInputVSbaseline_potential'])>0.001) & (np.abs(df['longtermVSbaseline_potential'])<0.1))
+                memory = (np.abs(df['longtermVSbaseline_potential'])>0.001)
+                if d == 1.5:
+                    print('Non responsive potential', non_responsive)
+
                 df.loc[non_responsive,'dynamic_function_potential'] = 1 #'non-responsive'
                 df.loc[transfer,'dynamic_function_potential'] = 2 #'transfer'
                 df.loc[memory,'dynamic_function_potential'] = 3 #'memory'

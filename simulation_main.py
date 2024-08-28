@@ -127,7 +127,7 @@ def main():
     # define input
     input_type = "step" # other options are "baseline"
     input_onset = 1.001 # in sec
-    input_durations = np.arange(0, 1.5, 0.25) # in sec 
+    input_durations = np.arange(0, 2, 0.5) # in sec 
     input_strengths = np.arange(0, 20, 2)
 
     for d in input_durations:
@@ -139,7 +139,7 @@ def main():
             all_potentials = []
 
             for g in coupling_strengths:
-                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalJi'
+                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalIsbJiang'
 
                 # create input array 
                 Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
