@@ -4,12 +4,12 @@ Plots:
     - plot style: heatmap
     - y axis: intensity
     - x axis: duration
-    1.1) SINGLE PLOT - RATES
-    1.2) SINGLE PLOT - POTENTIALS
-    1.3) Line Plot: 
-        - x axis: time  
-        - y axis: rate (Hz)
-        - line color: input strengths
+    1.1) Line plot, single population - plots trajectory
+    1.2) Heatmap, single population - difference between longterm and baseline 
+    1.3) Heatmap, single population - plots the different dynamic functions (memory, transfer, ..) 
+        - x axis: input duration  
+        - y axis: input strength
+        - color map: dynamic functions
 2) Interaction of stimulus intensity and coupling strength 
 3) Effect of connection strength from and to PV interneurons
     - 
@@ -37,21 +37,22 @@ figure_dir = "../Figures"
 # %%
 
 # read in data
-input_durations = [1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
-input_strengths = [4, 10, 16, 18] # np.arange(0, 20, 2)
+input_durations = [0.0, 0.5, 1.0] # np.arange(0, 2, 0.25) # in sec 
+input_strengths = np.arange(0, 80, 5) # np.arange(0, 20, 2)
 coupling_strengths = [0, 10, 20, 30, 40] #[0, 10, 20, 30, 40] # np.arange(0, 50, 10)
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 1.001
 sample_dur = 0.1 # amount of time in sec in which we look at the long term firing rate (min and max)
 cortex_type = 'somato'
-thalamus_source = 'thalJi'
+stimulation_type = 'step'
+thalamus_source = 'thalJiang'
 load_trajectory = True
 load_full_potentials = False
 load_population_potential = 3 # the 3rd population is E3, the output layer
 
 summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, 
-                        step_size, sample_delay, input_onset, sample_dur, cortex_type, thalamus_source, load_trajectory, load_full_potentials, load_population_potential)
+                        step_size, sample_delay, input_onset, sample_dur, cortex_type, stimulation_type, thalamus_source, load_trajectory, load_full_potentials, load_population_potential)
     
 # %% Make plots that demonstrate the sampling time line 
 
@@ -59,7 +60,7 @@ summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, fig
 coupling_strength = 10
 population = 'E3'
 input_duration = 0.5
-input_strength = 16
+input_strength = 70
 line_df = trajectory_df[trajectory_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
@@ -96,7 +97,7 @@ plt.axvspan(input_onset, input_offset, alpha=0.2, color='blue')
 plt.ylabel('Rate (Hz)')
 plt.xlabel('Time (sec)')
 plt.legend()
-plt.savefig('../Figures/plotting_windows.pdf')
+plt.savefig('/data/tu_grossmannr/IMPRS_SummerSchool/PosterFigures//plotting_windows.pdf')
 plt.show()
 
 # %%
@@ -109,10 +110,10 @@ plt.show()
 '''
 
 # choose example settings
-coupling_strength = 20
+coupling_strength = 10
 population = 'E3'
 input_duration = 1
-input_strength = 10
+input_strength = 35
 line_df = trajectory_df[trajectory_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
@@ -174,28 +175,13 @@ cmap = sns.color_palette("Pastel2", n)
 for axis, G in zip(ax, coupling_strengths):
     plot_df = data_df[data_df['coupling_strength']==G]
     data_heatmap = plot_df.pivot(index='InputStrength',columns='InputDuration', values='dynamic_function_potential')
-    sns.heatmap(data_heatmap, cmap=cmap, cbar=False, ax=axis, )
+    sns.heatmap(data_heatmap, cmap=cmap, cbar=True, ax=axis, vmin=1, vmax=3, cbar_kws={'ticks': [1, 2, 3]})
     axis.set_ylabel('')
     axis.set_xlabel('Input Duration')
     axis.invert_yaxis()
     axis.set_title(f'G = {G}')
 
 ax[0].set_ylabel('Input Strength')
-
-# reconstruct color map
-# add legend
-#box = ax[-1].get_position()
-#ax[-1].set_position([box.x0, box.y0, box.width * 0.7, box.height])
-
-# add color map to legend
-legend_ax = fig.add_axes([.01, 1.2, 1, .1])
-legend_ax.axis('off')
-patches = [mpatches.Patch(facecolor=c, edgecolor=c) for c in cmap]
-legend = legend_ax.legend(patches,
-    ['non-responsive', 'transfer', 'memory'])
-    #handlelength=0.8, loc='lower left')
-#for t in legend.get_texts():
-#    t.set_ha("left")
 
 plt.tight_layout(h_pad=1)
 figure_name = f'dynamicFunctions_{population}pop_tauVisual_{thalamus_source}.pdf'

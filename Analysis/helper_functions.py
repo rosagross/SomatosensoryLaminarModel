@@ -9,7 +9,7 @@ import pandas as pd
 import ast
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, 
-                        step_size, sample_delay, input_onset, sample_dur, cortex_type,
+                        step_size, sample_delay, input_onset, sample_dur, cortex_type, stimulation_type,
                         thalamus_source, load_trajectory, load_full_potentials, load_population_potential = 3):
     
     # create summary matrix: should include (max/min_value x population   
@@ -25,11 +25,11 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                 df = pd.DataFrame()
 
                 # read in firing rates in data matrix (datapoints x populations)
-                filename_rates = f"rates_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
+                filename_rates = f"rates_G{g}_{cortex_type}_Iduration{d}_{stimulation_type}Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
                 rates_df = pd.read_csv(os.path.join(output_dir, filename_rates))
                 
                 # read in potentials in data matrix (datapoints x populations)
-                filename_potentials = f"potentials_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
+                filename_potentials = f"potentials_G{g}_{cortex_type}_Iduration{d}_{stimulation_type}Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
                 potentials_df = pd.read_csv(os.path.join(output_dir, filename_potentials))
 
                 # LONG TERM (sample for 100ms starting at 0.5 sec after offset)
@@ -80,10 +80,14 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                 df.loc[memory,'dynamic_function_rate'] = 3 # 'memory'
                 
                 non_responsive = np.abs(df['duringInputVSbaseline_potential'])<0.001
-                transfer = ((np.abs(df['duringInputVSbaseline_potential'])>0.001) & (np.abs(df['longtermVSbaseline_potential'])<0.1))
+                transfer = ((np.abs(df['duringInputVSbaseline_potential'])>0.001) & (np.abs(df['longtermVSbaseline_potential'])<0.001))
                 memory = (np.abs(df['longtermVSbaseline_potential'])>0.001)
+
                 if d == 1.5:
-                    print('Non responsive potential', non_responsive)
+                    if (not non_responsive[2]) & (not transfer[2]) & (not memory[2]): 
+                        print('no function')
+                        print(np.abs(df['duringInputVSbaseline_potential'][2]))
+                        print(np.abs(df['longtermVSbaseline_potential'][2]))
 
                 df.loc[non_responsive,'dynamic_function_potential'] = 1 #'non-responsive'
                 df.loc[transfer,'dynamic_function_potential'] = 2 #'transfer'
