@@ -175,14 +175,14 @@ class Parameter():
             # now create the external input matrix, based on thalamus connectivity (average of findings, see FinalConnectivity_PSPs.ods)
             # order: 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1'
             S_thal_jiang = np.array([0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0]) # postsynaptic potentials!
-            S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # postsynaptic potentials!
+            S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # based on Isbister & jiang 
             P_thal = np.array([6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0])*1e-2    
-            Wext = np.expand_dims(P_thal * S_thal,1)
+            Wext = np.expand_dims(P_thal * S_thal_jiang,1)
 
             #Wext = np.zeros((nPop,1))
             #Wext[1] = 1
 
-            # TODO: implement thalamus connectivity based on Ji et al. 2016
+            # thalamus connectivity based on Ji et al. 2016
             #Wext = np.array([0.8488, 1, 0.44019, 0.2856, 0.9095, 2.5837, 1.3860, 0.7833, 0, 0.0140, 0, 0, 0])
             #Wext = np.expand_dims(Wext,1)
             

@@ -71,6 +71,9 @@ def create_Iext(simulation_time, step_size, input_onset, input_duration, input_s
         t  = int(input_duration/step_size)
         t0 = int(input_onset/step_size)
         Iext[t0:t0+t] = input_strength
+    elif input_type == "background":
+        # provide input for the entire simulation duration 
+        Iext[:] = input_strength
 
     return Iext
 
@@ -125,10 +128,10 @@ def main():
     filedir = 'output'
 
     # define input
-    input_type = "step" # other options are "baseline"
+    input_type = "step" # other options are "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
     input_durations = np.arange(0, 2, 0.5) # in sec 
-    input_strengths = np.arange(0, 20, 2)
+    input_strengths = np.arange(0, 40, 5)
 
     for d in input_durations:
         print('Input duration:', d)
@@ -139,7 +142,7 @@ def main():
             all_potentials = []
 
             for g in coupling_strengths:
-                filename = f'_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_thalIsbJiang'
+                filename = f'_G{g}_{cortex_type}_Iduration{d}_{input_type}Istrength{s}_Ionset{input_onset}_tauVisual_thalJiang'
 
                 # create input array 
                 Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)

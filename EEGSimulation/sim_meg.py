@@ -90,15 +90,8 @@ def plot_dipoles(simDipoles):
         axes[0].plot(steps, simDipoles[i, start:stop], label=names)
     axes[0].legend()
     axes[1].plot(steps, simMEG[start:stop], label='averaged')
-    axes[0].set_ylabel('Time (s)')
-    axes[0].set_xlabel('ECD')
-    axes[1].set_xlabel('ECD')
+    axes[0].set_xlabel('Time (s)')
+    axes[0].set_ylabel('ECD')
+    axes[1].set_ylabel('ECD')
     axes[1].legend()
-
-
-filename = 'full_potentials_G20_visual_Iduration0.02_Istrength5_Ionset0.501.csv'
-data_dir = '../output/'
-
-dipole_setting = []
-nCells = [16, 4, 4, 4, 4]
-sim_dip = simDipoles(nCells, )
+    
