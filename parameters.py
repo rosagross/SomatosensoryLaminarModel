@@ -177,14 +177,14 @@ class Parameter():
             S_thal_jiang = np.array([0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0]) # postsynaptic potentials!
             S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # postsynaptic potentials!
             P_thal = np.array([6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0])*1e-2    
-            Wext = np.expand_dims(P_thal * S_thal_jiang,1)
+            Wext = np.expand_dims(P_thal * S_thal,1)
 
             #Wext = np.zeros((nPop,1))
             #Wext[1] = 1
 
             # TODO: implement thalamus connectivity based on Ji et al. 2016
-            Wext = np.array([0.8488, 1, 0.44019, 0.2856, 0.9095, 2.5837, 1.3860, 0.7833, 0, 0.0140, 0, 0, 0])
-            Wext = np.expand_dims(Wext,1)
+            #Wext = np.array([0.8488, 1, 0.44019, 0.2856, 0.9095, 2.5837, 1.3860, 0.7833, 0, 0.0140, 0, 0, 0])
+            #Wext = np.expand_dims(Wext,1)
             
 
         # Extracting submatrices based on the defined index sets

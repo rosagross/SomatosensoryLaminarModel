@@ -27,7 +27,6 @@ import seaborn as sns
 import pandas as pd
 from plotting_style import figure_style
 from helper_functions import *
-import ast
 
 colors, _ = figure_style() 
 
@@ -38,9 +37,9 @@ figure_dir = "../Figures"
 # %%
 
 # read in data
-input_durations = [0.25] # np.arange(0, 1.5, 0.25) # in sec 
-input_strengths = [4, 16] #np.arange(0, 20, 2)
-coupling_strengths = [20, 40] # np.arange(0, 50, 10)
+input_durations = [1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
+input_strengths = [4, 10, 16, 18] # np.arange(0, 20, 2)
+coupling_strengths = [0, 10, 20, 30, 40] #[0, 10, 20, 30, 40] # np.arange(0, 50, 10)
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 1.001
@@ -57,9 +56,9 @@ summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, fig
 # %% Make plots that demonstrate the sampling time line 
 
 # choose example settings
-coupling_strength = 20
+coupling_strength = 10
 population = 'E3'
-input_duration = 0.25
+input_duration = 0.5
 input_strength = 16
 line_df = trajectory_df[trajectory_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
@@ -82,16 +81,18 @@ steps = np.arange(step_size, simulation_time+step_size, step_size)
 input_line = np.zeros(len(line_df))
 input_line[int((input_onset)/step_size):int(input_offset/step_size)] = input_strength
 fig = plt.figure(figsize=(10,5))
-plt.plot(steps[:-plotting_cut], input_line[:-plotting_cut], color='green', linewidth=2)
+#plt.plot(steps[:-plotting_cut], input_line[:-plotting_cut], color='green', linewidth=2)
 sns.lineplot(data=line_df[:-plotting_cut], x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
 #sns.lineplot(data=line_df[:-plotting_cut], x='time', y='potential', hue='InputStrength', legend='', palette=['grey'])
 plt.axvline(x=baseline_start, color='purple', linestyle='--', linewidth=1, label='Baseline Sample')
 plt.axvline(x=baseline_stop, color='purple', linestyle='--', linewidth=1, label='')
+plt.axvspan(baseline_start, baseline_stop, alpha=0.2, color='purple')
 plt.axvline(x=start_sample, color='red', linestyle='--', linewidth=1, label='Long Term Sample')
 plt.axvline(x=stop_sample, color='red', linestyle='--', linewidth=1, label='')
+plt.axvspan(start_sample, stop_sample, alpha=0.2, color='red')
 plt.axvline(x=input_onset, color='blue', linestyle='--', linewidth=1, label='During Input Sample')
 plt.axvline(x=input_offset, color='blue', linestyle='--', linewidth=1, label='')
-
+plt.axvspan(input_onset, input_offset, alpha=0.2, color='blue')
 plt.ylabel('Rate (Hz)')
 plt.xlabel('Time (sec)')
 plt.legend()
@@ -101,15 +102,33 @@ plt.show()
 # %%
 
 '''
-1.1) SINGLE PLOT: Effect of input intensity and duration on firing rates in the steady state in comparison to the baseline
-    - plot style: heatmap
-    - y axis: intensity
-    - x axis: duration
-    - measure: longtermVSbaseline rate
+1.1) SINGLE PLOT: Plot example trajectory
+    - plot style: line plot
+    - y axis: rate
+    - x axis: time
 '''
 
+# choose example settings
+coupling_strength = 20
+population = 'E3'
+input_duration = 1
+input_strength = 10
+line_df = trajectory_df[trajectory_df['coupling_strength']==coupling_strength]
+line_df = line_df[line_df['population']==population]
+line_df = line_df[line_df['InputDuration']==input_duration]
+line_df = line_df[line_df['InputStrength']==input_strength]
+
+# plot the input
+steps = np.arange(step_size, simulation_time+step_size, step_size)
+input_line = np.zeros(len(line_df))
+input_line[int((input_onset)/step_size):int(input_offset/step_size)] = input_strength
+fig = plt.figure(figsize=(10,5))
+sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
+
+# %%
+
 # choose a coupling strength and a population
-coupling_strength = 40
+coupling_strength = 20
 population = 'E1'
 data_df = summary_df[summary_df['coupling_strength']==coupling_strength]
 data_df = data_df[data_df['population']==population]
@@ -118,15 +137,15 @@ sns.heatmap(data_heatmap, cmap='magma')
 
 # %%
 '''
-1.2) SINGLE PLOT: Effect of input intensity and duration on potentials in the steady state in comparison to the baseline
+1.2) SINGLE PLOT: Effect of input intensity and duration on potentials/rates in the steady state in comparison to the baseline
     - plot style: heatmap
     - y axis: intensity
     - x axis: duration
-    - measure: longtermVSbaseline potential
+    - measure: longtermVSbaseline potential or rate
 '''
 
 # choose a coupling strength and a population
-coupling_strength = 40
+coupling_strength = 20
 population = 'E1'
 data_df = summary_df[summary_df['coupling_strength']==coupling_strength]
 data_df = data_df[data_df['population']==population]
@@ -144,35 +163,44 @@ sns.heatmap(data_heatmap, cmap='magma')
 '''
 
 # choose a coupling strength and a population
-coupling_strengths = [20,40]
+coupling_strengths = [0, 10, 20, 30, 40]
 population = 'E3'
 data_df = summary_df[summary_df['population']==population]
 
-fig, ax = plt.subplots(2, 1)
+fig, ax = plt.subplots(1, len(coupling_strengths), figsize=(10,2))
 
 n = 3 # there are three different functions of the dynamics --> make discrete colormap
 cmap = sns.color_palette("Pastel2", n)
 for axis, G in zip(ax, coupling_strengths):
     plot_df = data_df[data_df['coupling_strength']==G]
     data_heatmap = plot_df.pivot(index='InputStrength',columns='InputDuration', values='dynamic_function_potential')
-    sns.heatmap(data_heatmap, cmap=cmap, cbar=False, ax=axis)
+    sns.heatmap(data_heatmap, cmap=cmap, cbar=False, ax=axis, )
+    axis.set_ylabel('')
+    axis.set_xlabel('Input Duration')
+    axis.invert_yaxis()
+    axis.set_title(f'G = {G}')
+
+ax[0].set_ylabel('Input Strength')
 
 # reconstruct color map
 # add legend
-box = ax[-1].get_position()
-ax[-1].set_position([box.x0, box.y0, box.width * 0.7, box.height])
+#box = ax[-1].get_position()
+#ax[-1].set_position([box.x0, box.y0, box.width * 0.7, box.height])
 
 # add color map to legend
-legend_ax = fig.add_axes([.7, .5, 1, .1])
+legend_ax = fig.add_axes([.01, 1.2, 1, .1])
 legend_ax.axis('off')
 patches = [mpatches.Patch(facecolor=c, edgecolor=c) for c in cmap]
 legend = legend_ax.legend(patches,
-    ['non-responsive', 'transfer', 'memory'],
-    handlelength=0.8, loc='lower left')
-for t in legend.get_texts():
-    t.set_ha("left")
+    ['non-responsive', 'transfer', 'memory'])
+    #handlelength=0.8, loc='lower left')
+#for t in legend.get_texts():
+#    t.set_ha("left")
 
-#plt.show()
+plt.tight_layout(h_pad=1)
+figure_name = f'dynamicFunctions_{population}pop_tauVisual_{thalamus_source}.pdf'
+#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.show()
 
 # %%
 
