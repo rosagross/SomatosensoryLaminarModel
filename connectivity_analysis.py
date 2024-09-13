@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from plotting_style import figure_style
+import matplotlib.colors as clrs
 
 colors, _ = figure_style() 
 
@@ -27,6 +28,9 @@ def adjust_connectivity_matrix(conmatrix):
     conmatrix = np.append(conmatrix, np.zeros((15, 1)), axis=1)
     conmatrix = np.append(conmatrix, np.zeros((1, 16)), axis=0)
     return conmatrix
+
+# Set the directory where to save the figures
+figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/PosterFigures'
 
 # Plot difference between Visual and Somatosensory connectivity
 params_visual = Parameter('visual')
@@ -129,7 +133,17 @@ somato_W['cortex_type'] = 'somato'
 visual_W['cortex_type'] = 'visual' 
 df_W = pd.concat((visual_W, somato_W), ignore_index=False)
 # %%
-sns.heatmap(somato_W_matrix[:,:], annot=True, cmap='magma',xticklabels=plot_populations, yticklabels=plot_populations)
+fig = plt.figure(figsize=(8,6))
+zero_idx = np.where(somato_W_matrix<0.0001)
+W = somato_W_matrix.copy()
+x_idx = zero_idx[0]
+y_idx = zero_idx[1]
+for x, y in zip(x_idx, y_idx):
+    W[x, y] = 0
+sns.heatmap(W, annot=True, norm=clrs.LogNorm(), cmap='BuGn',xticklabels=plot_populations[:-3], yticklabels=plot_populations[:-3])
+filename = 'W_somato.pdf'
+plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
+plt.show()
 
 # %% 
 
@@ -150,13 +164,15 @@ for i, ax in enumerate(axs.flatten()):
 
 sns.despine(fig, trim=True, bottom=False)
 plt.tight_layout()
-#plt.savefig('Figures/Connection_weight.pdf')
+filename = 'Connection_weight.pdf'
+#plt.savefig(os.path.join(figure_dir, filename))
 plt.show()
 
 # %% Input matrix (connections from the thalamus)
-fig = plt.figure(figsize=[2,10])
+fig = plt.figure(figsize=[1,6])
 
 somato_Wext = params_somato.get_connectivity(1, include_Iext=True)[:, -1:]
-sns.heatmap(somato_Wext, yticklabels=plot_populations[:-3])
-#plt.savefig('Figures/Wext_somato.pdf', bbox_inches='tight')
+sns.heatmap(somato_Wext, yticklabels=plot_populations[:-3], cmap='BuGn')
+filename = 'Wext_somato.pdf'
+plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
 plt.show()

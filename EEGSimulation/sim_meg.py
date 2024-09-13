@@ -6,9 +6,10 @@ Based on Vincent Chien's Simulation
 import matplotlib.pyplot as plt
 import numpy as np
 import os, sys
+import seaborn as sns
 from ast import literal_eval
 import csv
-csv.field_size_limit(sys.maxsize)
+csv.field_size_limit(10**7)
 import pandas as pd
 # Add the parent directory to the sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -72,12 +73,10 @@ def simDipoles(dipole_setting, pop_counts, indices_E, psp_dir, psp_filename):
     return simDipoles
 
 
-def plot_dipoles(simDipoles):
+def plot_dipoles(simDipoles, input_onset):
     
     # Average of all dipoles [1 x timepoints], it's the dipole direction * currents
     simMEG = np.sum(simDipoles, axis=0)
-
-    input_onset = 0.501
     time_step = 0.001
     plot_window = 0.2
     start = int(input_onset/time_step)
@@ -94,4 +93,6 @@ def plot_dipoles(simDipoles):
     axes[0].set_ylabel('ECD')
     axes[1].set_ylabel('ECD')
     axes[1].legend()
+    sns.despine(trim=True, )
     
+# %%
