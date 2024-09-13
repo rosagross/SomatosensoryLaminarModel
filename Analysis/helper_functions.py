@@ -9,7 +9,7 @@ import pandas as pd
 import ast
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, 
-                        step_size, sample_delay, input_onset, sample_dur, cortex_type, stimulation_type,
+                        step_size, sample_delay, input_onset, sample_dur, cortex_type, input_type,
                         thalamus_source, load_trajectory, load_full_potentials, load_population_potential = 3):
     
     # create summary matrix: should include (max/min_value x population   
@@ -25,11 +25,11 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                 df = pd.DataFrame()
 
                 # read in firing rates in data matrix (datapoints x populations)
-                filename_rates = f"rates_G{g}_{cortex_type}_Iduration{d}_{stimulation_type}Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
+                filename_rates = f"rates_G{g}_{cortex_type}_Iduration{d}_{input_type}Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
                 rates_df = pd.read_csv(os.path.join(output_dir, filename_rates))
                 
                 # read in potentials in data matrix (datapoints x populations)
-                filename_potentials = f"potentials_G{g}_{cortex_type}_Iduration{d}_{stimulation_type}Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
+                filename_potentials = f"potentials_G{g}_{cortex_type}_Iduration{d}_{input_type}Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
                 potentials_df = pd.read_csv(os.path.join(output_dir, filename_potentials))
 
                 # LONG TERM (sample for 100ms starting at 0.5 sec after offset)
@@ -84,7 +84,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                 memory = (np.abs(df['longtermVSbaseline_potential'])>0.001)
 
                 if d == 1.5:
-                    if (not non_responsive[2]) & (not transfer[2]) & (not memory[2]): 
+                    if (not non_responsive.iloc[2]) & (not transfer.iloc[2]) & (not memory.iloc[2]): 
                         print('no function')
                         print(np.abs(df['duringInputVSbaseline_potential'][2]))
                         print(np.abs(df['longtermVSbaseline_potential'][2]))
@@ -111,7 +111,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         pop_df = pd.DataFrame()
                         pop_df['population'] = [pop_name]*len(rate_trajectory)
                         pop_df['rate'] = rate_trajectory
-                        pop_df['rate'] = potential_trajectory
+                        pop_df['potential'] = potential_trajectory
                         pop_df['time'] = rate_trajectory.index.values * 1e-3 # time in s
                         pop_df['coupling_strength'] = g
                         pop_df['InputDuration'] = d
@@ -120,7 +120,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
 
                 if load_full_potentials:
                     # load full 3D (target x source x timestep) potential of selected population 
-                    filename = f"full_potentials_G{g}_{cortex_type}_Iduration{d}_Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
+                    filename = f"full_potentials_G{g}_{cortex_type}_Iduration{d}_{input_type}Istrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}.csv"
                     potential_df = pd.read_csv(os.path.join(output_dir, filename), sep=',', header=None)
                     potential_df = potential_df.applymap(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('[') and x.endswith(']') else x)
                     potential_df = potential_df.iloc[load_population_potential]

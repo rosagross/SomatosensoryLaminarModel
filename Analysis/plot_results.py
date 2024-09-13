@@ -1,27 +1,33 @@
 '''
 Plots:
 1) Effect of input intensity and duration on firing rates and potentials
-    - plot style: heatmap
-    - y axis: intensity
-    - x axis: duration
     1.1) Line plot, single population - plots trajectory
     1.2) Heatmap, single population - difference between longterm and baseline 
     1.3) Heatmap, single population - plots the different dynamic functions (memory, transfer, ..) 
         - x axis: input duration  
         - y axis: input strength
         - color map: dynamic functions
-2) Interaction of stimulus intensity and coupling strength 
-3) Effect of connection strength from and to PV interneurons
+    1.4) Heatmap, multiple populations - longterm versus baseline by G, input duration and strength
+2) Baseline activity and coupling strength 
+    2.1) Line plot, multiple populations - axis x:G, y: rate in (Hz)
+3) Background activity in steady state
+    3.1) Average longterm activity
+        - x axis: input strength
+        - y axis: Steady state potential of Layer 5 population 
+
+4) Effect of connection strength from and to PV interneurons
     - 
 
 '''
+
 # %% 
 import numpy as np
 import os
 from matplotlib.ticker import FormatStrFormatter, FuncFormatter, FormatStrFormatter
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
-from matplotlib.colors import ListedColormap, Normalize
+import matplotlib.cm as cm  # Import the colormap module
+from matplotlib.colors import ListedColormap, Normalize, BoundaryNorm
 from scipy.signal import find_peaks
 import seaborn as sns
 import pandas as pd
@@ -32,14 +38,14 @@ colors, _ = figure_style()
 
 # define directories of stored data and figures
 output_dir = "../output"
-figure_dir = "../Figures"
+figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/PosterFigures' #"../Figures"
 
 # %%
 
 # read in data
-input_durations = [0.0, 0.5, 1.0] # np.arange(0, 2, 0.25) # in sec 
-input_strengths = np.arange(0, 80, 5) # np.arange(0, 20, 2)
-coupling_strengths = [0, 10, 20, 30, 40] #[0, 10, 20, 30, 40] # np.arange(0, 50, 10)
+input_durations = [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
+input_strengths = np.arange(0, 80, 20) # np.arange(0, 20, 2)
+coupling_strengths = np.arange(0, 100, 20)
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 1.001
@@ -57,10 +63,10 @@ summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, fig
 # %% Make plots that demonstrate the sampling time line 
 
 # choose example settings
-coupling_strength = 10
-population = 'E3'
+coupling_strength = 40
+population = 'E4'
 input_duration = 0.5
-input_strength = 70
+input_strength = 40
 line_df = trajectory_df[trajectory_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
@@ -75,14 +81,14 @@ input_offset = input_onset + input_duration
 offset = 0.1 # time between baseline sampling and start of input 
 baseline_start = input_onset - (sample_dur+offset)
 baseline_stop = baseline_start + sample_dur
-plotting_cut = 400
+plotting_cut = 10
 
 # plot the input
 steps = np.arange(step_size, simulation_time+step_size, step_size)
 input_line = np.zeros(len(line_df))
 input_line[int((input_onset)/step_size):int(input_offset/step_size)] = input_strength
 fig = plt.figure(figsize=(10,5))
-#plt.plot(steps[:-plotting_cut], input_line[:-plotting_cut], color='green', linewidth=2)
+plt.plot(steps[:-plotting_cut], input_line[:-plotting_cut], color='green', linewidth=2)
 sns.lineplot(data=line_df[:-plotting_cut], x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
 #sns.lineplot(data=line_df[:-plotting_cut], x='time', y='potential', hue='InputStrength', legend='', palette=['grey'])
 plt.axvline(x=baseline_start, color='purple', linestyle='--', linewidth=1, label='Baseline Sample')
@@ -97,7 +103,9 @@ plt.axvspan(input_onset, input_offset, alpha=0.2, color='blue')
 plt.ylabel('Rate (Hz)')
 plt.xlabel('Time (sec)')
 plt.legend()
-plt.savefig('/data/tu_grossmannr/IMPRS_SummerSchool/PosterFigures//plotting_windows.pdf')
+sns.despine(trim=True)
+
+#plt.savefig('C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/plotting_windows.pdf')
 plt.show()
 
 # %%
@@ -110,27 +118,32 @@ plt.show()
 '''
 
 # choose example settings
-coupling_strength = 10
-population = 'E3'
-input_duration = 1
-input_strength = 35
+coupling_strength = 40
+population = 'E2'
+input_duration = 0.5
+input_strength = 40
 line_df = trajectory_df[trajectory_df['coupling_strength']==coupling_strength]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
 line_df = line_df[line_df['InputStrength']==input_strength]
+plotting_window = []
 
 # plot the input
 steps = np.arange(step_size, simulation_time+step_size, step_size)
-input_line = np.zeros(len(line_df))
-input_line[int((input_onset)/step_size):int(input_offset/step_size)] = input_strength
 fig = plt.figure(figsize=(10,5))
-sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
+sns.lineplot(data=line_df[500:2000], x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
+sns.despine(trim=True)
+plt.ylabel('Rate (Hz)')
+figure_name = f'trajectory_G{coupling_strength}_pop{population}_Iduration{input_duration}_{input_strength}.pdf'
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.show()
+
 
 # %%
 
 # choose a coupling strength and a population
-coupling_strength = 20
-population = 'E1'
+coupling_strength = 50
+population = 'P2'
 data_df = summary_df[summary_df['coupling_strength']==coupling_strength]
 data_df = data_df[data_df['population']==population]
 data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_rate')
@@ -146,8 +159,8 @@ sns.heatmap(data_heatmap, cmap='magma')
 '''
 
 # choose a coupling strength and a population
-coupling_strength = 20
-population = 'E1'
+coupling_strength = 50
+population = 'P2'
 data_df = summary_df[summary_df['coupling_strength']==coupling_strength]
 data_df = data_df[data_df['population']==population]
 data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_potential')
@@ -164,34 +177,55 @@ sns.heatmap(data_heatmap, cmap='magma')
 '''
 
 # choose a coupling strength and a population
-coupling_strengths = [0, 10, 20, 30, 40]
+coupling_strengths = np.arange(0, 100, 10)
+cbar_ticks = ['non-responsive', 'transfer', 'memory']
 population = 'E3'
 data_df = summary_df[summary_df['population']==population]
+data_df['InputDuration'] = data_df['InputDuration'].round(4)
+fig, ax = plt.subplots(2, int(len(coupling_strengths)/2), figsize=(9,4), sharex=True, sharey=True)
 
-fig, ax = plt.subplots(1, len(coupling_strengths), figsize=(10,2))
-
+# Define a fixed discrete colormap with colors for 1, 2, and 3
 n = 3 # there are three different functions of the dynamics --> make discrete colormap
-cmap = sns.color_palette("Pastel2", n)
-for axis, G in zip(ax, coupling_strengths):
-    plot_df = data_df[data_df['coupling_strength']==G]
-    data_heatmap = plot_df.pivot(index='InputStrength',columns='InputDuration', values='dynamic_function_potential')
-    sns.heatmap(data_heatmap, cmap=cmap, cbar=True, ax=axis, vmin=1, vmax=3, cbar_kws={'ticks': [1, 2, 3]})
-    axis.set_ylabel('')
-    axis.set_xlabel('Input Duration')
-    axis.invert_yaxis()
-    axis.set_title(f'G = {G}')
+colors = sns.color_palette("Pastel2", n)
+cmap = ListedColormap(colors)
 
-ax[0].set_ylabel('Input Strength')
+# Define the boundaries for normalization
+bounds = [0.5, 1.5, 2.5, 3.5]
+norm = BoundaryNorm(bounds, ncolors=cmap.N)
+
+for i, axis in enumerate(ax.flatten()):
+    plot_df = data_df[data_df['coupling_strength']==coupling_strengths[i]]
+    data_heatmap = plot_df.pivot(index='InputStrength',columns='InputDuration', values='dynamic_function_potential')
+    if i == len(coupling_strengths)-1:
+        heat_ax = sns.heatmap(data_heatmap, cmap=cmap, norm=norm, ax=axis, cbar=False)
+        # Add colorbar, make sure to specify tick locations to match desired ticklabels
+        #cbar = heat_ax.collections[0].colorbar
+        #cbar.set_ticks([1, 2, 3])
+        #cbar.set_ticklabels(cbar_ticks)
+    else:
+        sns.heatmap(data_heatmap, cmap=cmap, norm=norm, cbar=False, ax=axis, vmin=1, vmax=3, cbar_kws={'ticks': cbar_ticks})
+
+    # Only set x-axis label for the bottom row
+    if i >= len(coupling_strengths) // 2:
+        axis.set_xlabel('Input Duration')
+    else:
+        axis.set_xlabel('')
+    axis.set_ylabel('')
+    axis.invert_yaxis()
+    axis.set_title(f'G = {coupling_strengths[i]}')
+
+ax[0][0].set_ylabel('Input Strength')
+ax[1][0].set_ylabel('Input Strength')
 
 plt.tight_layout(h_pad=1)
-figure_name = f'dynamicFunctions_{population}pop_tauVisual_{thalamus_source}.pdf'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+figure_name = f'G0-90_dynamicFunctions_{population}pop_tauVisual_{thalamus_source}.pdf'
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 # %%
 
 '''
-1.2) MULTI PLOT: Effect of input intensity and duration on firing rates
+1.4) MULTI PLOT: Effect of input intensity and duration on firing rates
     - plot style: heatmap
     - y axis: intensity
     - x axis: duration
@@ -199,7 +233,7 @@ plt.show()
     - subplot rows: coupling strengths
 '''
 
-rate_measure = 'longtermVSbaseline'
+rate_measure = 'longtermVSbaseline_rate'
 coupling_strengths = [0, 40, 80]
 populations = np.array(['E1', 'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
@@ -247,14 +281,127 @@ figure_name = f'inputDurationVSinputStrength_{populations[0][0]}pop_{rate_measur
 #plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
-# %% investigate one specific population and see how this behaves..
-# .. during input
-# .. on the long term behaviour
-# .. is the long term behaviour over baseline? 
-# .. frequency of oscillations
+# %% 
+"""
+2.1) BASELINE vs Coupling Strengths
+Plot Mininum and Maximum Firing rates 
+"""
+
+# choose settings (make sure that there is no input in the samples)
+input_duration = 0
+input_strength = 0
+data_df = summary_df[summary_df['InputDuration']==input_duration]
+data_df = data_df[data_df['InputStrength']==input_strength]
+
+# separate data in layers
+layers = [['E1', 'P1', 'S1', 'V1'], ['E2', 'P2', 'S2'], ['E3', 'P3', 'S3'], ['E4', 'P4', 'S4']]
+
+# plot results
+fig, axs = plt.subplots(4, 1, figsize=(3, 6), sharey=False, sharex=True)  # Set figure size
+
+for l, ax in zip(layers, axs):
+    layer_df = data_df.loc[l]
+    layer_df['population'] = layer_df.index
+    sns.lineplot(layer_df, y='minRate_longterm', x='coupling_strength', hue='population', ax=ax)
+    #sns.lineplot(layer_df, y='maxRate_longterm', x='coupling_strength', hue='population', ax=ax)
+    ax.set_ylabel('Rate (Hz)')
+    ax.set_xlabel('Coupling Strength')
+    ax.legend(prop={'size':8})
+
+axs[0].set_title(f'Layer 2/3')
+axs[1].set_title(f'Layer 4')
+axs[2].set_title(f'Layer 5')
+axs[3].set_title(f'Layer 6')
+axs[1].set_ylim([0,3])
+axs[2].set_ylim([0,10])
+axs[3].set_xlim([0,100])
+sns.despine(trim=True)
+plt.tight_layout() 
+figure_name = f'BaselineAllLayers_tauVisual_{thalamus_source}.pdf'
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.show()
 
 
+# %%
+'''
+3.1) Background input 
+- x-axis: input strength
+- y-axis: PSP of E3 population
+'''
 
+input_duration = 0
+input_strengths = [0, 20, 40, 60]
+population = 'P3'
+summary_df['population'] = summary_df.index
+data_df = summary_df[summary_df['population']==population]
+data_df = data_df[data_df['InputDuration']==input_duration]
+data_df = data_df[data_df['InputStrength'].isin(input_strengths)]
+
+# plot results
+fig, axs = plt.subplots(figsize=(6,3)) 
+
+# Create a colormap
+cmap = cm.get_cmap('Dark2', len(input_strengths))  # Choose a colormap, e.g., 'viridis'
+cmap_max = cm.get_cmap('Dark2', len(input_strengths))  # Choose a colormap, e.g., 'viridis'
+data_df['minPotential_longterm_mV'] = data_df['minPotential_longterm'] *1e3
+data_df['maxPotential_longterm_mV'] = data_df['maxPotential_longterm'] *1e3
+input_strengths = data_df['InputStrength'].unique()
+
+for i, s in enumerate(input_strengths):
+    Istrength_df = data_df[data_df['InputStrength']==s]
+    color = cmap(i / (len(input_strengths) - 1))  # Normalize i to [0, 1] for colormap
+    color_max = cmap_max(i / (len(input_strengths) - 1))  # Normalize i to [0, 1] for colormap
+    plt.plot(Istrength_df['coupling_strength'], Istrength_df['minRate_longterm'], label=s, color=color)
+    plt.plot(Istrength_df['coupling_strength'], Istrength_df['maxRate_longterm'], color=color_max)
+
+#sns.lineplot(data_df, y='maxPotential_longterm', x='coupling_strength', hue='InputStrength')
+axs.set_xlabel('Coupling Strength')
+axs.set_ylabel('Rate (Hz)')
+axs.set_xlim([0,100])
+sns.despine(trim=True)
+plt.legend(title='Input Strength', loc='right')
+plt.tight_layout() 
+figure_name = f'BackgroundSteadyState_pop{population}_tauVisual_{thalamus_source}.pdf'
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.show()
+
+# %%
+'''
+BACKGROUND INPUT
+3.2) all layers
+'''
+input_duration = 0
+input_strength = 40
+data_df = summary_df[summary_df['InputDuration']==input_duration]
+data_df = data_df[data_df['InputStrength']==input_strength]
+
+# separate data in layers
+layers = [['E1', 'P1', 'S1', 'V1'], ['E2', 'P2', 'S2'], ['E3', 'P3', 'S3'], ['E4', 'P4', 'S4']]
+
+# plot results
+fig, axs = plt.subplots(4, 1, figsize=(3, 6), sharey=False, sharex=True)  # Set figure size
+
+for l, ax in zip(layers, axs):
+    layer_df = data_df.loc[l]
+    layer_df['population'] = layer_df.index
+    sns.lineplot(layer_df, y='minRate_longterm', x='coupling_strength', hue='population', ax=ax)
+    sns.lineplot(layer_df, y='maxRate_longterm', x='coupling_strength', hue='population', ax=ax, legend=False)
+    ax.set_ylabel('Rate (Hz)')
+    ax.set_xlabel('Coupling Strength')
+    ax.legend(prop={'size':8})
+
+axs[0].set_title(f'Layer 2/3')
+axs[1].set_title(f'Layer 4')
+axs[2].set_title(f'Layer 5')
+axs[3].set_title(f'Layer 6')
+#axs[1].set_ylim([0,3])
+axs[2].set_ylim([0,60])
+#axs[3].set_xlim([0,100])
+sns.despine(trim=True)
+plt.tight_layout() 
+figure_name = f'BackgroundAllLayers_{input_strength}Istrength_tauVisual_{thalamus_source}.pdf'
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.show()
 
 # %%
 

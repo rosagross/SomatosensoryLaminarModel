@@ -15,14 +15,14 @@ class Parameter():
 
         if self.cortex_type == 'somato':
             # nr. of populations
-            nPop = 13   
+            nPop = 14   
             #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, Thal
             # SYNAPTIC DECAY (depends on the connection type excitatory/inhibitory)
             #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
             # MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron so this should be transposed!!!)
             #tau = np.tile(np.array([5.2, 5.2, 5.9, 5.9, 3, 3, 3.8, 3.8, 11.2, 11.2, 11.1, 11.1, 10.4])*1e-3, (nPop+1,1)) 
             # Visual cortex values
-            tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3])*1e-3, (nPop+1,1)) # sec
+            tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3])*1e-3, (nPop,1)) # sec
 
         elif self.cortex_type == 'visual':
             # nr. of populations
@@ -98,9 +98,9 @@ class Parameter():
                 [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]
             ]
 
-            # the inhibitory impact of the interneurons is added in the connectivity matrix 
+            # we only take the absolute values since the inhibitory impact of the interneurons is added in the connectivity matrix 
             psp = np.absolute(psp)
-        
+       
 
         elif self.cortex_type == 'visual':
             # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
@@ -221,6 +221,17 @@ class Parameter():
 
         if include_Iext:
             W = np.concatenate((W0*g, Wext), axis=1)
+
+            # TODO: add the connectivity details for the E and I populations of the thalamus
+            # To E (from populations, E_thal, I_thal)
+            E_thal = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0.4]
+
+            # To I, the reticular nucleus (from populations, E_thal, I_thal)
+            I_RN = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2, 0.3]
+
+            # To E, the higher order POM 
+
+
         else:
             W = W0*g
 
