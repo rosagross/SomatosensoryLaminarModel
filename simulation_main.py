@@ -101,7 +101,7 @@ def save_results_csv(rates, potentials, cortex_type, filedir, filename, full=Fal
 
     if full:
         # save all potentials additionally
-        psp_filename = 'full_potentials' + filename
+        psp_filename = 'full_' + filename
         write_3D_csv(os.path.join(filedir, psp_filename), potentials)
 
 
@@ -121,20 +121,20 @@ def main():
     plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths = np.arange(0, 50, 10)
+    coupling_strengths = np.arange(5, 100, 10)
     step_size = 0.001
-    simulation_time = 3
     cortex_type = 'somato'
     filedir = 'output'
 
     # define input
-    input_type = "step" # other options are "baseline" (equals input strength 0) or "background"
+    input_type = "background" # other options are "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = np.arange(0, 2, 0.5) # in sec 
-    input_strengths = np.arange(0, 40, 5)
+    input_durations = [0] # np.arange(0, 2, 0.5) # in sec 
+    input_strengths = np.arange(0, 80, 10)
 
     for d in input_durations:
         print('Input duration:', d)
+        simulation_time = int(input_onset) + d + 1
         for s in input_strengths:
 
             # arrays to store rate (for plotting)
