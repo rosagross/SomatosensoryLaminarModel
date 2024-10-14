@@ -19,11 +19,13 @@ class Parameter():
             #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, Thal
             # SYNAPTIC DECAY (depends on the connection type excitatory/inhibitory)
             #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
-            # MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron so this should be transposed!!!)
             #tau = np.tile(np.array([5.2, 5.2, 5.9, 5.9, 3, 3, 3.8, 3.8, 11.2, 11.2, 11.1, 11.1, 10.4])*1e-3, (nPop+1,1)) 
             # Visual cortex values
             tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3])*1e-3, (nPop+1,1)) # sec
 
+            # TODO: MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron whereas the synaptic decay depends on the presynapse)
+        
+        
         elif self.cortex_type == 'visual':
             # nr. of populations
             nPop = 16

@@ -116,9 +116,9 @@ def write_3D_csv(filename, data):
 
 def main():
 
-    save_results = True
+    save_results = False
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = False
+    plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
     coupling_strengths = np.arange(0, 50, 10)
