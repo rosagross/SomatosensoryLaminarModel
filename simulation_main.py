@@ -36,14 +36,17 @@ def plot_results(rates, Iext, step_size, simulation_time, start_plot):
 
     # plot results
     fig, axs = plt.subplots(5, 1, figsize=(3, 6))  # Set figure size
-
-    plot_rates = rates[0, 0:4, :]
-    
+   
     axs[0].plot(steps[start_plot:], Iext[start_plot:])
+    axs[0].plot(steps[start_plot:], rates[0, -2:].T[start_plot:])
+    axs[0].legend(['input', 'Thalamus E', 'Thalamus I'])
 
     # Plot settings for all subplots
     for i, ax in enumerate(axs[1:], start=1):
-        ax.plot(steps[start_plot:], rates[0, (i-1)*4:i*4].T[start_plot:], linewidth=1)
+        if i == 4:
+            ax.plot(steps[start_plot:], rates[0, 12].T[start_plot:], linewidth=1)
+        else:
+            ax.plot(steps[start_plot:], rates[0, (i-1)*4:i*4].T[start_plot:], linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -82,9 +85,10 @@ def save_results_csv(rates, potentials, cortex_type, filedir, filename, full=Fal
     Safe the simulated data in a csv file
     '''    
 
-    cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
     if cortex_type == 'somato':
-        cells = cells[:13]
+        cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'ThalE']) 
+    elif cortex_type == 'visual':
+        cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
 
     rates_df = pd.DataFrame(rates.T, columns=cells)
     filename = filename + '.csv'
@@ -116,21 +120,21 @@ def write_3D_csv(filename, data):
 
 def main():
 
-    save_results = True
-    save_full_potentials = True # if True the potential matrix is 3D, otherwise 2D
-    plot = False
+    save_results = False
+    save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
+    plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths = np.arange(5, 100, 10)
+    coupling_strengths = [20] #np.arange(5, 100, 10)
     step_size = 0.001
     cortex_type = 'somato'
     filedir = 'output'
 
     # define input
-    input_type = "background" # other options are "baseline" (equals input strength 0) or "background"
+    input_type = "baseline" # other options are "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0] # np.arange(0, 2, 0.5) # in sec 
-    input_strengths = np.arange(0, 80, 10)
+    input_durations = [0.5] # np.arange(0, 2, 0.5) # in sec 
+    input_strengths = [30] # np.arange(0, 80, 10)
 
     for d in input_durations:
         print('Input duration:', d)
