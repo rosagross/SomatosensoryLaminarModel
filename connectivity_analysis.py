@@ -11,12 +11,15 @@ import matplotlib.colors as clrs
 colors, _ = figure_style() 
 
 def adjust_matrix(matrix):
+    # remove the thalamus values (we look at those later)
     matrix = np.insert(matrix, 7, 0, axis=1)
     matrix = np.insert(matrix, 7, 0, axis=0)
     matrix = np.insert(matrix, 11, 0, axis=1)
     matrix = np.insert(matrix, 11, 0, axis=0)
     matrix = np.append(matrix, np.zeros((15, 1)), axis=1)
     matrix = np.append(matrix, np.zeros((1, 16)), axis=0)
+    print(matrix.shape)
+
     return matrix
 
 
@@ -102,10 +105,10 @@ plt.show()
 # %% 
 sns.heatmap(somato_S[:,:], annot=True, cmap='magma',xticklabels=population_names, yticklabels=population_names)
 
-
 # %%
 # Cell Counts
 somato_C = params_somato.get_cellcounts()
+somato_C = somato_C[:13] # don't consider the thalamus here
 somato_C = pd.DataFrame(np.insert(somato_C, [7, 10, 13], 0), index=population_names, columns=['cellcount'])
 somato_C['cortex_type'] = 'somato'
 visual_C = pd.DataFrame(params_visual.get_cellcounts(), index=population_names, columns=['cellcount'])
@@ -132,7 +135,8 @@ W_diff = np.array(somato_W) - np.array(visual_W)
 somato_W['cortex_type'] = 'somato'
 visual_W['cortex_type'] = 'visual' 
 df_W = pd.concat((visual_W, somato_W), ignore_index=False)
-# %%
+
+# %% Plot Connectivity Matrix without Iext
 fig = plt.figure(figsize=(8,6))
 zero_idx = np.where(somato_W_matrix<0.0001)
 W = somato_W_matrix.copy()
@@ -142,7 +146,22 @@ for x, y in zip(x_idx, y_idx):
     W[x, y] = 0
 sns.heatmap(W, annot=True, norm=clrs.LogNorm(), cmap='BuGn',xticklabels=plot_populations[:-3], yticklabels=plot_populations[:-3])
 filename = 'W_somato.pdf'
-plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
+#plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
+plt.show()
+
+# %% Plot Connectivity Matrix WITH Iext
+somato_W_matrix = np.abs(params_somato.get_connectivity(1, True))
+
+fig = plt.figure(figsize=(8,6))
+zero_idx = np.where(somato_W_matrix<0.0001)
+W = somato_W_matrix.copy()
+x_idx = zero_idx[0]
+y_idx = zero_idx[1]
+for x, y in zip(x_idx, y_idx):
+    W[x, y] = 0
+sns.heatmap(W, annot=True, norm=clrs.LogNorm(), cmap='BuGn',xticklabels=plot_populations[:-3], yticklabels=plot_populations[:-3])
+filename = 'W_somato.pdf'
+#plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
 plt.show()
 
 # %% 
@@ -168,11 +187,17 @@ filename = 'Connection_weight.pdf'
 #plt.savefig(os.path.join(figure_dir, filename))
 plt.show()
 
-# %% Input matrix (connections from the thalamus)
-fig = plt.figure(figsize=[1,6])
+# %% Input matrix: connections pattern in the thalamus and to the cortex)
+fig, ax = plt.subplots(1,1,figsize=[2,7])
+plot_populations = ['E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1','ThalE']
 
-somato_Wext = params_somato.get_connectivity(1, include_Iext=True)[:, -1:]
-sns.heatmap(somato_Wext, yticklabels=plot_populations[:-3], cmap='BuGn')
+somato_Wext = params_somato.get_connectivity(1, include_Iext=True)[:, -2:-1]
+sns.heatmap(somato_Wext, yticklabels=plot_populations, xticklabels=['ThalE'], cmap='BuGn', ax=ax)
 filename = 'Wext_somato.pdf'
-plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
+#plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
+
+#thalamic_circuit = 
+
 plt.show()
+
+

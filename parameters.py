@@ -15,14 +15,14 @@ class Parameter():
 
         if self.cortex_type == 'somato':
             # nr. of populations
-            nPop = 14   
+            nPop = 15
             #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, Thal
             # SYNAPTIC DECAY (depends on the connection type excitatory/inhibitory)
             #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
             # MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron so this should be transposed!!!)
             #tau = np.tile(np.array([5.2, 5.2, 5.9, 5.9, 3, 3, 3.8, 3.8, 11.2, 11.2, 11.1, 11.1, 10.4])*1e-3, (nPop+1,1)) 
             # Visual cortex values
-            tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3])*1e-3, (nPop,1)) # sec
+            tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3,3])*1e-3, (nPop,1)) # sec
 
         elif self.cortex_type == 'visual':
             # nr. of populations
@@ -38,7 +38,8 @@ class Parameter():
         if self.cortex_type == 'somato':
             # Connection probabilies
             # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4, Thalamus
-            P = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0,],
+            # Targets in rows, sources in columns 
+            P = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
                         [28.5, 31.8, 11.8,  5.5,  0.4,  1.7,  3.2,  0.05,  0.1,  1.4,  0.01, 0.01, 0.6],
                         [24.3, 29.1,  0., 27.1,  0.4, 1.2, 4.4, 0.03, 0.1, 2.1, 0., 0., 0],
                         [16., 20.6, 46.3,  6.3,  0.2,  1.,  1.7,  0.02,  0.1,  0.6, 0, 0.01,  0.5],
@@ -50,7 +51,8 @@ class Parameter():
                         [ 1.6,  0.4,  1.,  1.9,  3.8,  3.0,  2.5, 20.5, 31.1,  0.6,  0.6, 1-.5,  3.2],
                         [0, 0.2, 0.3, 0.8, 3.0, 1.5, 1.0, 4.0, 1.9, 1.7, 2.1, 39.6, 15.1],
                         [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, 39.6, 24.6, 24.1],
-                        [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2               
+                        [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
+
 
         elif self.cortex_type == 'visual':
             # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
@@ -71,7 +73,6 @@ class Parameter():
                         [0, 0, 0, 0, 0, 0, 0, 0, 0.0650600054303557, 0.109800787401575, 0.0698732283464567, 0.259529133858268, 0.243703937007874, 0.0598913385826772, 0.159710236220472, 0.189655905511811],
                         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.129764566929134, 0, 0.0598913385826772, 0.708714173228346, 0]])
 
-
         return P
 
 
@@ -82,6 +83,7 @@ class Parameter():
 
             # Postsynaptic potential (13x14) averages from Isbister, Jiang, and more (see excel file FinalConnectivity_PSP.csv for mor info)
             # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
+            # Targets in rows, sources in columns
             psp = [
                 [0.75, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0],
                 [0.75, 1.0, 1.0, 1.0, 1.2, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
@@ -95,12 +97,10 @@ class Parameter():
                 [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0],
                 [0.5, 1.0, 1.0, 1.0, 0.29, 1.0, 1.0, 0.5, 1.0, 1.0, 0.75, 2.0, 1.0],
                 [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
-                [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]
-            ]
+                [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]]
 
             # we only take the absolute values since the inhibitory impact of the interneurons is added in the connectivity matrix 
             psp = np.absolute(psp)
-       
 
         elif self.cortex_type == 'visual':
             # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
@@ -167,20 +167,42 @@ class Parameter():
             Wext[1] = 1
 
         elif self.cortex_type == 'somato':
+            # indices to reorder the matrix
             iE = np.array([0, 4, 7, 10])  # E1, E2, E3, E4
             iP = iE+1  # PV1, PV2, PV3, PV4
             iS = iE+2  # SOM1, SOM2, SOM3, SOM4
             iV = [3]  # VIP1
 
             # now create the external input matrix, based on thalamus connectivity (average of findings, see FinalConnectivity_PSPs.ods)
-            # order: 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1'
-            S_thal_jiang = np.array([0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0]) # postsynaptic potentials!
-            S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # based on Isbister & jiang 
-            P_thal = np.array([6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0])*1e-2    
-            Wext = np.expand_dims(P_thal * S_thal_jiang,1)
+            # order: 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1', 'Thal E'
+            #S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # based on Isbister & jiang 
+            S_from_thal = np.array([[0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0, 0, 0.5], # Based on Jiang et al. 2023 only! 
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0]]) # Reticular inhibition: just an assumption
+            S_to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+            print('S', S_to_thal.shape)
+            
+            # cell count of the thalamus 
+            C_thal = [1, 1] # Thal E, Thal I
+            
+            # connection probabilities
+            P_from_thal = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0, 0, 80],
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 0]])*1e-2 
+            P_to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
+            print('P to thal', P_to_thal.shape)
 
-            #Wext = np.zeros((nPop,1))
-            #Wext[1] = 1
+            # calculate final thalamus connectivity
+            PS_to_thal = np.multiply(P_to_thal, S_to_thal)
+            W_to_thal = np.multiply(PS_to_thal, C)
+            PS_from_thal = np.multiply(P_from_thal, S_from_thal)
+            W_from_thal = np.multiply(PS_from_thal, np.expand_dims(C_thal,1))
+
+            # weight the inhibitory popultaion (from the reticular nucleus in the thalamus) as negative
+            W_from_thal[1] = W_from_thal[1]*-1
+
+            # Only the thalamus E population receives the external input (from the brain stem)
+            Wext = np.zeros((W_from_thal.shape[1],1))
+            Wext[13] = 1
+            Wext[14] = 1
 
             # thalamus connectivity based on Ji et al. 2016
             #Wext = np.array([0.8488, 1, 0.44019, 0.2856, 0.9095, 2.5837, 1.3860, 0.7833, 0, 0.0140, 0, 0, 0])
@@ -218,19 +240,22 @@ class Parameter():
         # Vertically stack the rows to form W0
         W0 = np.vstack([row1, row2, row3, row4])
 
-
+        # include the external input to the matrix 
         if include_Iext:
-            W = np.concatenate((W0*g, Wext), axis=1)
+            print('W0', W0.shape) # this should be 13x13
+            W0 = W0*g
+            if self.cortex_type == 'somato':
+                # append the thalamus population(s) values to the matrix
+                W0 = np.append(W0, W_to_thal, axis=0)
+                print('W from thalamus 2\n', W_from_thal.shape)
+                print(W_from_thal)
 
-            # TODO: add the connectivity details for the E and I populations of the thalamus
-            # To E (from populations, E_thal, I_thal)
-            E_thal = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0.4]
+                W0 = np.append(W0, W_from_thal.T, axis=1)
 
-            # To I, the reticular nucleus (from populations, E_thal, I_thal)
-            I_RN = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.2, 0.3]
-
-            # To E, the higher order POM 
-
+            W = np.concatenate((W0, Wext), axis=1)
+            print('\nW matrix shape', W.shape) 
+            print('W matrix', W[:,-3:]) 
+            print('test')
 
         else:
             W = W0*g
@@ -254,7 +279,9 @@ class Parameter():
                                        [  0.07937015,  42.01276379,  56.95305832],
                                        [  0.12782346,  32.10540543,  31.39696397],
                                        [  0.14218422,  40.03107351, 166.82960408],
-                                       [  0.07937015,  42.01276379,  56.95305832],])
+                                       [  0.07937015,  42.01276379,  56.95305832],
+                                       [  1,  30,  30], # Thalamus E
+                                       [  1,  30,  30]]) # Thalamus I
                                        
         elif self.cortex_type == 'visual':
             sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
