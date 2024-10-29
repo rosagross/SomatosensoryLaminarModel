@@ -14,6 +14,7 @@ class JR_Model():
 
         # Simulation parameters
         self.tau = self.p.tau
+        print('tau', self.tau[0])
         self.nPop = self.p.nPop
         self.simulation_time = simulation_time# in s
         self.step_size = step_size # in s
@@ -34,7 +35,7 @@ class JR_Model():
 
     def run_simulation(self):
         '''
-        g: coupling strength
+        Simulation loop
         '''
         # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
         self.rate = np.zeros((self.nPop, len(self.steps)))
@@ -50,7 +51,6 @@ class JR_Model():
         W = self.p.get_connectivity(self.g) 
 
         for timestep, time in enumerate(self.steps):
-            
             
             # Update RATE (calculated from the current potential)
             # technically this could also go to the end of the for-loop but we need a rate value calculated from the initial potential value
