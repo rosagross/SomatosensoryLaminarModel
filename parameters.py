@@ -143,7 +143,7 @@ class Parameter():
 
         return C 
 
-    def get_connectivity(self, g, include_Iext=True):
+    def get_connectivity(self, gE, gI, include_Iext=True):
         # g is a scaling factor scaling the general coupling strength
 
         S = self.get_connectStrength()
@@ -179,18 +179,19 @@ class Parameter():
             # order: 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1', 'Thal E'
             #S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # based on Isbister & jiang 
             S_from_thal = np.array([[0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0, 0, 0.5], # Based on Jiang et al. 2023 only! 
-                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0]]) # Reticular inhibition: just an assumption
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0]]) # Reticular inhibition: just an assumption
             S_to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-            print('S', S_to_thal.shape)
+            #print('S', S_to_thal.shape)
             
             # cell count of the thalamus 
             C_thal = [1, 1] # Thal E, Thal I
             
             # connection probabilities
-            P_from_thal = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0, 0, 80],
-                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 90, 0]])*1e-2 
+            #P_from_thal = np.array([[0,0,0,0,0,0,0,0,0,0, 0, 0, 0, 0, 0], # thalamus excitatory
+            P_from_thal = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0, 0, 0], # thalamus excitatory
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
             P_to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
-            print('P to thal', P_to_thal.shape)
+            #print('P to thal', P_to_thal.shape)
 
             # calculate final thalamus connectivity
             PS_to_thal = np.multiply(P_to_thal, S_to_thal)
@@ -203,8 +204,8 @@ class Parameter():
 
             # Only the thalamus E population receives the external input (from the brain stem)
             Wext = np.zeros((W_from_thal.shape[1],1))
-            Wext[13] = 1
-            Wext[14] = 1
+            Wext[13] = 1 # thalamus E population
+            Wext[14] = 0 # reticular I population
 
             # thalamus connectivity based on Ji et al. 2016
             #Wext = np.array([0.8488, 1, 0.44019, 0.2856, 0.9095, 2.5837, 1.3860, 0.7833, 0, 0.0140, 0, 0, 0])
@@ -212,25 +213,25 @@ class Parameter():
             
 
         # Extracting submatrices based on the defined index sets
-        Wee = W[np.ix_(iE, iE)]
-        Wpe = W[np.ix_(iP, iE)]
-        Wse = W[np.ix_(iS, iE)]
-        Wve = W[np.ix_(iV, iE)]
+        Wee = W[np.ix_(iE, iE)]*gE
+        Wpe = W[np.ix_(iP, iE)]*gE
+        Wse = W[np.ix_(iS, iE)]*gE
+        Wve = W[np.ix_(iV, iE)]*gE
 
-        Wep = W[np.ix_(iE, iP)]
-        Wpp = W[np.ix_(iP, iP)]
-        Wsp = W[np.ix_(iS, iP)]
-        Wvp = W[np.ix_(iV, iP)]
+        Wep = W[np.ix_(iE, iP)]*gI
+        Wpp = W[np.ix_(iP, iP)]*gI
+        Wsp = W[np.ix_(iS, iP)]*gI
+        Wvp = W[np.ix_(iV, iP)]*gI
 
-        Wes = W[np.ix_(iE, iS)]
-        Wps = W[np.ix_(iP, iS)]
-        Wss = W[np.ix_(iS, iS)]
-        Wvs = W[np.ix_(iV, iS)]
+        Wes = W[np.ix_(iE, iS)]*gI
+        Wps = W[np.ix_(iP, iS)]*gI
+        Wss = W[np.ix_(iS, iS)]*gI
+        Wvs = W[np.ix_(iV, iS)]*gI
 
-        Wev = W[np.ix_(iE, iV)]
-        Wpv = W[np.ix_(iP, iV)]
-        Wsv = W[np.ix_(iS, iV)]
-        Wvv = W[np.ix_(iV, iV)]
+        Wev = W[np.ix_(iE, iV)]*gI
+        Wpv = W[np.ix_(iP, iV)]*gI
+        Wsv = W[np.ix_(iS, iV)]*gI
+        Wvv = W[np.ix_(iV, iV)]*gI
 
         # put them back together
         # Reconstructing W0 from the submatrices, negating where indicated
@@ -241,33 +242,28 @@ class Parameter():
 
         # Vertically stack the rows to form W0
         W0 = np.vstack([row1, row2, row3, row4])
+       
 
         # include the external input to the matrix 
         if include_Iext:
-            print('W0', W0.shape) # this should be 13x13
-            W0 = W0*g
+            #print('W0', W0.shape) # this should be 13x13
             if self.cortex_type == 'somato':
                 # append the thalamus population(s) values to the matrix
                 W0 = np.append(W0, W_to_thal, axis=0)
-                print('W from thalamus 2\n', W_from_thal.shape)
-                print(W_from_thal)
+                #print('W from thalamus 2\n', W_from_thal.shape)
+                #print(W_from_thal)
 
                 W0 = np.append(W0, W_from_thal.T, axis=1)
 
             W = np.concatenate((W0, Wext), axis=1)
-            print('\nW matrix shape', W.shape) 
-            print('W matrix', W[:,-3:]) 
-            print('test')
-
-        else:
-            W = W0*g
+            #print('\nW matrix shape', W.shape) 
+            #print('W matrix', W[:,-3:]) 
 
         return W
 
 
     def get_sigmoid(self):
         # sigmoid function (nPop x 3) --> 3 stands for parameters: r(1/mV), v_thr(mV), m_max (1/s)
-        # 
         if self.cortex_type == 'somato':
             sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
                                        [  0.14218422,  40.03107351, 166.82960408],
@@ -282,8 +278,8 @@ class Parameter():
                                        [  0.12782346,  32.10540543,  31.39696397],
                                        [  0.14218422,  40.03107351, 166.82960408],
                                        [  0.07937015,  42.01276379,  56.95305832],
-                                       [  1,  30,  30], # Thalamus E
-                                       [  1,  30,  30]]) # Thalamus I
+                                       [  0.1,  40,  30], # Thalamus E
+                                       [  0.1,  40,  30]]) # Thalamus I
                                        
         elif self.cortex_type == 'visual':
             sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
@@ -305,12 +301,12 @@ class Parameter():
             
         return sigmoid_params
     
-    def save_to_yaml(self, filename, g):
+    def save_to_yaml(self, filename, gE, gI):
         
         S = self.get_connectStrength()
         P = self.get_connectProb()
         C = self.get_cellcounts()
-        W = self.get_connectivity(g)
+        W = self.get_connectivity(gE, gI)
 
         # Convert numpy arrays to lists
         parameters = {

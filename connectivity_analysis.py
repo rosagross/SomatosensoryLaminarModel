@@ -150,7 +150,7 @@ filename = 'W_somato.pdf'
 plt.show()
 
 # %% Plot Connectivity Matrix WITH Iext
-somato_W_matrix = np.abs(params_somato.get_connectivity(1, True))
+somato_W_matrix = np.abs(params_somato.get_connectivity(1, 1, True))
 
 fig = plt.figure(figsize=(8,6))
 zero_idx = np.where(somato_W_matrix<0.0001)
