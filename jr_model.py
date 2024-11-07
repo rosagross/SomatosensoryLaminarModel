@@ -5,20 +5,21 @@ import os
 
 class JR_Model():
 
-    def __init__(self, Iext, cortex_type, g, filedir, filename, step_size=0.001, simulation_time=1):
+    def __init__(self, Iext, cortex_type, gE, gI, filedir, filename, step_size=0.001, simulation_time=1):
         
         # load in all parameters
         self.p = Parameter(cortex_type)
         # safe connectivty parameter in yaml file 
-        self.p.save_to_yaml(os.path.join(filedir, 'params'+filename), g)
+        self.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI)
 
         # Simulation parameters
         self.tau = self.p.tau
-        print('tau', self.tau[0])
+        #print('tau', self.tau[0])
         self.nPop = self.p.nPop
         self.simulation_time = simulation_time# in s
         self.step_size = step_size # in s
-        self.g = g
+        self.gE = gE
+        self.gI = gI
 
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
         self.sigm = self.p.sigmoid_params
@@ -48,7 +49,7 @@ class JR_Model():
         self.u_t = np.zeros((self.nPop, self.nPop+1)) # the initial first-order derivative: v'(t) = u(t)
 
         # Weight matrix [to x from]
-        W = self.p.get_connectivity(self.g) 
+        W = self.p.get_connectivity(self.gE, self.gI) 
 
         for timestep, time in enumerate(self.steps):
             
