@@ -21,7 +21,7 @@ class Parameter():
             #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
             #tau = np.tile(np.array([5.2, 5.2, 5.9, 5.9, 3, 3, 3.8, 3.8, 11.2, 11.2, 11.1, 11.1, 10.4])*1e-3, (nPop+1,1)) 
             # Visual cortex values
-            tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3,3])*1e-3, (nPop,1)) # sec
+            tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3,3,3,3])*1e-3, (nPop,1)) # sec
 
             # TODO: MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron whereas the synaptic decay depends on the presynapse)
         
@@ -202,15 +202,15 @@ class Parameter():
             # weight the inhibitory popultaion (from the reticular nucleus in the thalamus) as negative
             W_from_thal[1] = W_from_thal[1]*-1
 
+            # Create the external input matrix
             # Only the thalamus E population receives the external input (from the brain stem)
             Wext = np.zeros((W_from_thal.shape[1],1))
             Wext[13] = 1 # thalamus E population
             Wext[14] = 0 # reticular I population
 
-            # thalamus connectivity based on Ji et al. 2016
-            #Wext = np.array([0.8488, 1, 0.44019, 0.2856, 0.9095, 2.5837, 1.3860, 0.7833, 0, 0.0140, 0, 0, 0])
-            #Wext = np.expand_dims(Wext,1)
-            
+            # .. and also for the background input (all cells receive input except the thalamus)
+            Wb = np.zeros((W_from_thal.shape[1],1))
+            Wb[:-2] = 1
 
         # Extracting submatrices based on the defined index sets
         Wee = W[np.ix_(iE, iE)]*gE
@@ -242,7 +242,6 @@ class Parameter():
 
         # Vertically stack the rows to form W0
         W0 = np.vstack([row1, row2, row3, row4])
-       
 
         # include the external input to the matrix 
         if include_Iext:
@@ -255,9 +254,9 @@ class Parameter():
 
                 W0 = np.append(W0, W_from_thal.T, axis=1)
 
-            W = np.concatenate((W0, Wext), axis=1)
+            W = np.concatenate((W0, Wb, Wext), axis=1)
             #print('\nW matrix shape', W.shape) 
-            #print('W matrix', W[:,-3:]) 
+            #print('W matrix', W[:,-4:]) 
 
         return W
 

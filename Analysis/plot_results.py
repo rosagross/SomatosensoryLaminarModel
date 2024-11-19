@@ -29,7 +29,6 @@ import matplotlib.patches as mpatches
 import matplotlib.cm as cm  # Import the colormap module
 from matplotlib.colors import ListedColormap, Normalize, BoundaryNorm
 from scipy.signal import find_peaks
-
 import seaborn as sns
 import pandas as pd
 from plotting_style import figure_style
@@ -44,37 +43,40 @@ figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS Summer
 # %%
 
 # read in data
-input_durations = [0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
-input_strengths = [0, 20, 40, 60, 80, 100] #np.arange(0, 80, 20) # np.arange(0, 20, 2)
-coupling_strengths_E = [20, 30, 40, 50, 60] # np.arange(0, 100, 20)
-coupling_strengths_I = [20, 30, 40, 50, 60]
+input_durations = [0.5] #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
+input_strengths = [0] #[20, 40, 60, 80, 100] #np.arange(0, 80, 20) # np.arange(0, 20, 2)
+coupling_strengths_E = np.arange(0, 100, 20) # np.arange(0, 100, 20)
+coupling_strengths_I = np.arange(0, 100, 20)
+backgroundI_strengths = [1,2,3,4,5,6,7,8,9,10]
 step_size = 0.001
 sample_delay = 0.5
 input_onset = 1.001
 sample_dur = 0.1 # amount of time in sec in which we look at the long term firing rate (min and max)
 cortex_type = 'somato'
-stimulation_type = 'background'
+stimulation_type = 'step'
 thalamus_source = 'thalJiang'
 load_trajectory = True
 load_full_potentials = False
 load_population_potential = 3 # the 3rd population is E3, the output layer
 
-summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths_E, coupling_strengths_I, 
+summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths_E, coupling_strengths_I, backgroundI_strengths,
                         step_size, sample_delay, input_onset, sample_dur, cortex_type, stimulation_type, thalamus_source, load_trajectory, load_full_potentials, load_population_potential)
     
 # %% Make plots that demonstrate the sampling time line 
 
 # choose example settings
-gE = 60
-gI = 50 
+gE = 10
+gI = 10
 population = 'E1'
 input_duration = 0.5
-input_strength = 60
+input_strength = 20
+backgroundI_strength = 2
 line_df = trajectory_df[trajectory_df['coupling_strength_E']==gE]
 line_df = line_df[line_df['coupling_strength_I']==gI]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
 line_df = line_df[line_df['InputStrength']==input_strength]
+line_df = line_df[line_df['BckgndInputStrength']==backgroundI_strength]
 # LONG TERM and DURING INPUT
 
 # Add a red vertical line at time of input offset (start of sampling) and stop of sampling
@@ -123,15 +125,16 @@ plt.show()
 
 # choose example settings
 gE = 60
-gI = 50
+gI = 40
 population = 'E1'
 input_duration = 0.5
-input_strength = 60
+input_strength = 20
 line_df = trajectory_df[trajectory_df['coupling_strength_E']==gE]
 line_df = line_df[line_df['coupling_strength_I']==gI]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
 line_df = line_df[line_df['InputStrength']==input_strength]
+line_df = line_df[line_df['BckgndInputStrength']==backgroundI_strength]
 plotting_window = []
 
 # plot the input
@@ -147,13 +150,16 @@ plt.show()
 
 # %%
 
-# choose a coupling strength and a population
+# choose a coupling strength, background input strength and a population
 gE = 60
-gI = 50
+gI = 40
+backgroundI_strength = 5
 population = 'P2'
 data_df = summary_df[summary_df['coupling_strength_E']==gE]
 data_df = data_df[data_df['coupling_strength_I']==gI]
 data_df = data_df[data_df['population']==population]
+data_df = data_df[data_df['BckgndInputStrength']==backgroundI_strength]
+
 data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_rate')
 sns.heatmap(data_heatmap, cmap='magma')
 
@@ -173,7 +179,8 @@ population = 'P2'
 data_df = summary_df[summary_df['coupling_strength_E']==gE]
 data_df = data_df[data_df['coupling_strength_I']==gI]
 data_df = data_df[data_df['population']==population]
-data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_potential')
+data_df = data_df[data_df['BckgndInputStrength']==backgroundI_strength]
+data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_rate')
 sns.heatmap(data_heatmap, cmap='magma')
 
 # %% 
@@ -187,12 +194,14 @@ sns.heatmap(data_heatmap, cmap='magma')
 '''
 
 # choose a coupling strength and a population
-coupling_strengths_E = [30,40,50,60] #np.arange(0, 100, 10)
-gI = 50
+coupling_strengths_E = np.arange(0, 100, 20)
+gI = 40
+backgroundI_strength = 5
 cbar_ticks = ['non-responsive', 'transfer', 'memory']
 population = 'E3'
 data_df = summary_df[summary_df['population']==population]
 data_df = data_df[data_df['coupling_strength_I']==gI]
+data_df = data_df[data_df['BckgndInputStrength']==backgroundI_strength]
 data_df['InputDuration'] = data_df['InputDuration'].round(4)
 fig, ax = plt.subplots(2, int(len(coupling_strengths_E)/2), figsize=(9,4), sharex=True, sharey=True)
 
@@ -388,11 +397,13 @@ plt.show()
 BACKGROUND INPUT
 3.2) all layers
 '''
-input_duration = 0.0
-input_strength = 100
+input_duration = 0.5
+input_strength = 20
 data_df = summary_df[summary_df['InputDuration']==input_duration]
 data_df = data_df[data_df['InputStrength']==input_strength]
-gI = 60
+bI = 8
+data_df = data_df[data_df['BckgndInputStrength']==bI]
+gI = 40
 data_df = data_df[data_df['coupling_strength_I']==gI]
 
 # separate data in layers

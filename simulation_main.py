@@ -30,18 +30,18 @@ def plot_minmax(rates, coupling_strengths_Es):
     plt.legend()
     plt.show()
 
-def plot_results(rates, Iext, step_size, simulation_time, start_plot):
-
+def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
 
     # plot results
     fig, axs = plt.subplots(3, 2, figsize=(8, 5))  # Set figure size
    
-    axs[0][0].plot(steps[start_plot:], Iext[start_plot:])
-    axs[0][0].legend(['input'])
+    axs[0][0].plot(steps[start_plot:], Iext[start_plot:], label='Iext rate')
+    axs[0][0].plot(steps[start_plot:], Ib[start_plot:], label='Ib rate')
+    axs[0][0].legend(title='')
     axs[0][0].set_ylabel('Hz')
-    axs[0][1].plot(steps[start_plot:], rates[0, -2:-1].T[start_plot:])
-    axs[0][1].legend(['Thalamus E'])
+    axs[0][1].plot(steps[start_plot:], rates[0, -2:].T[start_plot:])
+    axs[0][1].legend(['Thalamus E', 'Thalamus I'])
     axs[0][1].set_ylabel('Hz')
 
     # Plot settings for all subplots
@@ -69,6 +69,7 @@ def plot_results(rates, Iext, step_size, simulation_time, start_plot):
     plt.legend()
     plt.show()
 
+
 def create_Iext(simulation_time, step_size, input_onset, input_duration, input_strength, input_type):
     ''' Creates external input.'''
 
@@ -83,6 +84,12 @@ def create_Iext(simulation_time, step_size, input_onset, input_duration, input_s
         Iext[:] = input_strength
 
     return Iext
+
+def create_Ibackground(simulation_time, step_size, input_strength):
+    ''' Create Background Input '''
+    Ib = np.zeros(int(simulation_time/step_size))
+    Ib[:] = input_strength
+    return Ib
 
 def save_results_csv(rates, potentials, cortex_type, filedir, filename, full=False):
     '''
@@ -124,67 +131,72 @@ def write_3D_csv(filename, data):
 
 def main():
 
-    save_results = False
+    save_results = True
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = True
+    plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths_E = [60] #np.arange(5, 100, 10)
-    coupling_strengths_I = [20] #,20,30,40,50,60]
+    coupling_strengths_E = np.arange(0, 100, 10)
+    coupling_strengths_I = np.arange(0, 100, 10)
     step_size = 0.001
     cortex_type = 'somato'
     filedir = 'output'
 
     # define input
-    input_type = "background" # other options are "step", "baseline" (equals input strength 0) or "background"
+    input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0] #np.arange(0, 2, 0.5) # in sec 
-    input_strengths = [0] #, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
+    input_durations = [0.5] # np.arange(0.5, 2, 0.5) # in sec 
+    input_strengths = [20, 40, 60, 80, 100] # np.arange(0, 80, 10)
+    backgrndI_strengths = [1,2,3,4,5,6,7,8,9,10]
 
     for d in input_durations:
         simulation_time = int(input_onset) + d + 1
-        for s in input_strengths:
+        for sb in backgrndI_strengths:
+        
+            for s in input_strengths:
 
-            # arrays to store rate (for plotting)
-            all_rates = []
-            all_potentials = []
+                # arrays to store rate (for plotting)
+                all_rates = []
+                all_potentials = []
 
-            for gE in coupling_strengths_E:
-                for gI in coupling_strengths_I:
+                for gE in coupling_strengths_E:
+                    for gI in coupling_strengths_I:
 
-                    print('\nInput duration:', d)
-                    print('Input strength:', s)
-                    print('gE', gE)
-                    print('gI', gI)
+                        print('\nInput duration:', d)
+                        print('Input strength:', s)
+                        print('Background Input strength:', sb)
+                        print('gE', gE)
+                        print('gI', gI)
 
-                    filename = f'_gE{gE}gI{gI}_{cortex_type}_Iduration{d}_{input_type}Istrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0'
+                        filename = f'_gE{gE}gI{gI}_{cortex_type}_IbStrength{sb}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0'
 
-                    # create input array 
-                    Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
-                    model = JR_Model(Iext, cortex_type, gE, gI, filedir, filename, step_size, simulation_time)
+                        # create input array 
+                        Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
+                        Ib = create_Ibackground(simulation_time, step_size, sb)
+                        model = JR_Model(Iext, Ib, cortex_type, gE, gI, filedir, filename, step_size, simulation_time)
 
-                    # perform simulation with current coupling strength g
-                    rate, potential = model.run_simulation()
-                    # append results
-                    all_rates.append(rate)
-                    all_potentials.append(potential)
+                        # perform simulation with current coupling strength g
+                        rate, potential = model.run_simulation()
+                        # append results
+                        all_rates.append(rate)
+                        all_potentials.append(potential)
 
-                    if save_results:
-                        save_results_csv(rate, potential, cortex_type, filedir, filename, save_full_potentials)
+                        if save_results:
+                            save_results_csv(rate, potential, cortex_type, filedir, filename, save_full_potentials)
 
-            all_rates = np.array(all_rates)
-            all_potentials = np.array(all_potentials)
 
-    if plot:
-        if len(coupling_strengths_E) == 1:
-            # when to start plotting (in ms)
-            start_plot = 500
-            # plot only one coupling strength value with time on the x-axis
-            plot_results(all_rates, Iext, step_size, simulation_time, start_plot)
-        else: 
-            # used to plot with coupling strength on the x-axis and max/min rate on the y
-            plot_minmax(all_rates, coupling_strengths_E)
-    
-
+                if plot:
+                    all_rates = np.array(all_rates)
+                    all_potentials = np.squeeze(np.array(all_potentials))
+                    if len(coupling_strengths_E) == 1:
+                        # when to start plotting (in ms)
+                        start_plot = 500
+                        # plot only one coupling strength value with time on the x-axis
+                        plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot)
+                        #plot_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot)
+                    else: 
+                        # used to plot with coupling strength on the x-axis and max/min rate on the y
+                        plot_minmax(all_rates, coupling_strengths_E)
+        
 if __name__ == '__main__':
    main()
