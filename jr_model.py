@@ -5,7 +5,7 @@ import os
 
 class JR_Model():
 
-    def __init__(self, Iext, cortex_type, gE, gI, filedir, filename, step_size=0.001, simulation_time=1):
+    def __init__(self, Iext, Ib, cortex_type, gE, gI, filedir, filename, step_size=0.001, simulation_time=1):
         
         # load in all parameters
         self.p = Parameter(cortex_type)
@@ -30,8 +30,9 @@ class JR_Model():
         # define time steps 
         self.steps = np.arange(self.step_size, self.simulation_time+self.step_size, self.step_size)
 
-        # external input matrix
+        # external input matrix and background input matrix
         self.Iext = np.tile(Iext, (self.nPop,1))
+        self.Ib = np.tile(Ib, (self.nPop,1))
         
 
     def run_simulation(self):
@@ -40,13 +41,13 @@ class JR_Model():
         '''
         # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
         self.rate = np.zeros((self.nPop, len(self.steps)))
-        self.potential = np.zeros((self.nPop, self.nPop+1, len(self.steps))) 
+        self.potential = np.zeros((self.nPop, self.nPop+2, len(self.steps))) 
 
         # Simulation loop
         # Initialize first values for the potential, rate and first order derivative with 0 or randomly
-        self.v_current = np.zeros((self.nPop, self.nPop+1))
+        self.v_current = np.zeros((self.nPop, self.nPop+2)) # +2 because 1 for background input and one for external input 
         self.rate_current = np.zeros(self.nPop)
-        self.u_t = np.zeros((self.nPop, self.nPop+1)) # the initial first-order derivative: v'(t) = u(t)
+        self.u_t = np.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
 
         # Weight matrix [to x from]
         W = self.p.get_connectivity(self.gE, self.gI) 
@@ -76,11 +77,17 @@ class JR_Model():
                     u_dot = (self.H[i, j]/self.tau[i,j]) * (W[i, j]*self.rate_current[j]) - 2 * self.u_t[i, j]/self.tau[i,j] - self.potential[i, j, timestep]/(self.tau[i,j]**2)
                     self.u_t[i, j] = self.u_t[i,j] + u_dot * self.step_size
 
-                # Add external input 
+                # Add external input (goes to thalamus only, so it's kind of a brain stem input) 
                 v_dot = self.u_t[i, -1]
                 self.v_current[i, -1] = self.v_current[i, -1] + v_dot * self.step_size
                 u_dot = (self.H[i,-1]/self.tau[i,-1]) * (W[i, -1] * self.Iext[i, timestep]) - 2 * self.u_t[i, -1]/self.tau[i,-1] - self.potential[i, -1, timestep]/(self.tau[i,-1]**2)
                 self.u_t[i, -1] = self.u_t[i,-1] + u_dot * self.step_size
+
+                # Add background input 
+                v_dot = self.u_t[i, -2]
+                self.v_current[i, -2] = self.v_current[i, -2] + v_dot * self.step_size
+                u_dot = (self.H[i,-2]/self.tau[i,-2]) * (W[i, -2] * self.Ib[i, timestep]) - 2 * self.u_t[i, -2]/self.tau[i,-2] - self.potential[i, -2, timestep]/(self.tau[i,-2]**2)
+                self.u_t[i, -2] = self.u_t[i,-2] + u_dot * self.step_size
         
         
         return self.rate, self.potential
