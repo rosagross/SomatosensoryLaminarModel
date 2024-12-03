@@ -140,13 +140,13 @@ def main():
     coupling_strengths_I = np.arange(0, 100, 10)
     step_size = 0.001
     cortex_type = 'somato'
-    filedir = 'output'
+    filedir = '/data/p_02989/Modelling/output/'
 
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0.5] # np.arange(0.5, 2, 0.5) # in sec 
-    input_strengths = [20, 40, 60, 80, 100] # np.arange(0, 80, 10)
+    input_durations = [0] #np.arange(0.5, 2, 0.5) # in sec 
+    input_strengths = [0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
     backgrndI_strengths = [1,2,3,4,5,6,7,8,9,10]
 
     for d in input_durations:
