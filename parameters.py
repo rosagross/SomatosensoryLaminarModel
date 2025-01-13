@@ -1,6 +1,7 @@
+# %%
 import numpy as np
 import yaml
-
+# %%
 class Parameter():
 
     def __init__(self, cortex_type='somato'):
@@ -15,33 +16,40 @@ class Parameter():
 
         if self.cortex_type == 'somato':
             # nr. of populations
-            nPop = 15
-            #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, Thal
+            nPopS1 = 13 #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
+            nPopS2 = 13 #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
+            nPopThal = 2 # one forward excitatory and one inhibitory feedback neuron
+            nPopTotal = nPopS1+nPopS2+nPopThal
             # SYNAPTIC DECAY (depends on the connection type excitatory/inhibitory)
             #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
             #tau = np.tile(np.array([5.2, 5.2, 5.9, 5.9, 3, 3, 3.8, 3.8, 11.2, 11.2, 11.1, 11.1, 10.4])*1e-3, (nPop+1,1)) 
             # Visual cortex values
-            tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3,3,3,3])*1e-3, (nPop,1)) # sec
+            # the last two values are used for the external input and background input
+            # with nPopTotal = 28 the shape of tau should be (28, 32) 
+            tauS1 = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15])*1e-3, (nPopTotal,1)) # sec
+            tauS2 = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3,3,3,3])*1e-3, (nPopTotal,1)) # sec
+            tau = np.hstack((tauS1,tauS2))
 
             # TODO: MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron whereas the synaptic decay depends on the presynapse)
         
         
         elif self.cortex_type == 'visual':
             # nr. of populations
-            nPop = 16
+            nPopTotal = 16
             # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1, VIP2, VIP3, VIP4, Iext
             tau = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,15,15,15,3])*1e-3, (nPop+1,1)) # sec
-        # synaptic kernel efficacy
-        return tau, nPop
+            # synaptic kernel efficacy
+        
+        return tau, nPopTotal
 
     def get_connectProb(self):
 
         # Connection probabilies
         if self.cortex_type == 'somato':
             # Connection probabilies
-            # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4, Thalamus
+            # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (Thalamus is added later!)
             # Targets in rows, sources in columns 
-            P = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
+            P_S1 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
                         [28.5, 31.8, 11.8,  5.5,  0.4,  1.7,  3.2,  0.05,  0.1,  1.4,  0.01, 0.01, 0.6],
                         [24.3, 29.1,  0., 27.1,  0.4, 1.2, 4.4, 0.03, 0.1, 2.1, 0., 0., 0],
                         [16., 20.6, 46.3,  6.3,  0.2,  1.,  1.7,  0.02,  0.1,  0.6, 0, 0.01,  0.5],
@@ -55,6 +63,25 @@ class Parameter():
                         [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, 39.6, 24.6, 24.1],
                         [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
 
+            P_S2 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
+                        [28.5, 31.8, 11.8,  5.5,  0.4,  1.7,  3.2,  0.05,  0.1,  1.4,  0.01, 0.01, 0.6],
+                        [24.3, 29.1,  0., 27.1,  0.4, 1.2, 4.4, 0.03, 0.1, 2.1, 0., 0., 0],
+                        [16., 20.6, 46.3,  6.3,  0.2,  1.,  1.7,  0.02,  0.1,  0.6, 0, 0.01,  0.5],
+                        [ 1.3,  3.5,  5.9,  7.,  9.9, 37.4, 19.8,  0.6,  2.8,  5.2, 0, 0.2, 2.4],
+                        [ 3.6,  1.6,  2.3,  5.3, 37.4, 28.8, 36.3,  0.9,  2.8,  4.7,  0.1, 0.3, 1.8],
+                        [ 3.6,  1.8,  2.4,  4.9, 19., 33.2,  1.2,  0.9,  3.2,  4.7,  0.2, 0.2, 2.3],
+                        [ 8.6,  4.2,  9.4,  6.2,  8.7,  7.,  7.6,  9.8, 39.6, 15.1,  1., 1.8, 5.1],
+                        [ 1.7,  0.5,  1.1,  1.9,  3.5,  3.,  2.3, 39.6, 24.6, 24.1,  0.4, 1.3, 2.6],
+                        [ 1.6,  0.4,  1.,  1.9,  3.8,  3.0,  2.5, 20.5, 31.1,  0.6,  0.6, 1-.5,  3.2],
+                        [0, 0.2, 0.3, 0.8, 3.0, 1.5, 1.0, 4.0, 1.9, 1.7, 2.1, 39.6, 15.1],
+                        [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, 39.6, 24.6, 24.1],
+                        [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
+
+            P_S1toS2 = np.zeros((13,13))
+            P_S2toS1 = np.zeros((13,13))
+            P_toS1 = np.hstack((P_S1,P_S2toS1))
+            P_toS2 = np.hstack((P_S1toS2,P_S2))
+            P = np.vstack((P_toS1, P_toS2)) #  26x26 (with nPop=13 per S1/S2)
 
         elif self.cortex_type == 'visual':
             # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
@@ -86,7 +113,7 @@ class Parameter():
             # Postsynaptic potential (13x14) averages from Isbister, Jiang, and more (see excel file FinalConnectivity_PSP.csv for mor info)
             # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
             # Targets in rows, sources in columns
-            psp = [
+            psp_S1 = [
                 [0.75, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0],
                 [0.75, 1.0, 1.0, 1.0, 1.2, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
                 [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
@@ -101,8 +128,26 @@ class Parameter():
                 [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
                 [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]]
 
-            # we only take the absolute values since the inhibitory impact of the interneurons is added in the connectivity matrix 
-            psp = np.absolute(psp)
+            psp_S2 = [
+                [0.75, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0],
+                [0.75, 1.0, 1.0, 1.0, 1.2, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+                [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+                [0.25, 1.0, 1.0, 1.0, 0.3, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0],
+                [0.5, 1.0, 1.0, 1.0, 1.59, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+                [0.5, 1.0, 1.0, 1.0, 1.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+                [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 0.19, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+                [0.5, 1.0, 1.0, 1.0, 0.6, 1.1, 0.38, 0.8, 1.0, 1.0, 0.5, 1.0, 1.0],
+                [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0],
+                [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0],
+                [0.5, 1.0, 1.0, 1.0, 0.29, 1.0, 1.0, 0.5, 1.0, 1.0, 0.75, 2.0, 1.0],
+                [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
+                [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]]
+
+            psp_S1toS2 = np.zeros((13,13))
+            psp_S2toS1 = np.zeros((13,13))
+            psp_toS1 = np.hstack((psp_S1,psp_S2toS1))
+            psp_toS2 = np.hstack((psp_S1toS2,psp_S2))
+            psp = np.vstack((psp_toS1, psp_toS2)) #  26x26 (with nPop=13 per S1/S2)
 
         elif self.cortex_type == 'visual':
             # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
@@ -130,8 +175,10 @@ class Parameter():
         # Cell counts
         if self.cortex_type == 'somato':
             # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-            C_absolute = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
-            
+            C_absoluteS1 = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
+            C_absoluteS2 = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
+            C_absolute = np.hstack((C_absoluteS1,C_absoluteS2))
+
             # translate in proportion
             C = C_absolute/np.sum(C_absolute)
             
@@ -169,28 +216,46 @@ class Parameter():
             Wext[1] = 1
 
         elif self.cortex_type == 'somato':
-            # indices to reorder the matrix
-            iE = np.array([0, 4, 7, 10])  # E1, E2, E3, E4
-            iP = iE+1  # PV1, PV2, PV3, PV4
-            iS = iE+2  # SOM1, SOM2, SOM3, SOM4
-            iV = [3]  # VIP1
-
-            # now create the external input matrix, based on thalamus connectivity (average of findings, see FinalConnectivity_PSPs.ods)
+        
+            # create the external input matrix, based on thalamus connectivity (average of findings, see FinalConnectivity_PSPs.ods)
             # order: 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1', 'Thal E'
-            #S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # based on Isbister & jiang 
-            S_from_thal = np.array([[0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0, 0, 0.5], # Based on Jiang et al. 2023 only! 
+            #S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # Thal to S1 based on Isbister & jiang 
+            S_thalToS1 = np.array([[0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0], # Thal to S1: Based on Jiang et al. 2023 only! 
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # no thal E/I target (integrated in last two entries of below S2 array) 
+            S_thalToS2 = np.array([[0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0, 0, 0.5], # last to are Thal E and Thal I 
                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0]]) # Reticular inhibition: just an assumption
-            S_to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-            #print('S', S_to_thal.shape)
+            #print('S', S_thalToS1.shape, S_thalToS2.shape)
+            
+            S_from_thal = np.hstack((S_thalToS1, S_thalToS2))
+            S_S1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+            S_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
+            S_to_thal = np.hstack((S_S1to_thal,S_S2to_thal))
+
+
+            #print('S', S_from_thal.shape)
             
             # cell count of the thalamus 
             C_thal = [1, 1] # Thal E, Thal I
             
             # connection probabilities
             #P_from_thal = np.array([[0,0,0,0,0,0,0,0,0,0, 0, 0, 0, 0, 0], # thalamus excitatory
-            P_from_thal = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0, 0, 0], # thalamus excitatory
+            P_thalToS1 = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0], # thalamus excitatory
+                                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
+            P_thalToS2 = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0, 0, 0], # thalamus excitatory
                                     [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
-            P_to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
+            #P_thalToS2 = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0, 0, 0], # thalamus excitatory
+            #                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
+            # no projections from thalamus to S2 
+            #P_thalToS2 = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # thalamus excitatory
+            #                        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
+
+
+            #print('P from thal', P_thalToS1.shape, P_thalToS2.shape)
+            P_from_thal = np.hstack((P_thalToS1, P_thalToS2))
+            P_S1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
+            P_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
+            P_to_thal = np.hstack((P_S1to_thal,P_S2to_thal))
+            
             #print('P to thal', P_to_thal.shape)
 
             # calculate final thalamus connectivity
@@ -205,43 +270,118 @@ class Parameter():
             # Create the external input matrix
             # Only the thalamus E population receives the external input (from the brain stem)
             Wext = np.zeros((W_from_thal.shape[1],1))
-            Wext[13] = 1 # thalamus E population
-            Wext[14] = 0 # reticular I population
+            Wext[26] = 1 # thalamus E population
+            Wext[27] = 0 # reticular I population
 
             # .. and also for the background input (all cells receive input except the thalamus)
             Wb = np.zeros((W_from_thal.shape[1],1))
             Wb[:-2] = 1
 
+            # S1
+            # indices to reorder the matrix to E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
+            iE_S1 = np.array([0, 4, 7, 10])  # E1, E2, E3, E4 of S1 
+            iP_S1 = iE_S1+1  # PV1, PV2, PV3, PV4
+            iS_S1 = iE_S1+2  # SOM1, SOM2, SOM3, SOM4
+            iV_S1 = [3]  # VIP1
+
+            # S2
+            iE_S2 = np.array([13, 17, 20, 23])  # E1, E2, E3, E4 of S2 
+            iP_S2 = iE_S2+1  # PV1, PV2, PV3, PV4
+            iS_S2 = iE_S2+2  # SOM1, SOM2, SOM3, SOM4
+            iV_S2 = [16]  # VIP1
+
         # Extracting submatrices based on the defined index sets
-        Wee = W[np.ix_(iE, iE)]*gE
-        Wpe = W[np.ix_(iP, iE)]*gE
-        Wse = W[np.ix_(iS, iE)]*gE
-        Wve = W[np.ix_(iV, iE)]*gE
+        # within S1 and S2
+        Wee_S1 = W[np.ix_(iE_S1, iE_S1)]*gE
+        Wpe_S1 = W[np.ix_(iP_S1, iE_S1)]*gE
+        Wse_S1 = W[np.ix_(iS_S1, iE_S1)]*gE
+        Wve_S1 = W[np.ix_(iV_S1, iE_S1)]*gE
+        Wee_S2 = W[np.ix_(iE_S2, iE_S2)]*gE
+        Wpe_S2 = W[np.ix_(iP_S2, iE_S2)]*gE
+        Wse_S2 = W[np.ix_(iS_S2, iE_S2)]*gE
+        Wve_S2 = W[np.ix_(iV_S2, iE_S2)]*gE
+        # connectivity between S1 and S2
+        Wee_S1S2 = W[np.ix_(iE_S1, iE_S2)]*gE
+        Wpe_S1S2 = W[np.ix_(iP_S1, iE_S2)]*gE
+        Wse_S1S2 = W[np.ix_(iS_S1, iE_S2)]*gE
+        Wve_S1S2 = W[np.ix_(iV_S1, iE_S2)]*gE
+        Wee_S2S1 = W[np.ix_(iE_S2, iE_S1)]*gE
+        Wpe_S2S1 = W[np.ix_(iP_S2, iE_S1)]*gE
+        Wse_S2S1 = W[np.ix_(iS_S2, iE_S1)]*gE
+        Wve_S2S1 = W[np.ix_(iV_S2, iE_S1)]*gE
 
-        Wep = W[np.ix_(iE, iP)]*gI
-        Wpp = W[np.ix_(iP, iP)]*gI
-        Wsp = W[np.ix_(iS, iP)]*gI
-        Wvp = W[np.ix_(iV, iP)]*gI
+        # within S1 and S2
+        Wep_S1 = W[np.ix_(iE_S1, iP_S1)]*gI
+        Wpp_S1 = W[np.ix_(iP_S1, iP_S1)]*gI
+        Wsp_S1 = W[np.ix_(iS_S1, iP_S1)]*gI
+        Wvp_S1 = W[np.ix_(iV_S1, iP_S1)]*gI
+        Wep_S2 = W[np.ix_(iE_S2, iP_S2)]*gI
+        Wpp_S2 = W[np.ix_(iP_S2, iP_S2)]*gI
+        Wsp_S2 = W[np.ix_(iS_S2, iP_S2)]*gI
+        Wvp_S2 = W[np.ix_(iV_S2, iP_S2)]*gI
+        # connectivity between S1 and S2
+        Wep_S1S2 = W[np.ix_(iE_S1, iP_S2)]*gI
+        Wpp_S1S2 = W[np.ix_(iP_S1, iP_S2)]*gI
+        Wsp_S1S2 = W[np.ix_(iS_S1, iP_S2)]*gI
+        Wvp_S1S2 = W[np.ix_(iV_S1, iP_S2)]*gI
+        Wep_S2S1 = W[np.ix_(iE_S2, iP_S1)]*gI
+        Wpp_S2S1 = W[np.ix_(iP_S2, iP_S1)]*gI
+        Wsp_S2S1 = W[np.ix_(iS_S2, iP_S1)]*gI
+        Wvp_S2S1 = W[np.ix_(iV_S2, iP_S1)]*gI
 
-        Wes = W[np.ix_(iE, iS)]*gI
-        Wps = W[np.ix_(iP, iS)]*gI
-        Wss = W[np.ix_(iS, iS)]*gI
-        Wvs = W[np.ix_(iV, iS)]*gI
+        # within S1 and S2
+        Wes_S1 = W[np.ix_(iE_S1, iS_S1)]*gI
+        Wps_S1 = W[np.ix_(iP_S1, iS_S1)]*gI
+        Wss_S1 = W[np.ix_(iS_S1, iS_S1)]*gI
+        Wvs_S1 = W[np.ix_(iV_S1, iS_S1)]*gI
+        Wes_S2 = W[np.ix_(iE_S2, iS_S2)]*gI
+        Wps_S2 = W[np.ix_(iP_S2, iS_S2)]*gI
+        Wss_S2 = W[np.ix_(iS_S2, iS_S2)]*gI
+        Wvs_S2 = W[np.ix_(iV_S2, iS_S2)]*gI
+        # connectivity between S1 and S2
+        Wes_S1S2 = W[np.ix_(iE_S1, iS_S2)]*gI
+        Wps_S1S2 = W[np.ix_(iP_S1, iS_S2)]*gI
+        Wss_S1S2 = W[np.ix_(iS_S1, iS_S2)]*gI
+        Wvs_S1S2 = W[np.ix_(iV_S1, iS_S2)]*gI
+        Wes_S2S1 = W[np.ix_(iE_S2, iS_S1)]*gI
+        Wps_S2S1 = W[np.ix_(iP_S2, iS_S1)]*gI
+        Wss_S2S1 = W[np.ix_(iS_S2, iS_S1)]*gI
+        Wvs_S2S1 = W[np.ix_(iV_S2, iS_S1)]*gI
 
-        Wev = W[np.ix_(iE, iV)]*gI
-        Wpv = W[np.ix_(iP, iV)]*gI
-        Wsv = W[np.ix_(iS, iV)]*gI
-        Wvv = W[np.ix_(iV, iV)]*gI
+        # within S1 and S2
+        Wev_S1 = W[np.ix_(iE_S1, iV_S1)]*gI
+        Wpv_S1 = W[np.ix_(iP_S1, iV_S1)]*gI
+        Wsv_S1 = W[np.ix_(iS_S1, iV_S1)]*gI
+        Wvv_S1 = W[np.ix_(iV_S1, iV_S1)]*gI
+        Wev_S2 = W[np.ix_(iE_S2, iV_S2)]*gI
+        Wpv_S2 = W[np.ix_(iP_S2, iV_S2)]*gI
+        Wsv_S2 = W[np.ix_(iS_S2, iV_S2)]*gI
+        Wvv_S2 = W[np.ix_(iV_S2, iV_S2)]*gI
+        # connectivity between S1 and S2
+        Wev_S1S2 = W[np.ix_(iE_S1, iV_S2)]*gI
+        Wpv_S1S2 = W[np.ix_(iP_S1, iV_S2)]*gI
+        Wsv_S1S2 = W[np.ix_(iS_S1, iV_S2)]*gI
+        Wvv_S1S2 = W[np.ix_(iV_S1, iV_S2)]*gI
+        Wev_S2S1 = W[np.ix_(iE_S2, iV_S1)]*gI
+        Wpv_S2S1 = W[np.ix_(iP_S2, iV_S1)]*gI
+        Wsv_S2S1 = W[np.ix_(iS_S2, iV_S1)]*gI
+        Wvv_S2S1 = W[np.ix_(iV_S2, iV_S1)]*gI
 
         # put them back together
         # Reconstructing W0 from the submatrices, negating where indicated
-        row1 = np.hstack([Wee, -Wep, -Wes, -Wev])
-        row2 = np.hstack([Wpe, -Wpp, -Wps, -Wpv])
-        row3 = np.hstack([Wse, -Wsp, -Wss, -Wsv])
-        row4 = np.hstack([Wve, -Wvp, -Wvs, -Wvv])
-
+        row1 = np.hstack([Wee_S1, -Wep_S1, -Wes_S1, -Wev_S1, Wee_S1S2, -Wep_S1S2, -Wes_S1S2, -Wev_S1S2])
+        row2 = np.hstack([Wpe_S1, -Wpp_S1, -Wps_S1, -Wpv_S1, Wpe_S1S2, -Wpp_S1S2, -Wps_S1S2, -Wpv_S1S2])
+        row3 = np.hstack([Wse_S1, -Wsp_S1, -Wss_S1, -Wsv_S1, Wse_S1S2, -Wsp_S1S2, -Wss_S1S2, -Wsv_S1S2])
+        row4 = np.hstack([Wve_S1, -Wvp_S1, -Wvs_S1, -Wvv_S1, Wve_S1S2, -Wvp_S1S2, -Wvs_S1S2, -Wvv_S1S2])
+        row5 = np.hstack([Wee_S2S1, -Wep_S2S1, -Wes_S2S1, -Wev_S2S1, Wee_S2, -Wep_S2, -Wes_S2, -Wev_S2])
+        row6 = np.hstack([Wpe_S2S1, -Wpp_S2S1, -Wps_S2S1, -Wpv_S2S1, Wpe_S2, -Wpp_S2, -Wps_S2, -Wpv_S2])
+        row7 = np.hstack([Wse_S2S1, -Wsp_S2S1, -Wss_S2S1, -Wsv_S2S1, Wse_S2, -Wsp_S2, -Wss_S2, -Wsv_S2])
+        row8 = np.hstack([Wve_S2S1, -Wvp_S2S1, -Wvs_S2S1, -Wvv_S2S1, Wve_S2, -Wvp_S2, -Wvs_S2, -Wvv_S2])
+        
         # Vertically stack the rows to form W0
-        W0 = np.vstack([row1, row2, row3, row4])
+        W0 = np.vstack([row1, row2, row3, row4, row5, row6, row7, row8])
+        #print(Wee_S1.shape)
+        #print(W.shape, W0.shape)
 
         # include the external input to the matrix 
         if include_Iext:
@@ -264,7 +404,21 @@ class Parameter():
     def get_sigmoid(self):
         # sigmoid function (nPop x 3) --> 3 stands for parameters: r(1/mV), v_thr(mV), m_max (1/s)
         if self.cortex_type == 'somato':
-            sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
+            sigmoid_params_S1 = np.array([[  0.12782346,  32.10540543,  31.39696397],
+                                       [  0.14218422,  40.03107351, 166.82960408],
+                                       [  0.07937015,  42.01276379,  56.95305832],
+                                       [  0.0704119 ,  37.86409387,  38.52689646],
+                                       [  0.12782346,  32.10540543,  31.39696397],
+                                       [  0.14218422,  40.03107351, 166.82960408],
+                                       [  0.07937015,  42.01276379,  56.95305832],
+                                       [  0.12782346,  32.10540543,  31.39696397],
+                                       [  0.14218422,  40.03107351, 166.82960408],
+                                       [  0.07937015,  42.01276379,  56.95305832],
+                                       [  0.12782346,  32.10540543,  31.39696397],
+                                       [  0.14218422,  40.03107351, 166.82960408],
+                                       [  0.07937015,  42.01276379,  56.95305832]]) 
+
+            sigmoid_params_S2 = np.array([[  0.12782346,  32.10540543,  31.39696397],
                                        [  0.14218422,  40.03107351, 166.82960408],
                                        [  0.07937015,  42.01276379,  56.95305832],
                                        [  0.0704119 ,  37.86409387,  38.52689646],
@@ -279,6 +433,8 @@ class Parameter():
                                        [  0.07937015,  42.01276379,  56.95305832],
                                        [  0.1,  40,  30], # Thalamus E
                                        [  0.1,  40,  30]]) # Thalamus I
+
+            sigmoid_params = np.vstack((sigmoid_params_S1, sigmoid_params_S2))
                                        
         elif self.cortex_type == 'visual':
             sigmoid_params = np.array([[  0.12782346,  32.10540543,  31.39696397],
@@ -318,7 +474,4 @@ class Parameter():
         # Save parameters to a YAML file
         with open(filename + '.yaml', 'w') as file:
             yaml.dump(parameters, file)
-
-    
-
 

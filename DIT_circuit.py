@@ -4,10 +4,9 @@ In this script I implement a mini DIT circuit, with 3 interneuron populations an
 Connectivity:
 
 Integration function:
+Integrating the basal and apical input.
 
 External input:
-
-
 
 '''
 # %%
