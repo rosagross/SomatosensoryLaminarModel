@@ -20,13 +20,14 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
     potential_data_df = pd.DataFrame()
 
     for d in input_durations:
+        print('\nInput duration', d)
         for s in input_strengths:
             for gE in coupling_strengths_E:
                 for gI in coupling_strengths_I:
                     for bI in backgroundI_strengths:
 
-                        print('\nInput duration', d)
-                        print('Input strength', s)
+                        
+                        #print('Input strength', s)
 
                         df = pd.DataFrame()
 

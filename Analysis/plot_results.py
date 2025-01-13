@@ -43,10 +43,10 @@ figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS Summer
 # %%
 
 # read in data
-input_durations = np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
+input_durations = [0, 0.5, 1.0, 1.5] #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
 input_strengths = [0, 20, 40, 60, 80, 100] #np.arange(0, 80, 20) # np.arange(0, 20, 2)
-coupling_strengths_E = np.arange(0, 100, 20) # np.arange(0, 100, 20)
-coupling_strengths_I = np.arange(0, 100, 20)
+coupling_strengths_E = np.arange(0, 100, 10) # np.arange(0, 100, 20)
+coupling_strengths_I = np.arange(0, 100, 10)
 backgroundI_strengths = [1,2,3,4,5,6,7,8,9,10]
 step_size = 0.001
 sample_delay = 0.5

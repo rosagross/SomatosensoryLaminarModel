@@ -131,13 +131,13 @@ def write_3D_csv(filename, data):
 
 def main():
 
-    save_results = True
+    save_results = False
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = False
+    plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths_E = np.arange(0, 100, 10)
-    coupling_strengths_I = np.arange(0, 100, 10)
+    coupling_strengths_E = [60] #np.arange(0, 100, 10)
+    coupling_strengths_I = [40] #np.arange(0, 100, 10)
     step_size = 0.001
     cortex_type = 'somato'
     filedir = '/data/p_02989/Modelling/output/'
@@ -145,9 +145,9 @@ def main():
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0] #np.arange(0.5, 2, 0.5) # in sec 
-    input_strengths = [0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
-    backgrndI_strengths = [1,2,3,4,5,6,7,8,9,10]
+    input_durations = [1] #np.arange(0.5, 2, 0.5) # in sec 
+    input_strengths = [80] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
+    backgrndI_strengths = [2] #[1,2,3,4,5,6,7,8,9,10]
 
     for d in input_durations:
         simulation_time = int(input_onset) + d + 1
