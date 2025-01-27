@@ -82,10 +82,10 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     axs[0][1].legend(['L2/3', 'L4', 'L5', 'L6'])
 
     # Set titles for each subplot
-    axs[0][0].set_title('Baseline rate (E)')
-    axs[0][1].set_title('Baseline rate (PV)')
-    axs[1][0].set_title('Baseline rate (SOM)')
-    axs[1][1].set_title('Baseline rate (VIP)')
+    axs[0][0].set_title('E')
+    axs[0][1].set_title('PV')
+    axs[1][0].set_title('SOM')
+    axs[1][1].set_title('VIP')
     axs[1][1].set_xlabel('time (s)')
     figS1.suptitle('S1')
 
@@ -108,10 +108,10 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     axsS2[1][1].legend(['L2/3', 'L4', 'L5', 'L6'])
 
     # Set titles for each subplot
-    axsS2[0][0].set_title('Baseline rate (E)')
-    axsS2[0][1].set_title('Baseline rate (PV)')
-    axsS2[1][0].set_title('Baseline rate (SOM)')
-    axsS2[1][1].set_title('Baseline rate (VIP)')
+    axsS2[0][0].set_title('E')
+    axsS2[0][1].set_title('PV')
+    axsS2[1][0].set_title('SOM')
+    axsS2[1][1].set_title('VIP')
     axsS2[1][1].set_xlabel('time (s)')
     figS2.suptitle('S2')
     plt.tight_layout() 

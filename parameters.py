@@ -175,12 +175,12 @@ class Parameter():
         # Cell counts
         if self.cortex_type == 'somato':
             # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-            C_absoluteS1 = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
-            C_absoluteS2 = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
-            C_absolute = np.hstack((C_absoluteS1,C_absoluteS2))
+            C_S1 = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
+            C_absoluteS1 = C_S1/np.sum(C_S1)
+            C_S2 = np.array([1691, 90, 74, 85, 1656*(3/4), 85, 48, 1095*(5/4), 109, 105, 1288, 56, 66]) # for S2 adapt this to more neurons in layer 5 than in layer 4
+            C_absoluteS2 = C_S2/np.sum(C_S2)
+            C = np.hstack((C_absoluteS1,C_absoluteS2))
 
-            # translate in proportion
-            C = C_absolute/np.sum(C_absolute)
             
         elif self.cortex_type == 'visual':
             # E1, PV1, SST1, VIP1, E2, PV2, SST2, VIP2, E3, PV3, SST3, VIP3, E4, PV4, SST4, VIP4
