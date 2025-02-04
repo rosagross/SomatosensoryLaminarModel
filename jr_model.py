@@ -5,10 +5,10 @@ import os
 
 class JR_Model():
 
-    def __init__(self, Iext, Ib, cortex_type, gE, gI, filedir, filename, step_size=0.001, simulation_time=1):
+    def __init__(self, Iext, Ib, gE, gI, filedir, filename, step_size=0.001, simulation_time=1):
         
         # load in all parameters
-        self.p = Parameter(cortex_type)
+        self.p = Parameter()
         # safe connectivty parameter in yaml file 
         self.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI)
 

@@ -10,13 +10,23 @@ def plot_minmax(rates, coupling_strengths_Es):
     minRate = np.min(rates[:,:,-100:],axis=2)
     maxRate = np.max(rates[:,:,-100:],axis=2)
 
-    # plot results
-    fig, axs = plt.subplots(4, 1, figsize=(3, 6))  # Set figure size
 
+    # Plottign Area 3b Activity
+    fig, axs = plt.subplots(1, 1, figsize=(3, 6)) 
+    axs.plot(coupling_strengths_Es, minRate[:,0:3], linewidth=2)
+    axs.plot(coupling_strengths_Es, maxRate[:,0:3], linewidth=0.5)
+    axs.grid(True)
+    axs.set_ylabel('Hz')
+    axs.legend(['E', 'PV', 'SOM'])
+    plt.tight_layout() 
+    plt.legend()
+
+    # plot results for S1
+    fig, axs = plt.subplots(4, 1, figsize=(3, 6))  # Set figure size
     # Plot settings for all subplots
     for i, ax in enumerate(axs, start=1):
-        ax.plot(coupling_strengths_Es, minRate[:,(i-1)*4:i*4], linewidth=2)
-        ax.plot(coupling_strengths_Es, maxRate[:,(i-1)*4:i*4], linewidth=0.5)
+        ax.plot(coupling_strengths_Es, minRate[:,((i-1)*4)+3:i*4+3], linewidth=2)
+        ax.plot(coupling_strengths_Es, maxRate[:,((i-1)*4)+3:i*4]+3, linewidth=0.5)
         ax.grid(True)
         ax.set_ylabel('Hz')
         ax.legend(['L2/3', 'L4', 'L5', 'L6'])
@@ -35,8 +45,8 @@ def plot_minmax(rates, coupling_strengths_Es):
 
     # Plot settings for all subplots
     for i, ax in enumerate(axsS2, start=14):
-        ax.plot(coupling_strengths_Es, minRate[:,(i-1)*4:i*4], linewidth=2)
-        ax.plot(coupling_strengths_Es, maxRate[:,(i-1)*4:i*4], linewidth=0.5)
+        ax.plot(coupling_strengths_Es, minRate[:,((i-1)*4)+3:i*4+3], linewidth=2)
+        ax.plot(coupling_strengths_Es, maxRate[:,((i-1)*4)+3:i*4+3], linewidth=0.5)
         ax.grid(True)
         ax.set_ylabel('Hz')
         ax.legend(['L2/3', 'L4', 'L5', 'L6'])
@@ -67,6 +77,13 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
 
     plt.tight_layout() 
 
+    figA3b, axsA3b = plt.subplots(1, 1, figsize=(5, 5))
+    axsA3b.plot(steps[start_plot:], rates[0, :3].T[start_plot:], linewidth=1)
+    axsA3b.legend(['E', 'PV', 'SOM'])
+    figA3b.suptitle('Area 3b')
+    plt.tight_layout() 
+    plt.legend(['E', 'PV', 'SOM'])
+
     # plot results for the S1 column 
     figS1, axs = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
    
@@ -75,7 +92,7 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
         if i == 4:
             ax.plot(steps[start_plot:], rates[0, 12].T[start_plot:], linewidth=1)
         else:
-            ax.plot(steps[start_plot:], rates[0, (i-1)*4:i*4].T[start_plot:], linewidth=1)
+            ax.plot(steps[start_plot:], rates[0, ((i-1)*4)+3:i*4+3].T[start_plot:], linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -93,7 +110,7 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     plt.tight_layout() 
     plt.legend()
     
-    # plot results
+    # plot results S2
     figS2, axsS2 = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
    
     # Plot settings for all subplots
@@ -101,7 +118,7 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
         if i == 4:
             ax.plot(steps[start_plot:], rates[0, 25].T[start_plot:], linewidth=1)
         else:
-            ax.plot(steps[start_plot:], rates[0, (i-1)*4+13:i*4+13].T[start_plot:], linewidth=1)
+            ax.plot(steps[start_plot:], rates[0, (i-1)*4+16:i*4+16].T[start_plot:], linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -115,6 +132,7 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     axsS2[1][1].set_xlabel('time (s)')
     figS2.suptitle('S2')
     plt.tight_layout() 
+    plt.legend()
     plt.show()
 
 
@@ -139,16 +157,13 @@ def create_Ibackground(simulation_time, step_size, input_strength):
     Ib[:] = input_strength
     return Ib
 
-def save_results_csv(rates, potentials, cortex_type, filedir, filename, full=False):
+def save_results_csv(rates, potentials, filedir, filename, full=False):
     '''
     Safe the simulated data in a csv file
     '''    
 
-    if cortex_type == 'somato':
-        cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'ThalE', 'ThalI']) 
-    elif cortex_type == 'visual':
-        cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'V2', 'V3', 'V4'])
-
+    cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'ThalE', 'ThalI']) 
+    
     rates_df = pd.DataFrame(rates.T, columns=cells)
     filename = filename + '.csv'
     filename_rates = 'rates' + filename
@@ -188,7 +203,7 @@ def main():
     coupling_strengths_I = [40] #np.arange(0, 100, 10)
     step_size = 0.001
     cortex_type = 'somato'
-    filedir = '/data/p_02989/Modelling/output/'
+    filedir = '' #'/data/p_02989/Modelling/output/'
 
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
@@ -221,7 +236,7 @@ def main():
                         # create input array 
                         Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
                         Ib = create_Ibackground(simulation_time, step_size, sb)
-                        model = JR_Model(Iext, Ib, cortex_type, gE, gI, filedir, filename, step_size, simulation_time)
+                        model = JR_Model(Iext, Ib, gE, gI, filedir, filename, step_size, simulation_time)
 
                         # perform simulation with current coupling strength g
                         rate, potential = model.run_simulation()
@@ -230,7 +245,7 @@ def main():
                         all_potentials.append(potential)
 
                         if save_results:
-                            save_results_csv(rate, potential, cortex_type, filedir, filename, save_full_potentials)
+                            save_results_csv(rate, potential, filedir, filename, save_full_potentials)
 
 
                 if plot:
@@ -255,7 +270,7 @@ save_results = False
 save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
 plot = True
 
-# set coupling strengths, step size and cortex type (visual or somato)
+# set coupling strengths, step size
 coupling_strengths_E = [60] #np.arange(0, 100, 10)
 coupling_strengths_I = [40] #np.arange(0, 100, 10)
 step_size = 0.001
@@ -293,7 +308,7 @@ for d in input_durations:
                     # create input array 
                     Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
                     Ib = create_Ibackground(simulation_time, step_size, sb)
-                    model = JR_Model(Iext, Ib, cortex_type, gE, gI, filedir, filename, step_size, simulation_time)
+                    model = JR_Model(Iext, Ib, gE, gI, filedir, filename, step_size, simulation_time)
 
                     # perform simulation with current coupling strength g
                     rate, potential = model.run_simulation()
@@ -302,7 +317,7 @@ for d in input_durations:
                     all_potentials.append(potential)
 
                     if save_results:
-                        save_results_csv(rate, potential, cortex_type, filedir, filename, save_full_potentials)
+                        save_results_csv(rate, potential, filedir, filename, save_full_potentials)
 
 
             if plot:
