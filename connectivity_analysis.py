@@ -8,6 +8,8 @@ import pandas as pd
 from plotting_style import figure_style
 import matplotlib.colors as clrs
 
+# %%
+
 colors, _ = figure_style() 
 
 def adjust_matrix(matrix):
@@ -65,6 +67,16 @@ plt.ylabel('Target Population')
 plt.xlabel('Source Population')
 plt.title("Synaptic Strength")
 plt.tight_layout() 
+plt.figure(figsize=(12, 10))
+sns.heatmap(df_S, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
+
+# Rotate x-axis labels for better visibility
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+plt.ylabel('Target Population')
+plt.xlabel('Source Population')
+plt.title("Synaptic Strength")
+plt.tight_layout() 
 #plt.savefig("Figures/Synaptic_strength.pdf")
 plt.show()
 
@@ -72,6 +84,16 @@ plt.show()
 # Connectivity Probabilities
 plt.figure(figsize=(12, 10))
 sns.heatmap(df_W, annot=False, cmap='viridis', xticklabels=True, yticklabels=True)
+
+# Rotate x-axis labels for better visibility
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+plt.ylabel('Target Population')
+plt.xlabel('Source Population')
+plt.title("Connection Probability")
+plt.tight_layout() 
+plt.figure(figsize=(12, 10))
+sns.heatmap(df_W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
 # Rotate x-axis labels for better visibility
 plt.xticks(rotation=45, ha='right')
@@ -147,3 +169,28 @@ filename = 'Wext_somato.pdf'
 plt.show()
 
 
+################ Connectivity matrix #############
+plt.figure(figsize=(12, 10))
+sns.heatmap(df_W, annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
+
+# Rotate x-axis labels for better visibility
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+plt.ylabel('Target Population')
+plt.xlabel('Source Population')
+plt.title("Connectivity Matrix")
+plt.tight_layout() 
+#plt.savefig("Figures/Connect_Probability.pdf")
+plt.show()
+
+#%% 
+################ Thlamus connectivity ##################
+plt.figure(figsize=(5,12))
+sns.heatmap(df_W[["ThalE", 'ThalI']], annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
+
+#%% 
+################ Background & External input ##################
+plt.figure(figsize=(5,12))
+sns.heatmap(df_W[["B", 'Ext']], annot=False, cmap='coolwarm', xticklabels=True, yticklabels=True)
+
+# %%
