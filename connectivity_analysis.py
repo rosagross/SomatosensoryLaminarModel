@@ -8,6 +8,8 @@ import pandas as pd
 from plotting_style import figure_style
 import matplotlib.colors as clrs
 
+# %%
+
 colors, _ = figure_style() 
 
 def adjust_matrix(matrix):
@@ -35,169 +37,89 @@ def adjust_connectivity_matrix(conmatrix):
 # Set the directory where to save the figures
 figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/PosterFigures'
 
-# Plot difference between Visual and Somatosensory connectivity
-params_visual = Parameter('visual')
-params_somato = Parameter('somato')
-
+params = Parameter()
+population_names = ['E3b','PV3b','SST3b', 'E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4',
+                                          'E1S2','PV1S2','SST1S2','VIP1S2','E2S2','PV2S2','SST2S2','E3S2','PV3S2','SST3S2','E4S2','PV4S2','SST4S2']
+plot_populations = ['E3b','PV3b','SST3b', 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1', 
+                                          'E1S2','E2S2','E3S2','E4S2','PV1S2','PV2S2','PV3S2','PV4S2','SST1S2','SST2S2','SST3S2','SST4S2','VIP1S2']
+all_pops = np.concatenate((population_names,['ThalE', 'ThalI', 'B', 'Ext']))
 # Synaptic strengths
-visual_S = params_visual.get_connectStrength()
-somato_S = np.abs(params_somato.get_connectStrength())
-
-# make the somatosensory matrix the same size as the visual one (where the VIP cells are insert a row/column of zeros)
-somato_S = adjust_matrix(somato_S)
-
-# %%
-population_names = ['E1','PV1','SST1','VIP1','E2','PV2','SST2','VIP2','E3','PV3','SST3','VIP3','E4','PV4','SST4','VIP4']
-plot_populations = ['E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1','VIP2','VIP3','VIP4']
-df_somato_S = pd.DataFrame(somato_S, index=population_names, columns=population_names)
-df_somato_S['cortex_type'] = 'somato'
-df_visual_S = pd.DataFrame(visual_S, index=population_names, columns=population_names)
-df_visual_S['cortex_type'] = 'visual' 
-df_S = pd.concat((df_somato_S, df_visual_S), ignore_index=False)
+S = np.abs(params.get_connectStrength())
+df_S = pd.DataFrame(S, index=population_names, columns=population_names)
+# Connection Probability
+P = params.get_connectProb()
+df_P = pd.DataFrame(P, index=population_names, columns=population_names)
+# Cell counts
+C = params.get_cellcounts()
+df_C = pd.DataFrame(C, index=population_names)
+# Total Connectivity
+W = params.get_connectivity(60, 40)
+df_W = pd.DataFrame(W, index=all_pops[:-2], columns=all_pops)
 
 # %% Plot Synaptic strengths
+plt.figure(figsize=(12, 10))
+sns.heatmap(df_S, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
-fig, axs = plt.subplots(4, 4, figsize=(10,10), sharey=False)
-
-for i, ax in enumerate(axs.flatten()):
-    y = visual_S[i]
-    y2 = somato_S[i]
-    sns.barplot(data=df_S, ax=ax, x=population_names*2, y=plot_populations[i], hue='cortex_type', palette=[colors['somato'], colors['visual']])
-    ax.set_ylabel("Synaptic Strength")
-    ax.set_title(f'from {plot_populations[i]}')
-    ax.tick_params(axis='x', labelsize=8, rotation=60)
-
-sns.despine(fig, trim=True, bottom=False)
-plt.tight_layout(h_pad=1)
-plt.legend(title='cortex type')
+# Rotate x-axis labels for better visibility
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+plt.ylabel('Target Population')
+plt.xlabel('Source Population')
+plt.title("Synaptic Strength")
+plt.tight_layout() 
 #plt.savefig("Figures/Synaptic_strength.pdf")
 plt.show()
 
 # %%
 # Connectivity Probabilities
+plt.figure(figsize=(12, 10))
+sns.heatmap(df_W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
-visual_P = params_visual.get_connectProb()
-somato_P = params_somato.get_connectProb()
-somato_P = adjust_matrix(somato_P)
-df_somato_P = pd.DataFrame(somato_P, index=population_names, columns=population_names)
-df_somato_P['cortex_type'] = 'somato'
-df_visual_P = pd.DataFrame(visual_P, index=population_names, columns=population_names)
-df_visual_P['cortex_type'] = 'visual' 
-df_P = pd.concat((df_somato_P, df_visual_P), ignore_index=False)
-
-# %% PLOT
-fig, axs = plt.subplots(4, 4, figsize=(10,10), sharey=False)
-for i, ax in enumerate(axs.flatten()):
-    sns.barplot(data=df_P, ax=ax, x=population_names*2, y=plot_populations[i], hue='cortex_type', palette=[colors['somato'], colors['visual']])
-    ax.set_ylabel("Connection Probabilities")
-    ax.set_title(f'from {plot_populations[i]}')
-    legend = ax.legend(title='cortex type', facecolor='white', edgecolor='black', framealpha=1)
-    if not i%4 == 0:
-        ax.get_legend().remove()
-    ax.set_xlabel('')
-    ax.tick_params(axis='x', labelsize=8, rotation=60)
-
-sns.despine(fig, trim=True, bottom=False)
-plt.tight_layout(h_pad=1)
+# Rotate x-axis labels for better visibility
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+plt.ylabel('Target Population')
+plt.xlabel('Source Population')
+plt.title("Connection Probability")
+plt.tight_layout() 
 #plt.savefig("Figures/Connect_Probability.pdf")
 plt.show()
 
-# %% 
-sns.heatmap(somato_S[:,:], annot=True, cmap='magma',xticklabels=population_names, yticklabels=population_names)
-
 # %%
-# Cell Counts
-somato_C = params_somato.get_cellcounts()
-somato_C = somato_C[:13] # don't consider the thalamus here
-somato_C = pd.DataFrame(np.insert(somato_C, [7, 10, 13], 0), index=population_names, columns=['cellcount'])
-somato_C['cortex_type'] = 'somato'
-visual_C = pd.DataFrame(params_visual.get_cellcounts(), index=population_names, columns=['cellcount'])
-visual_C['cortex_type'] = 'visual'
-
-df_C = pd.concat((somato_C, visual_C))
-
-# %%
+# Plot Cell Counts
 fig, ax = plt.subplots()
-sns.barplot(df_C, x=df_C.index, y='cellcount', hue='cortex_type', ax=ax, palette=[colors['somato'], colors['visual']], dodge=True)
+sns.barplot(df_C.T, ax=ax)
 sns.despine(fig, trim=True, bottom=False)
 ax.set_ylabel('Proportional Cellcount')
 ax.set_xlabel('Populations')
+plt.xticks(rotation=45, ha='right')
+plt.tight_layout() 
 #plt.legend('cortex type')
 plt.show()
 
 # %% 
-# Connectivity matrix
+################ Connectivity matrix #############
+plt.figure(figsize=(12, 10))
+sns.heatmap(df_W, annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
 
-visual_W = pd.DataFrame(np.abs(params_visual.get_connectivity(1, False)), index=plot_populations, columns=plot_populations)
-somato_W_matrix = np.abs(params_somato.get_connectivity(1, False))
-somato_W = pd.DataFrame(adjust_connectivity_matrix(somato_W_matrix), index=plot_populations, columns=plot_populations)
-W_diff = np.array(somato_W) - np.array(visual_W)
-somato_W['cortex_type'] = 'somato'
-visual_W['cortex_type'] = 'visual' 
-df_W = pd.concat((visual_W, somato_W), ignore_index=False)
-
-# %% Plot Connectivity Matrix without Iext
-fig = plt.figure(figsize=(8,6))
-zero_idx = np.where(somato_W_matrix<0.0001)
-W = somato_W_matrix.copy()
-x_idx = zero_idx[0]
-y_idx = zero_idx[1]
-for x, y in zip(x_idx, y_idx):
-    W[x, y] = 0
-sns.heatmap(W, annot=True, norm=clrs.LogNorm(), cmap='BuGn',xticklabels=plot_populations[:-3], yticklabels=plot_populations[:-3])
-filename = 'W_somato.pdf'
-#plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
+# Rotate x-axis labels for better visibility
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+plt.ylabel('Target Population')
+plt.xlabel('Source Population')
+plt.title("Connectivity Matrix")
+plt.tight_layout() 
+#plt.savefig("Figures/Connect_Probability.pdf")
 plt.show()
 
-# %% Plot Connectivity Matrix WITH Iext
-somato_W_matrix = np.abs(params_somato.get_connectivity(1, 1, True))
+#%% 
+################ Thlamus connectivity ##################
+plt.figure(figsize=(5,12))
+sns.heatmap(df_W[["ThalE", 'ThalI']], annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
 
-fig = plt.figure(figsize=(8,6))
-zero_idx = np.where(somato_W_matrix<0.0001)
-W = somato_W_matrix.copy()
-x_idx = zero_idx[0]
-y_idx = zero_idx[1]
-for x, y in zip(x_idx, y_idx):
-    W[x, y] = 0
-sns.heatmap(W, annot=True, norm=clrs.LogNorm(), cmap='BuGn',xticklabels=plot_populations[:-3], yticklabels=plot_populations[:-3])
-filename = 'W_somato.pdf'
-#plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
-plt.show()
+#%% 
+################ Background & External input ##################
+plt.figure(figsize=(5,12))
+sns.heatmap(df_W[["B", 'Ext']], annot=False, cmap='coolwarm', xticklabels=True, yticklabels=True)
 
-# %% 
-
-fig, axs = plt.subplots(4, 4, figsize=(10,10), sharey=False)
-x = population_names
-for i, ax in enumerate(axs.flatten()):
-    sns.barplot(data=df_W, ax=ax, x=plot_populations*2, y=plot_populations[i], hue='cortex_type', palette=[colors['visual'], colors['somato']])
-
-    #sns.barplot(x=x, y=y, ax=ax, color=colors['visual'])
-    #sns.barplot(x=x, y=y2, ax=ax, color=colors['somato'])
-    ax.set_ylabel("Connection weight")
-    ax.set_title(f'from {plot_populations[i]}')
-    legend = ax.legend(title='cortex type', facecolor='white', edgecolor='black', framealpha=1)
-    if not i%4 == 0:
-        ax.get_legend().remove()
-    ax.set_xlabel('')
-    ax.tick_params(axis='x', labelsize=8, rotation=60)
-
-sns.despine(fig, trim=True, bottom=False)
-plt.tight_layout()
-filename = 'Connection_weight.pdf'
-#plt.savefig(os.path.join(figure_dir, filename))
-plt.show()
-
-# %% Input matrix: connections pattern in the thalamus and to the cortex)
-fig, ax = plt.subplots(1,1,figsize=[2,7])
-plot_populations = ['E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1','ThalE']
-
-somato_Wext = params_somato.get_connectivity(1, include_Iext=True)[:, -2:-1]
-sns.heatmap(somato_Wext, yticklabels=plot_populations, xticklabels=['ThalE'], cmap='BuGn', ax=ax)
-filename = 'Wext_somato.pdf'
-#plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
-
-#thalamic_circuit = 
-
-plt.show()
-
-
+# %%

@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from jr_model import JR_Model
 import pandas as pd 
 import csv 
+
 # %% 
 def plot_minmax(rates, coupling_strengths_Es):
     minRate = np.min(rates[:,:,-100:],axis=2)
@@ -190,6 +191,7 @@ def write_3D_csv(filename, data):
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerows(data)
+        
 # %% 
 def main():
 
@@ -198,8 +200,8 @@ def main():
     plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths_E = [40] #np.arange(0, 100, 10)
-    coupling_strengths_I = [20] #np.arange(0, 100, 10)
+    coupling_strengths_E = [60] #np.arange(0, 100, 10)
+    coupling_strengths_I = [30] #np.arange(0, 100, 10)
     step_size = 0.001
     cortex_type = 'somato'
     filedir = '' #'/data/p_02989/Modelling/output/'
@@ -207,8 +209,8 @@ def main():
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [1] #np.arange(0.5, 2, 0.5) # in sec 
-    input_strengths = [60] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
+    input_durations = [2] #np.arange(0.5, 2, 0.5) # in sec 
+    input_strengths = [100] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
     backgrndI_strengths = [2] #[1,2,3,4,5,6,7,8,9,10]
 
     for d in input_durations:
