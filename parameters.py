@@ -1,9 +1,10 @@
 # %%
 import numpy as np
 import yaml
+
 # %%
 class Parameter():
-
+    
     def __init__(self):
         self.tau, self.nPop = self.get_params()
         self.S = self.get_connectStrength()
@@ -41,7 +42,8 @@ class Parameter():
         # Connection probabilies
         # Targets in rows, sources in columns 
         # Area 3b: E2, PV2, SST2
-        P_A3b = np.array([[9.9, 37.4, 19.8],[37.4, 28.8, 36.3],[19., 33.2,  1.2]])
+        
+        #P_A3b = np.array([[9.9, 37.4, 19.8],[37.4, 28.8, 36.3],[19., 33.2,  1.2]])*1e-2 
         
         # E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (Thalamus is added later!)
         P_S1 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
@@ -73,21 +75,20 @@ class Parameter():
                     [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
         
         # E population projects to S1 layer 4 E and PV 
-        P_A3btoS1 = np.array([[0,0,0],[0,0,0],[0,0,0],[0,0,0],
-                                [100,0,0],[50,0,0],[0,0,0],
-                                [0,0,0],[0,0,0],[0,0,0],
-                                [0,0,0],[0,0,0],[0,0,0]])*1e-2
+        #P_A3btoS1 = np.array([[0,0,0],[0,0,0],[0,0,0],[0,0,0],
+        #                        [100,0,0],[50,0,0],[0,0,0],
+        #                        [0,0,0],[0,0,0],[0,0,0],
+        #                        [0,0,0],[0,0,0],[0,0,0]])*1e-2
         
-        P_A3btoS2 = np.zeros((13,3)) 
+        #P_A3btoS2 = np.zeros((13,3)) 
         P_S1toS2 = np.zeros((13,13)) # TODO: implement S1 to S2 connection! 
         P_S1toA3b = np.zeros((3,13)) # TODO: implement feedback S1 to A3b! 
         P_S2toS1 = np.zeros((13,13)) # TODO: implement feedback from S2 to S1
         P_S2toA3b = np.zeros((3,13)) 
-        P_toA3b = np.hstack((P_A3b,P_S1toA3b,P_S2toA3b))
-        P_toS1 = np.hstack((P_A3btoS1, P_S1, P_S2toS1))
-        P_toS2 = np.hstack((P_A3btoS2, P_S1toS2, P_S2))
-        P = np.vstack((P_toA3b, P_toS1, P_toS2)) #  26x26 (with nPop=13 per S1/S2)
-
+        #P_toA3b = np.hstack((P_A3b,P_S1toA3b,P_S2toA3b))
+        P_toS1 = np.hstack((P_S1, P_S2toS1))
+        P_toS2 = np.hstack((P_S1toS2, P_S2))
+        P = np.vstack((P_toS1, P_toS2)) #  26x26 (with nPop=13 per S1/S2)
     
         return P
 
@@ -95,7 +96,7 @@ class Parameter():
     def get_connectStrength(self):
 
         # Based on values below 
-        psp_A3b = [[1.59, 1.0, 1.0],[1.5, 1.0, 1.0],[0.5, 1.0, 0.19]]
+        #psp_A3b = [[1.59, 1.0, 1.0],[1.5, 1.0, 1.0],[0.5, 1.0, 0.19]]
                     
         # Postsynaptic potential (13x13) averages from Isbister, Jiang, and more (see excel file FinalConnectivity_PSP.csv for mor info)
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
@@ -131,36 +132,43 @@ class Parameter():
             [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]]
 
         # to Area 3b
-        psp_S1toA3b = [[0.5, 1.0, 1.0, 1.0, 1.59, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-            [0.5, 1.0, 1.0, 1.0, 1.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-            [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 0.19, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-            ] # same as S1 to layer 4, since A3b is only modelled as the input layer!
-        psp_S2toA3b = np.zeros((3,13))
-        psp_toA3b = np.hstack((psp_A3b, psp_S1toA3b, psp_S2toA3b))
+        #psp_S1toA3b = [[0.5, 1.0, 1.0, 1.0, 1.59, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+        #    [0.5, 1.0, 1.0, 1.0, 1.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+        #    [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 0.19, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+        #    ] # same as S1 to layer 4, since A3b is only modelled as the input layer!
+        #psp_S2toA3b = np.zeros((3,13))
+        #psp_toA3b = np.hstack((psp_A3b, psp_S1toA3b, psp_S2toA3b))
+        
         # to S1
         psp_S2toS1 = np.zeros((13,13))
-        psp_A3btoS1 = psp_S1[:,4:7] # same as layer 4 of S1
-        psp_toS1 = np.hstack((psp_A3btoS1, psp_S1, psp_S2toS1))
-        # to S2
-        psp_A3btoS2 = psp_S1[:,4:7] # same as layer 4 of S1, but 3b to S2 connection is unlikely
-        psp_S1toS2 = np.zeros((13,13))
-        psp_toS2 = np.hstack((psp_A3btoS2, psp_S1toS2, psp_S2))
-        psp = np.vstack((psp_toA3b, psp_toS1, psp_toS2)) #  26x26 (with nPop=13 per S1/S2)
-
+        #psp_A3btoS1 = psp_S1[:,4:7] # same as layer 4 of S1
+        psp_toS1 = np.hstack((psp_S1, psp_S2toS1))
         
+        # to S2
+        #psp_A3btoS2 = psp_S1[:,4:7] # same as layer 4 of S1, but 3b to S2 connection is unlikely
+        # TODO: insert connectivity between area S1 and S2 
+        psp_S1toS2 = np.zeros((13,13))
+        psp_toS2 = np.hstack((psp_S1toS2, psp_S2))
+        psp = np.vstack((psp_toS1, psp_toS2)) #  26x26 (with nPop=13 per S1/S2)
+
         return psp
 
     def get_cellcounts(self):
         
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         C_S1 = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
-        C_absoluteS1 = C_S1/np.sum(C_S1)
+        CS1_total = np.sum(C_S1)
+        C_relativeS1 = C_S1/CS1_total
         C_S2 = np.array([1691, 90, 74, 85, 1656*(3/4), 85, 48, 1095*(5/4), 109, 105, 1288, 56, 66]) # for S2 adapt this to more neurons in layer 5 than in layer 4
-        C_absoluteS2 = C_S2/np.sum(C_S2)
+        C_relativeS2 = C_S2/np.sum(C_S2)
 
-        # For Area 3b we take the same cell counts as for S1 
-        C_absoluteA3b = C_absoluteS1[4:7]
-        C = np.hstack((C_absoluteA3b,C_absoluteS1,C_absoluteS2))
+        # For Area 3b we take the cell counts summed for each population
+        # So we end up with a "collapsed" area 
+        C_A3b_E = np.sum(C_relativeS1[[0,4,7,10]])
+        C_A3b_PV = np.sum(C_relativeS1[[1,5,8,11]])
+        C_A3b_SST = np.sum(C_relativeS1[[2,6,9,12]])
+        C_A3b_VIP = np.sum(C_relativeS1[[3]])
+        C = np.hstack((C_A3b_E, C_A3b_PV, C_A3b_SST, C_A3b_VIP, C_relativeS1, C_relativeS2))
 
         return C 
 
@@ -176,20 +184,35 @@ class Parameter():
         # W0 = PS * C (16 x 16) --> make sure that cell counts are accounted for! C is shaped (16 x 1) so tile it before multiplying  
         PS = P * S
         nPop = len(PS)
-        W0 = PS * np.tile(C, (nPop,1))
+        #W0 = PS * np.tile(C, (nPop,1))
 
+        # to S1 from A3b
+        PS_E = PS[[0,4,7,10],:]
+        
+        
+        # from S1 to A3b
+        PS_E = PS[:,[0,4,7,10]]
+        
         # create the external input matrix, based on thalamus connectivity (average of findings, see FinalConnectivity_PSPs.ods)
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        #S_thal = np.array([0.49, 0.49, 0.245, 0, 1.45, 2.3, 0.245, 0.5, 0.49,0.245, 0.85, 2.2, 0.245]) # Thal to S1 based on Isbister & jiang 
+        # S_thal = np.array([0.49, 0.49, 0.245, 0, 1.45, 2.3, 0.245, 0.5, 0.49,0.245, 0.85, 2.2, 0.245]) # Thal to S1 based on Isbister & jiang 
 
         # E2, PV2, SST2
+        # input to area 3b is collapsed S1 (PS weighted average by cell count of each population)
+        S_thalToA3b_E = PS
+        #S_thalToA3b_PV = 
+        #S_thalToA3b_SST = 
+
         S_thalToA3b = np.array([[0.49, 0.49, 0.245], # copied from Thal to S1 (Jiang et al 2023 only)
                                 [0, 0, 0]])
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         S_thalToS1 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
-                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # no thal E/I target (integrated in last two entries of below S2 array) 
-        S_thalToS2 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0, 0.5], # last to are Thal E and Thal I 
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0]]) # Reticular inhibition: just an assumption
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # no thal E/I target (integrated in last two entries of below S2 array) 
+        S_thalToS2 = np.zeros((2,15)) # TODO: check if there should still be some connection from thalamus to S1 (area 1)!
+        S_thalToS2[0, -1] = 0.5 # ThalE to ThalI
+        S_thalToS2[1, -2] = 0.5 # ThalI to ThalE
+                    #np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0, 0.5], # last two are Thal E and Thal I 
+                    #           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0]]) # Reticular inhibition: just an assumption
         
         #print('S', S_thalToS1.shape, S_thalToS2.shape)
         S_from_thal = np.hstack((S_thalToA3b, S_thalToS1, S_thalToS2))
@@ -211,12 +234,14 @@ class Parameter():
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         P_thalToS1 = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0], # thalamus excitatory
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
-    
-        # TODO: change this!! In reality S2 receives way less than S1    
+
+        # TODO: the last two values are ThalE and ThalI and the value 10 is intuitively assigned. Check if this makes sense!
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        P_thalToS2 = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0, 0, 0], # thalamus excitatory
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
+        P_thalToS2 = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0, 0, 10], # thalamus excitatory
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
         
+        
+        # TODO: Check how much S2 receives from the thalamus! In reality S2 receives way less than S1    
         P_thalToS2 = P_thalToS2 * 0.2 # S2 receives just a fith of what S1 receives from the thalamus
         #print('P from thal', P_thalToS1.shape, P_thalToS2.shape)
         P_from_thal = np.hstack((P_thalToA3b, P_thalToS1, P_thalToS2))
