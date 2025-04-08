@@ -168,7 +168,7 @@ class Parameter():
         C_A3b_PV = np.sum(C_relativeS1[[1,5,8,11]])
         C_A3b_SST = np.sum(C_relativeS1[[2,6,9,12]])
         C_A3b_VIP = np.sum(C_relativeS1[[3]])
-        C = np.hstack((C_A3b_E, C_A3b_PV, C_A3b_SST, C_A3b_VIP, C_relativeS1, C_relativeS2))
+        C = np.hstack((C_relativeS1, C_relativeS2))
 
         return C 
 
@@ -184,15 +184,54 @@ class Parameter():
         # W0 = PS * C (16 x 16) --> make sure that cell counts are accounted for! C is shaped (16 x 1) so tile it before multiplying  
         PS = P * S
         nPop = len(PS)
-        #W0 = PS * np.tile(C, (nPop,1))
+        W0 = PS * np.tile(C, (nPop,1))
 
-        # to S1 from A3b
-        PS_E = PS[[0,4,7,10],:]
+        idx_E = [0,4,7,10]
+        idx_P = [1,5,8,11]
+        idx_S = [2,6,9,12]
+        idx_V = [2,6,9,12]
+
+        # set up the connectivity for area 3b as a weighted average of the connectivity from S1
+        # ... within A3b
+        # ... merge input from all E to all other populations
+        W_A3bA3b_E = np.sum(W0[:,idx_E], axis=1)  
+        W_A3bA3b_EE = np.dot(W_A3bA3b_E[idx_E], C[idx_E]) # .. now we have to compute the weighted average for the all receiving cells
+        W_A3bA3b_PE = np.dot(W_A3bA3b_E[idx_P], C[idx_P])
+        W_A3bA3b_SE = np.dot(W_A3bA3b_E[idx_S], C[idx_S])
+        W_A3bA3b_VE = np.dot(W_A3bA3b_E[idx_V], C[idx_V])
+        # ... merge input from all P targeting all other populations
+        W_A3bA3b_P = np.sum(W0[:,idx_P], axis=1)  
+        W_A3bA3b_EP = np.dot(W_A3bA3b_P[idx_E], C[idx_E])
+        W_A3bA3b_PP = np.dot(W_A3bA3b_P[idx_P], C[idx_P])
+        W_A3bA3b_SP = np.dot(W_A3bA3b_P[idx_S], C[idx_S])
+        W_A3bA3b_VP = np.dot(W_A3bA3b_P[idx_V], C[idx_V])
+        # ... merge input from all S targeting all other populations
+        W_A3bA3b_S = np.sum(W0[:,idx_S], axis=1)  
+        W_A3bA3b_ES = np.dot(W_A3bA3b_S[idx_E], C[idx_E])
+        W_A3bA3b_PS = np.dot(W_A3bA3b_S[idx_P], C[idx_P])
+        W_A3bA3b_SS = np.dot(W_A3bA3b_S[idx_S], C[idx_S])
+        W_A3bA3b_VS = np.dot(W_A3bA3b_S[idx_V], C[idx_V])
+        # ... merge input from all V targeting all other populations
+        W_A3bA3b_V = np.sum(W0[:,idx_V], axis=1)  
+        W_A3bA3b_EV = np.dot(W_A3bA3b_V[idx_E], C[idx_E])
+        W_A3bA3b_PV = np.dot(W_A3bA3b_V[idx_P], C[idx_P])
+        W_A3bA3b_SV = np.dot(W_A3bA3b_V[idx_S], C[idx_S])
+        W_A3bA3b_VV = np.dot(W_A3bA3b_V[idx_V], C[idx_V])
+
+        # stack them all together to create the A3b to A3b connection matrix
+        W_A3bA3b = np.hstack((np.vstack((W_A3bA3b_EE, W_A3bA3b_PE, W_A3bA3b_SE, W_A3bA3b_VE)),
+                            np.vstack((W_A3bA3b_EP, W_A3bA3b_PP, W_A3bA3b_SP, W_A3bA3b_VP)),
+                            np.vstack((W_A3bA3b_ES, W_A3bA3b_PS, W_A3bA3b_SS, W_A3bA3b_VS)),
+                            np.vstack((W_A3bA3b_EV, W_A3bA3b_PV, W_A3bA3b_SV, W_A3bA3b_VV))))
+
+        # ... from  area 3b to S1
+
+
+
+        # ... from S1 to area 3b
+
         
-        
-        # from S1 to A3b
-        PS_E = PS[:,[0,4,7,10]]
-        
+   
         # create the external input matrix, based on thalamus connectivity (average of findings, see FinalConnectivity_PSPs.ods)
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         # S_thal = np.array([0.49, 0.49, 0.245, 0, 1.45, 2.3, 0.245, 0.5, 0.49,0.245, 0.85, 2.2, 0.245]) # Thal to S1 based on Isbister & jiang 
