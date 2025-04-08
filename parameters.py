@@ -4,7 +4,7 @@ import yaml
 
 # %%
 class Parameter():
-
+    
     def __init__(self):
         self.tau, self.nPop = self.get_params()
         self.S = self.get_connectStrength()
@@ -16,23 +16,24 @@ class Parameter():
 
         # nr. of populations
         nPopA3b = 3 # E2, PV2, SOM2 
-        nPopS1 = 13 #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
-        nPopS2 = 13 #  E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
+        nPopS1 = 13 #  
+        nPopS2 = 13 # 
         nPopThal = 2 # one forward excitatory and one inhibitory feedback neuron
         nPopTotal = nPopS1+nPopS2+nPopA3b+nPopThal
         # SYNAPTIC DECAY (depends on the connection type excitatory/inhibitory)
+        # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
         #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
         #tau = np.tile(np.array([5.2, 5.2, 5.9, 5.9, 3, 3, 3.8, 3.8, 11.2, 11.2, 11.1, 11.1, 10.4])*1e-3, (nPop+1,1)) 
         # Visual cortex values
         # the last two values are used for the external input and background input
         # with nPopTotal = 28 the shape of tau should be (28, 32) 
+        
         tauA3b = np.tile(np.array([6,3,20])*1e-3, (nPopTotal,1)) # sec
-        tauS1 = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15])*1e-3, (nPopTotal,1)) # sec
-        tauS2 = np.tile(np.array([6,6,6,6,3,3,3,3,20,20,20,20,15,3,3,3,3])*1e-3, (nPopTotal,1)) # sec
+        tauS1 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20])*1e-3, (nPopTotal,1)) # sec
+        tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
         # TODO: MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron whereas the synaptic decay depends on the presynapse)
-        
         
         return tau, nPopTotal
 
@@ -41,7 +42,8 @@ class Parameter():
         # Connection probabilies
         # Targets in rows, sources in columns 
         # Area 3b: E2, PV2, SST2
-        P_A3b = np.array([[9.9, 37.4, 19.8],[37.4, 28.8, 36.3],[19., 33.2,  1.2]])*1e-2 
+        
+        #P_A3b = np.array([[9.9, 37.4, 19.8],[37.4, 28.8, 36.3],[19., 33.2,  1.2]])*1e-2 
         
         # E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (Thalamus is added later!)
         P_S1 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
@@ -73,28 +75,28 @@ class Parameter():
                     [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
         
         # E population projects to S1 layer 4 E and PV 
-        P_A3btoS1 = np.array([[0,0,0],[0,0,0],[0,0,0],[0,0,0],
-                                [100,0,0],[50,0,0],[0,0,0],
-                                [0,0,0],[0,0,0],[0,0,0],
-                                [0,0,0],[0,0,0],[0,0,0]])*1e-2
+        #P_A3btoS1 = np.array([[0,0,0],[0,0,0],[0,0,0],[0,0,0],
+        #                        [100,0,0],[50,0,0],[0,0,0],
+        #                        [0,0,0],[0,0,0],[0,0,0],
+        #                        [0,0,0],[0,0,0],[0,0,0]])*1e-2
         
-        P_A3btoS2 = np.zeros((13,3)) 
+        #P_A3btoS2 = np.zeros((13,3)) 
         P_S1toS2 = np.zeros((13,13)) # TODO: implement S1 to S2 connection! 
         P_S1toA3b = np.zeros((3,13)) # TODO: implement feedback S1 to A3b! 
         P_S2toS1 = np.zeros((13,13)) # TODO: implement feedback from S2 to S1
         P_S2toA3b = np.zeros((3,13)) 
-        P_toA3b = np.hstack((P_A3b,P_S1toA3b,P_S2toA3b))
-        P_toS1 = np.hstack((P_A3btoS1, P_S1, P_S2toS1))
-        P_toS2 = np.hstack((P_A3btoS2, P_S1toS2, P_S2))
-        P = np.vstack((P_toA3b, P_toS1, P_toS2)) #  26x26 (with nPop=13 per S1/S2)
-
+        #P_toA3b = np.hstack((P_A3b,P_S1toA3b,P_S2toA3b))
+        P_toS1 = np.hstack((P_S1, P_S2toS1))
+        P_toS2 = np.hstack((P_S1toS2, P_S2))
+        P = np.vstack((P_toS1, P_toS2)) #  26x26 (with nPop=13 per S1/S2)
+    
         return P
 
 
     def get_connectStrength(self):
 
         # Based on values below 
-        psp_A3b = [[1.59, 1.0, 1.0],[1.5, 1.0, 1.0],[0.5, 1.0, 0.19]]
+        #psp_A3b = [[1.59, 1.0, 1.0],[1.5, 1.0, 1.0],[0.5, 1.0, 0.19]]
                     
         # Postsynaptic potential (13x13) averages from Isbister, Jiang, and more (see excel file FinalConnectivity_PSP.csv for mor info)
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
@@ -130,36 +132,43 @@ class Parameter():
             [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]]
 
         # to Area 3b
-        # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        psp_S1toA3b = [[0.5, 1.0, 1.0, 1.0, 1.59, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-            [0.5, 1.0, 1.0, 1.0, 1.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-            [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 0.19, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-            ] # same as S1 to layer 4, since A3b is only modelled as the input layer!
-        psp_S2toA3b = np.zeros((3,13))
-        psp_toA3b = np.hstack((psp_A3b, psp_S1toA3b, psp_S2toA3b))
+        #psp_S1toA3b = [[0.5, 1.0, 1.0, 1.0, 1.59, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+        #    [0.5, 1.0, 1.0, 1.0, 1.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+        #    [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 0.19, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
+        #    ] # same as S1 to layer 4, since A3b is only modelled as the input layer!
+        #psp_S2toA3b = np.zeros((3,13))
+        #psp_toA3b = np.hstack((psp_A3b, psp_S1toA3b, psp_S2toA3b))
+        
         # to S1
         psp_S2toS1 = np.zeros((13,13))
-        psp_A3btoS1 = psp_S1[:,4:7] # same as layer 4 of S1
-        psp_toS1 = np.hstack((psp_A3btoS1, psp_S1, psp_S2toS1))
+        #psp_A3btoS1 = psp_S1[:,4:7] # same as layer 4 of S1
+        psp_toS1 = np.hstack((psp_S1, psp_S2toS1))
+        
         # to S2
-        psp_A3btoS2 = psp_S1[:,4:7] # same as layer 4 of S1, but 3b to S2 connection is unlikely
+        #psp_A3btoS2 = psp_S1[:,4:7] # same as layer 4 of S1, but 3b to S2 connection is unlikely
+        # TODO: insert connectivity between area S1 and S2 
         psp_S1toS2 = np.zeros((13,13))
-        psp_toS2 = np.hstack((psp_A3btoS2, psp_S1toS2, psp_S2))
-        psp = np.vstack((psp_toA3b, psp_toS1, psp_toS2)) #  26x26 (with nPop=13 per S1/S2)
-       
+        psp_toS2 = np.hstack((psp_S1toS2, psp_S2))
+        psp = np.vstack((psp_toS1, psp_toS2)) #  26x26 (with nPop=13 per S1/S2)
+
         return psp
 
     def get_cellcounts(self):
         
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         C_S1 = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
-        C_absoluteS1 = C_S1/np.sum(C_S1)
+        CS1_total = np.sum(C_S1)
+        C_relativeS1 = C_S1/CS1_total
         C_S2 = np.array([1691, 90, 74, 85, 1656*(3/4), 85, 48, 1095*(5/4), 109, 105, 1288, 56, 66]) # for S2 adapt this to more neurons in layer 5 than in layer 4
-        C_absoluteS2 = C_S2/np.sum(C_S2)
+        C_relativeS2 = C_S2/np.sum(C_S2)
 
-        # For Area 3b we take the same cell counts as for S1 
-        C_absoluteA3b = C_absoluteS1[4:7]
-        C = np.hstack((C_absoluteA3b,C_absoluteS1,C_absoluteS2))
+        # For Area 3b we take the cell counts summed for each population
+        # So we end up with a "collapsed" area 
+        C_A3b_E = np.sum(C_relativeS1[[0,4,7,10]])
+        C_A3b_PV = np.sum(C_relativeS1[[1,5,8,11]])
+        C_A3b_SST = np.sum(C_relativeS1[[2,6,9,12]])
+        C_A3b_VIP = np.sum(C_relativeS1[[3]])
+        C = np.hstack((C_A3b_E, C_A3b_PV, C_A3b_SST, C_A3b_VIP, C_relativeS1, C_relativeS2))
 
         return C 
 
@@ -172,20 +181,39 @@ class Parameter():
 
         # Final connectivity matrix 
         # PS = P * S (16 x 16) --> Connectivity probability if all cells were equally distributed
-        # W = PS * C (16 x 16) --> make sure that cell counts are accounted for! C is shaped (16 x 1) so tile it before multiplying  
+        # W0 = PS * C (16 x 16) --> make sure that cell counts are accounted for! C is shaped (16 x 1) so tile it before multiplying  
         PS = P * S
         nPop = len(PS)
-        W = PS * np.tile(C, (nPop,1))
+        #W0 = PS * np.tile(C, (nPop,1))
 
+        # to S1 from A3b
+        PS_E = PS[[0,4,7,10],:]
+        
+        
+        # from S1 to A3b
+        PS_E = PS[:,[0,4,7,10]]
+        
         # create the external input matrix, based on thalamus connectivity (average of findings, see FinalConnectivity_PSPs.ods)
-        # order: 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1'
-        #S_thal = np.array([0.49, 1.45, 0.5, 0.85, 0.49, 2.3, 0.49, 2.2, 0.245, 0.245, 0.245, 0.245, 0]) # Thal to S1 based on Isbister & jiang 
-        S_thalToA3b = np.array([[0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
+        # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
+        # S_thal = np.array([0.49, 0.49, 0.245, 0, 1.45, 2.3, 0.245, 0.5, 0.49,0.245, 0.85, 2.2, 0.245]) # Thal to S1 based on Isbister & jiang 
+
+        # E2, PV2, SST2
+        # input to area 3b is collapsed S1 (PS weighted average by cell count of each population)
+        S_thalToA3b_E = PS
+        #S_thalToA3b_PV = 
+        #S_thalToA3b_SST = 
+
+        S_thalToA3b = np.array([[0.49, 0.49, 0.245], # copied from Thal to S1 (Jiang et al 2023 only)
                                 [0, 0, 0]])
-        S_thalToS1 = np.array([[0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0], # Thal to S1: Based on Jiang et al. 2023 only! 
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # no thal E/I target (integrated in last two entries of below S2 array) 
-        S_thalToS2 = np.array([[0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.49, 0.245, 0.245, 0.245, 0.245, 0, 0, 0.5], # last to are Thal E and Thal I 
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0]]) # Reticular inhibition: just an assumption
+        # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
+        S_thalToS1 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # no thal E/I target (integrated in last two entries of below S2 array) 
+        S_thalToS2 = np.zeros((2,15)) # TODO: check if there should still be some connection from thalamus to S1 (area 1)!
+        S_thalToS2[0, -1] = 0.5 # ThalE to ThalI
+        S_thalToS2[1, -2] = 0.5 # ThalI to ThalE
+                    #np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0, 0.5], # last two are Thal E and Thal I 
+                    #           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0]]) # Reticular inhibition: just an assumption
+        
         #print('S', S_thalToS1.shape, S_thalToS2.shape)
         S_from_thal = np.hstack((S_thalToA3b, S_thalToS1, S_thalToS2))
         
@@ -203,14 +231,17 @@ class Parameter():
         # E2, PV2, SOM2
         P_thalToA3b = np.array([[40, 40, 20], # thalamus excitatory
                                 [0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
-        # order: 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1'
-        P_thalToS1 = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0], # thalamus excitatory
+        # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
+        P_thalToS1 = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0], # thalamus excitatory
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
-    
-        # TODO: change this!! In reality S2 receives way less than S1    
-        P_thalToS2 = np.array([[6.2, 40, 25.9, 9, 6.2, 40, 25.9, 9, 0, 20, 0, 0, 0, 0, 0], # thalamus excitatory
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
+
+        # TODO: the last two values are ThalE and ThalI and the value 10 is intuitively assigned. Check if this makes sense!
+        # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
+        P_thalToS2 = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0, 0, 10], # thalamus excitatory
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
         
+        
+        # TODO: Check how much S2 receives from the thalamus! In reality S2 receives way less than S1    
         P_thalToS2 = P_thalToS2 * 0.2 # S2 receives just a fith of what S1 receives from the thalamus
         #print('P from thal', P_thalToS1.shape, P_thalToS2.shape)
         P_from_thal = np.hstack((P_thalToA3b, P_thalToS1, P_thalToS2))
@@ -242,184 +273,20 @@ class Parameter():
         Wb = np.zeros((W_from_thal.shape[1],1))
         Wb[:-2] = 1
 
-        # S1
-        # indices to reorder the matrix to E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
-        iE_S1 = np.array([3, 7, 10, 13])  # E1, E2, E3, E4 of S1 
-        iP_S1 = iE_S1+1  # PV1, PV2, PV3, PV4
-        iS_S1 = iE_S1+2  # SOM1, SOM2, SOM3, SOM4
-        iV_S1 = [6]  # VIP1
+        # make inhibitory connections negative and apply weights gI and gE respectively
+        idx_I_A3b = np.array([1,2])
+        idx_I_S = [1,2,3,5,6,8,9,11,12]
+        idx_I_S1 = np.array(idx_I_S)+3 
+        idx_I_S2 = np.array(idx_I_S)+16
+        idx_I = np.concatenate((idx_I_A3b,idx_I_S1,idx_I_S2))
+        idx_E_A3b = np.array([0])
+        idx_E_S = [0,4,7,10]
+        idx_E_S1 = np.array(idx_E_S)+3 
+        idx_E_S2 = np.array(idx_E_S)+16
+        idx_E = np.concatenate((idx_E_A3b,idx_E_S1,idx_E_S2))
 
-        # S2
-        iE_S2 = np.array([16, 20, 23, 26])  # E1, E2, E3, E4 of S2 
-        iP_S2 = iE_S2+1  # PV1, PV2, PV3, PV4
-        iS_S2 = iE_S2+2  # SOM1, SOM2, SOM3, SOM4
-        iV_S2 = [19]  # VIP1
-
-        # Extracting submatrices based on the defined index sets
-        # Within Area 3b
-        Wee_A3b = W[np.ix_([0], [0])]*gE # .. from E population in Area 3b
-        Wpe_A3b = W[np.ix_([1], [0])]*gE 
-        Wse_A3b = W[np.ix_([2], [0])]*gE 
-        Wep_A3b = W[np.ix_([0], [1])]*gI 
-        Wpp_A3b = W[np.ix_([1], [1])]*gI 
-        Wsp_A3b = W[np.ix_([2], [1])]*gI 
-        Wes_A3b = W[np.ix_([0], [2])]*gI 
-        Wps_A3b = W[np.ix_([1], [2])]*gI 
-        Wss_A3b = W[np.ix_([2], [2])]*gI 
-
-        # Connectivity to S1 from Area 3b and the other way around
-        # ... from excitatory population
-        Wee_S1A3b = W[np.ix_(iE_S1, [0])]*gE
-        Wpe_S1A3b = W[np.ix_(iP_S1, [0])]*gE
-        Wse_S1A3b = W[np.ix_(iS_S1, [0])]*gE
-        Wve_S1A3b = W[np.ix_(iV_S1, [0])]*gE
-        Wee_A3bS1 = W[np.ix_([0], iE_S1)]*gE
-        Wpe_A3bS1 = W[np.ix_([1], iE_S1)]*gE
-        Wse_A3bS1 = W[np.ix_([2], iE_S1)]*gE
-        # ... from PV population
-        Wep_S1A3b = W[np.ix_(iE_S1, [1])]*gI
-        Wpp_S1A3b = W[np.ix_(iP_S1, [1])]*gI
-        Wsp_S1A3b = W[np.ix_(iS_S1, [1])]*gI
-        Wvp_S1A3b = W[np.ix_(iV_S1, [1])]*gI
-        Wep_A3bS1 = W[np.ix_([0], iP_S1)]*gI
-        Wpp_A3bS1 = W[np.ix_([1], iP_S1)]*gI
-        Wsp_A3bS1 = W[np.ix_([2], iP_S1)]*gI
-        # ... from SST population
-        Wes_S1A3b = W[np.ix_(iE_S1, [2])]*gI
-        Wps_S1A3b = W[np.ix_(iP_S1, [2])]*gI
-        Wss_S1A3b = W[np.ix_(iS_S1, [2])]*gI
-        Wvs_S1A3b = W[np.ix_(iV_S1, [2])]*gI
-        Wes_A3bS1 = W[np.ix_([0], iS_S1)]*gI
-        Wps_A3bS1 = W[np.ix_([1], iS_S1)]*gI
-        Wss_A3bS1 = W[np.ix_([2], iS_S1)]*gI
-        # ... from VIP population
-        Wev_A3bS1 = W[np.ix_([0], iV_S1)]*gI
-        Wpv_A3bS1 = W[np.ix_([1], iV_S1)]*gI
-        Wsv_A3bS1 = W[np.ix_([2], iV_S1)]*gI
-
-        # Connectivity to S2 from Area 3b and the other way around
-        # ... from excitatory population
-        Wee_S2A3b = W[np.ix_(iE_S2, [0])]*gE
-        Wpe_S2A3b = W[np.ix_(iP_S2, [0])]*gE
-        Wse_S2A3b = W[np.ix_(iS_S2, [0])]*gE
-        Wve_S2A3b = W[np.ix_(iV_S2, [0])]*gE
-        Wee_A3bS2 = W[np.ix_([0], iE_S2)]*gE
-        Wpe_A3bS2 = W[np.ix_([1], iE_S2)]*gE
-        Wse_A3bS2 = W[np.ix_([2], iE_S2)]*gE
-        # ... from PV population
-        Wep_S2A3b = W[np.ix_(iE_S2, [1])]*gI
-        Wpp_S2A3b = W[np.ix_(iP_S2, [1])]*gI
-        Wsp_S2A3b = W[np.ix_(iS_S2, [1])]*gI
-        Wvp_S2A3b = W[np.ix_(iV_S2, [1])]*gI
-        Wep_A3bS2 = W[np.ix_([0], iP_S2)]*gI
-        Wpp_A3bS2 = W[np.ix_([1], iP_S2)]*gI
-        Wsp_A3bS2 = W[np.ix_([2], iP_S2)]*gI
-        # ... from SST population
-        Wes_S2A3b = W[np.ix_(iE_S2, [2])]*gI
-        Wps_S2A3b = W[np.ix_(iP_S2, [2])]*gI
-        Wss_S2A3b = W[np.ix_(iS_S2, [2])]*gI
-        Wvs_S2A3b = W[np.ix_(iV_S2, [2])]*gI
-        Wes_A3bS2 = W[np.ix_([0], iS_S2)]*gI
-        Wps_A3bS2 = W[np.ix_([1], iS_S2)]*gI
-        Wss_A3bS2 = W[np.ix_([2], iS_S2)]*gI
-        # ... from VIP population
-        Wev_A3bS2 = W[np.ix_([0], iV_S2)]*gI
-        Wpv_A3bS2 = W[np.ix_([1], iV_S2)]*gI
-        Wsv_A3bS2 = W[np.ix_([2], iV_S2)]*gI
-
-        
-        # within S1 and S2
-        Wee_S1 = W[np.ix_(iE_S1, iE_S1)]*gE
-        Wpe_S1 = W[np.ix_(iP_S1, iE_S1)]*gE
-        Wse_S1 = W[np.ix_(iS_S1, iE_S1)]*gE
-        Wve_S1 = W[np.ix_(iV_S1, iE_S1)]*gE
-        Wee_S2 = W[np.ix_(iE_S2, iE_S2)]*gE
-        Wpe_S2 = W[np.ix_(iP_S2, iE_S2)]*gE
-        Wse_S2 = W[np.ix_(iS_S2, iE_S2)]*gE
-        Wve_S2 = W[np.ix_(iV_S2, iE_S2)]*gE
-        # connectivity between S1 and S2
-        Wee_S1S2 = W[np.ix_(iE_S1, iE_S2)]*gE
-        Wpe_S1S2 = W[np.ix_(iP_S1, iE_S2)]*gE
-        Wse_S1S2 = W[np.ix_(iS_S1, iE_S2)]*gE
-        Wve_S1S2 = W[np.ix_(iV_S1, iE_S2)]*gE
-        Wee_S2S1 = W[np.ix_(iE_S2, iE_S1)]*gE
-        Wpe_S2S1 = W[np.ix_(iP_S2, iE_S1)]*gE
-        Wse_S2S1 = W[np.ix_(iS_S2, iE_S1)]*gE
-        Wve_S2S1 = W[np.ix_(iV_S2, iE_S1)]*gE
-
-        # within S1 and S2
-        Wep_S1 = W[np.ix_(iE_S1, iP_S1)]*gI
-        Wpp_S1 = W[np.ix_(iP_S1, iP_S1)]*gI
-        Wsp_S1 = W[np.ix_(iS_S1, iP_S1)]*gI
-        Wvp_S1 = W[np.ix_(iV_S1, iP_S1)]*gI
-        Wep_S2 = W[np.ix_(iE_S2, iP_S2)]*gI
-        Wpp_S2 = W[np.ix_(iP_S2, iP_S2)]*gI
-        Wsp_S2 = W[np.ix_(iS_S2, iP_S2)]*gI
-        Wvp_S2 = W[np.ix_(iV_S2, iP_S2)]*gI
-        # connectivity between S1 and S2
-        Wep_S1S2 = W[np.ix_(iE_S1, iP_S2)]*gI
-        Wpp_S1S2 = W[np.ix_(iP_S1, iP_S2)]*gI
-        Wsp_S1S2 = W[np.ix_(iS_S1, iP_S2)]*gI
-        Wvp_S1S2 = W[np.ix_(iV_S1, iP_S2)]*gI
-        Wep_S2S1 = W[np.ix_(iE_S2, iP_S1)]*gI
-        Wpp_S2S1 = W[np.ix_(iP_S2, iP_S1)]*gI
-        Wsp_S2S1 = W[np.ix_(iS_S2, iP_S1)]*gI
-        Wvp_S2S1 = W[np.ix_(iV_S2, iP_S1)]*gI
-
-        # within S1 and S2
-        Wes_S1 = W[np.ix_(iE_S1, iS_S1)]*gI
-        Wps_S1 = W[np.ix_(iP_S1, iS_S1)]*gI
-        Wss_S1 = W[np.ix_(iS_S1, iS_S1)]*gI
-        Wvs_S1 = W[np.ix_(iV_S1, iS_S1)]*gI
-        Wes_S2 = W[np.ix_(iE_S2, iS_S2)]*gI
-        Wps_S2 = W[np.ix_(iP_S2, iS_S2)]*gI
-        Wss_S2 = W[np.ix_(iS_S2, iS_S2)]*gI
-        Wvs_S2 = W[np.ix_(iV_S2, iS_S2)]*gI
-        # connectivity between S1 and S2
-        Wes_S1S2 = W[np.ix_(iE_S1, iS_S2)]*gI
-        Wps_S1S2 = W[np.ix_(iP_S1, iS_S2)]*gI
-        Wss_S1S2 = W[np.ix_(iS_S1, iS_S2)]*gI
-        Wvs_S1S2 = W[np.ix_(iV_S1, iS_S2)]*gI
-        Wes_S2S1 = W[np.ix_(iE_S2, iS_S1)]*gI
-        Wps_S2S1 = W[np.ix_(iP_S2, iS_S1)]*gI
-        Wss_S2S1 = W[np.ix_(iS_S2, iS_S1)]*gI
-        Wvs_S2S1 = W[np.ix_(iV_S2, iS_S1)]*gI
-
-        # within S1 and S2
-        Wev_S1 = W[np.ix_(iE_S1, iV_S1)]*gI
-        Wpv_S1 = W[np.ix_(iP_S1, iV_S1)]*gI
-        Wsv_S1 = W[np.ix_(iS_S1, iV_S1)]*gI
-        Wvv_S1 = W[np.ix_(iV_S1, iV_S1)]*gI
-        Wev_S2 = W[np.ix_(iE_S2, iV_S2)]*gI
-        Wpv_S2 = W[np.ix_(iP_S2, iV_S2)]*gI
-        Wsv_S2 = W[np.ix_(iS_S2, iV_S2)]*gI
-        Wvv_S2 = W[np.ix_(iV_S2, iV_S2)]*gI
-        # connectivity between S1 and S2
-        Wev_S1S2 = W[np.ix_(iE_S1, iV_S2)]*gI
-        Wpv_S1S2 = W[np.ix_(iP_S1, iV_S2)]*gI
-        Wsv_S1S2 = W[np.ix_(iS_S1, iV_S2)]*gI
-        Wvv_S1S2 = W[np.ix_(iV_S1, iV_S2)]*gI
-        Wev_S2S1 = W[np.ix_(iE_S2, iV_S1)]*gI
-        Wpv_S2S1 = W[np.ix_(iP_S2, iV_S1)]*gI
-        Wsv_S2S1 = W[np.ix_(iS_S2, iV_S1)]*gI
-        Wvv_S2S1 = W[np.ix_(iV_S2, iV_S1)]*gI
-
-        # put them back together
-        # Reconstructing W0 from the submatrices, negating where indicated
-        rowA3b1 = np.hstack([Wee_A3b, -Wep_A3b, -Wes_A3b, Wee_A3bS1, -Wep_A3bS1, -Wes_A3bS1, -Wev_A3bS1, Wee_A3bS2, -Wep_A3bS2, -Wes_A3bS2, -Wev_A3bS2])
-        rowA3b2 = np.hstack([Wpe_A3b, -Wpp_A3b, -Wps_A3b, Wpe_A3bS1, -Wpp_A3bS1, -Wps_A3bS1, -Wpv_A3bS1, Wpe_A3bS2, -Wpp_A3bS2, -Wps_A3bS2, -Wpv_A3bS2])
-        rowA3b3 = np.hstack([Wse_A3b, -Wsp_A3b, -Wss_A3b, Wse_A3bS1, -Wsp_A3bS1, -Wss_A3bS1, -Wsv_A3bS1, Wse_A3bS2, -Wsp_A3bS2, -Wss_A3bS2, -Wsv_A3bS2])
-        row1 = np.hstack([Wee_S1A3b, -Wep_S1A3b, -Wes_S1A3b, Wee_S1, -Wep_S1, -Wes_S1, -Wev_S1, Wee_S1S2, -Wep_S1S2, -Wes_S1S2, -Wev_S1S2])
-        row2 = np.hstack([Wpe_S1A3b, -Wpp_S1A3b, -Wps_S1A3b, Wpe_S1, -Wpp_S1, -Wps_S1, -Wpv_S1, Wpe_S1S2, -Wpp_S1S2, -Wps_S1S2, -Wpv_S1S2])
-        row3 = np.hstack([Wse_S1A3b, -Wsp_S1A3b, -Wss_S1A3b, Wse_S1, -Wsp_S1, -Wss_S1, -Wsv_S1, Wse_S1S2, -Wsp_S1S2, -Wss_S1S2, -Wsv_S1S2])
-        row4 = np.hstack([Wve_S1A3b, -Wvp_S1A3b, -Wvs_S1A3b, Wve_S1, -Wvp_S1, -Wvs_S1, -Wvv_S1, Wve_S1S2, -Wvp_S1S2, -Wvs_S1S2, -Wvv_S1S2])
-        row5 = np.hstack([Wee_S2A3b, -Wep_S2A3b, -Wes_S2A3b, Wee_S2S1, -Wep_S2S1, -Wes_S2S1, -Wev_S2S1, Wee_S2, -Wep_S2, -Wes_S2, -Wev_S2])
-        row6 = np.hstack([Wpe_S2A3b, -Wpp_S2A3b, -Wps_S2A3b, Wpe_S2S1, -Wpp_S2S1, -Wps_S2S1, -Wpv_S2S1, Wpe_S2, -Wpp_S2, -Wps_S2, -Wpv_S2])
-        row7 = np.hstack([Wse_S2A3b, -Wsp_S2A3b, -Wss_S2A3b, Wse_S2S1, -Wsp_S2S1, -Wss_S2S1, -Wsv_S2S1, Wse_S2, -Wsp_S2, -Wss_S2, -Wsv_S2])
-        row8 = np.hstack([Wve_S2A3b, -Wvp_S2A3b, -Wvs_S2A3b, Wve_S2S1, -Wvp_S2S1, -Wvs_S2S1, -Wvv_S2S1, Wve_S2, -Wvp_S2, -Wvs_S2, -Wvv_S2])
-        
-        # Vertically stack the rows to form W0
-        W0 = np.vstack([rowA3b1, rowA3b2, rowA3b3, row1, row2, row3, row4, row5, row6, row7, row8])
+        W0[:,idx_I] = W0[:,idx_I] * -gI # negative weight for inhibitory connections
+        W0[:,idx_E] = W0[:,idx_E] * gE
 
         # include the external input to the matrix 
         if include_Iext:
@@ -437,14 +304,14 @@ class Parameter():
 
         return W
 
-
     def get_sigmoid(self):
         # sigmoid function (nPop x 3) --> 3 stands for parameters: r(1/mV), v_thr(mV), m_max (1/s)
-        
         sigmoid_params_A3b = np.array([[  0.12782346,  32.10540543,  31.39696397],
                                     [  0.14218422,  40.03107351, 166.82960408],
                                     [  0.07937015,  42.01276379,  56.95305832]])
         
+        # order:
+        # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         sigmoid_params_S1 = np.array([[  0.12782346,  32.10540543,  31.39696397],
                                     [  0.14218422,  40.03107351, 166.82960408],
                                     [  0.07937015,  42.01276379,  56.95305832],

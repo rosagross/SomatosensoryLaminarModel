@@ -192,6 +192,7 @@ def write_3D_csv(filename, data):
     with open(filename, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
         writer.writerows(data)
+        
 # %% 
 def main():
 
@@ -201,7 +202,7 @@ def main():
 
     # set coupling strengths, step size and cortex type (visual or somato)
     coupling_strengths_E = [60] #np.arange(0, 100, 10)
-    coupling_strengths_I = [40] #np.arange(0, 100, 10)
+    coupling_strengths_I = [30] #np.arange(0, 100, 10)
     step_size = 0.001
     cortex_type = 'somato'
     filedir = '' #'/data/p_02989/Modelling/output/'
@@ -209,8 +210,8 @@ def main():
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [1] #np.arange(0.5, 2, 0.5) # in sec 
-    input_strengths = [10] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
+    input_durations = [2] #np.arange(0.5, 2, 0.5) # in sec 
+    input_strengths = [100] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
     backgrndI_strengths = [2] #[1,2,3,4,5,6,7,8,9,10]
 
     for d in input_durations:
@@ -266,71 +267,4 @@ def main():
 if __name__ == '__main__':
    main()
 
-# %%
-save_results = False
-save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-plot = True
-
-# set coupling strengths, step size
-coupling_strengths_E = [60] #np.arange(0, 100, 10)
-coupling_strengths_I = [40] #np.arange(0, 100, 10)
-step_size = 0.001
-cortex_type = 'somato'
-filedir = '/data/p_02989/Modelling/output/'
-
-# define input
-input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
-input_onset = 1.001 # in sec
-input_durations = [1] #np.arange(0.5, 2, 0.5) # in sec 
-input_strengths = [80] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
-backgrndI_strengths = [2] #[1,2,3,4,5,6,7,8,9,10]
-
-for d in input_durations:
-    simulation_time = int(input_onset) + d + 1
-    for sb in backgrndI_strengths:
-    
-        for s in input_strengths:
-
-            # arrays to store rate (for plotting)
-            all_rates = []
-            all_potentials = []
-
-            for gE in coupling_strengths_E:
-                for gI in coupling_strengths_I:
-
-                    print('\nInput duration:', d)
-                    print('Input strength:', s)
-                    print('Background Input strength:', sb)
-                    print('gE', gE)
-                    print('gI', gI)
-
-                    filename = f'_gE{gE}gI{gI}_{cortex_type}_IbStrength{sb}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0'
-
-                    # create input array 
-                    Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
-                    Ib = create_Ibackground(simulation_time, step_size, sb)
-                    model = JR_Model(Iext, Ib, gE, gI, filedir, filename, step_size, simulation_time)
-
-                    # perform simulation with current coupling strength g
-                    rate, potential = model.run_simulation()
-                    # append results
-                    all_rates.append(rate)
-                    all_potentials.append(potential)
-
-                    if save_results:
-                        save_results_csv(rate, potential, filedir, filename, save_full_potentials)
-
-
-            if plot:
-                all_rates = np.array(all_rates)
-                all_potentials = np.squeeze(np.array(all_potentials))
-                if len(coupling_strengths_E) == 1:
-                    # when to start plotting (in ms)
-                    start_plot = 500
-                    # plot only one coupling strength value with time on the x-axis
-                    plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot)
-                    #plot_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot)
-                else: 
-                    # used to plot with coupling strength on the x-axis and max/min rate on the y
-                    plot_minmax(all_rates, coupling_strengths_E)
 # %%
