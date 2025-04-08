@@ -1,6 +1,7 @@
 # %%
 import numpy as np
 import yaml
+
 # %%
 class Parameter():
 
@@ -40,7 +41,7 @@ class Parameter():
         # Connection probabilies
         # Targets in rows, sources in columns 
         # Area 3b: E2, PV2, SST2
-        P_A3b = np.array([[9.9, 37.4, 19.8],[37.4, 28.8, 36.3],[19., 33.2,  1.2]])
+        P_A3b = np.array([[9.9, 37.4, 19.8],[37.4, 28.8, 36.3],[19., 33.2,  1.2]])*1e-2 
         
         # E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (Thalamus is added later!)
         P_S1 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
@@ -87,7 +88,6 @@ class Parameter():
         P_toS2 = np.hstack((P_A3btoS2, P_S1toS2, P_S2))
         P = np.vstack((P_toA3b, P_toS1, P_toS2)) #  26x26 (with nPop=13 per S1/S2)
 
-    
         return P
 
 
@@ -130,6 +130,7 @@ class Parameter():
             [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]]
 
         # to Area 3b
+        # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         psp_S1toA3b = [[0.5, 1.0, 1.0, 1.0, 1.59, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
             [0.5, 1.0, 1.0, 1.0, 1.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
             [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 0.19, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
@@ -145,8 +146,7 @@ class Parameter():
         psp_S1toS2 = np.zeros((13,13))
         psp_toS2 = np.hstack((psp_A3btoS2, psp_S1toS2, psp_S2))
         psp = np.vstack((psp_toA3b, psp_toS1, psp_toS2)) #  26x26 (with nPop=13 per S1/S2)
-
-        
+       
         return psp
 
     def get_cellcounts(self):
@@ -214,6 +214,8 @@ class Parameter():
         P_thalToS2 = P_thalToS2 * 0.2 # S2 receives just a fith of what S1 receives from the thalamus
         #print('P from thal', P_thalToS1.shape, P_thalToS2.shape)
         P_from_thal = np.hstack((P_thalToA3b, P_thalToS1, P_thalToS2))
+        
+        # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         P_A3bto_thal = np.array([[0, 0, 0], [0, 0, 0]]) # this is only from the cortex!
         P_S1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
         P_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
@@ -254,9 +256,77 @@ class Parameter():
         iV_S2 = [19]  # VIP1
 
         # Extracting submatrices based on the defined index sets
-        Wee_A3b = W[np.ix_(0, iE_S1)]*gE
-        Wpe_A3b = W[np.ix_(0, iE_S1)]*gI
-        Wse_A3b = W[np.ix_(0, iE_S1)]*gI
+        # Within Area 3b
+        Wee_A3b = W[np.ix_([0], [0])]*gE # .. from E population in Area 3b
+        Wpe_A3b = W[np.ix_([1], [0])]*gE 
+        Wse_A3b = W[np.ix_([2], [0])]*gE 
+        Wep_A3b = W[np.ix_([0], [1])]*gI 
+        Wpp_A3b = W[np.ix_([1], [1])]*gI 
+        Wsp_A3b = W[np.ix_([2], [1])]*gI 
+        Wes_A3b = W[np.ix_([0], [2])]*gI 
+        Wps_A3b = W[np.ix_([1], [2])]*gI 
+        Wss_A3b = W[np.ix_([2], [2])]*gI 
+
+        # Connectivity to S1 from Area 3b and the other way around
+        # ... from excitatory population
+        Wee_S1A3b = W[np.ix_(iE_S1, [0])]*gE
+        Wpe_S1A3b = W[np.ix_(iP_S1, [0])]*gE
+        Wse_S1A3b = W[np.ix_(iS_S1, [0])]*gE
+        Wve_S1A3b = W[np.ix_(iV_S1, [0])]*gE
+        Wee_A3bS1 = W[np.ix_([0], iE_S1)]*gE
+        Wpe_A3bS1 = W[np.ix_([1], iE_S1)]*gE
+        Wse_A3bS1 = W[np.ix_([2], iE_S1)]*gE
+        # ... from PV population
+        Wep_S1A3b = W[np.ix_(iE_S1, [1])]*gI
+        Wpp_S1A3b = W[np.ix_(iP_S1, [1])]*gI
+        Wsp_S1A3b = W[np.ix_(iS_S1, [1])]*gI
+        Wvp_S1A3b = W[np.ix_(iV_S1, [1])]*gI
+        Wep_A3bS1 = W[np.ix_([0], iP_S1)]*gI
+        Wpp_A3bS1 = W[np.ix_([1], iP_S1)]*gI
+        Wsp_A3bS1 = W[np.ix_([2], iP_S1)]*gI
+        # ... from SST population
+        Wes_S1A3b = W[np.ix_(iE_S1, [2])]*gI
+        Wps_S1A3b = W[np.ix_(iP_S1, [2])]*gI
+        Wss_S1A3b = W[np.ix_(iS_S1, [2])]*gI
+        Wvs_S1A3b = W[np.ix_(iV_S1, [2])]*gI
+        Wes_A3bS1 = W[np.ix_([0], iS_S1)]*gI
+        Wps_A3bS1 = W[np.ix_([1], iS_S1)]*gI
+        Wss_A3bS1 = W[np.ix_([2], iS_S1)]*gI
+        # ... from VIP population
+        Wev_A3bS1 = W[np.ix_([0], iV_S1)]*gI
+        Wpv_A3bS1 = W[np.ix_([1], iV_S1)]*gI
+        Wsv_A3bS1 = W[np.ix_([2], iV_S1)]*gI
+
+        # Connectivity to S2 from Area 3b and the other way around
+        # ... from excitatory population
+        Wee_S2A3b = W[np.ix_(iE_S2, [0])]*gE
+        Wpe_S2A3b = W[np.ix_(iP_S2, [0])]*gE
+        Wse_S2A3b = W[np.ix_(iS_S2, [0])]*gE
+        Wve_S2A3b = W[np.ix_(iV_S2, [0])]*gE
+        Wee_A3bS2 = W[np.ix_([0], iE_S2)]*gE
+        Wpe_A3bS2 = W[np.ix_([1], iE_S2)]*gE
+        Wse_A3bS2 = W[np.ix_([2], iE_S2)]*gE
+        # ... from PV population
+        Wep_S2A3b = W[np.ix_(iE_S2, [1])]*gI
+        Wpp_S2A3b = W[np.ix_(iP_S2, [1])]*gI
+        Wsp_S2A3b = W[np.ix_(iS_S2, [1])]*gI
+        Wvp_S2A3b = W[np.ix_(iV_S2, [1])]*gI
+        Wep_A3bS2 = W[np.ix_([0], iP_S2)]*gI
+        Wpp_A3bS2 = W[np.ix_([1], iP_S2)]*gI
+        Wsp_A3bS2 = W[np.ix_([2], iP_S2)]*gI
+        # ... from SST population
+        Wes_S2A3b = W[np.ix_(iE_S2, [2])]*gI
+        Wps_S2A3b = W[np.ix_(iP_S2, [2])]*gI
+        Wss_S2A3b = W[np.ix_(iS_S2, [2])]*gI
+        Wvs_S2A3b = W[np.ix_(iV_S2, [2])]*gI
+        Wes_A3bS2 = W[np.ix_([0], iS_S2)]*gI
+        Wps_A3bS2 = W[np.ix_([1], iS_S2)]*gI
+        Wss_A3bS2 = W[np.ix_([2], iS_S2)]*gI
+        # ... from VIP population
+        Wev_A3bS2 = W[np.ix_([0], iV_S2)]*gI
+        Wpv_A3bS2 = W[np.ix_([1], iV_S2)]*gI
+        Wsv_A3bS2 = W[np.ix_([2], iV_S2)]*gI
+
         
         # within S1 and S2
         Wee_S1 = W[np.ix_(iE_S1, iE_S1)]*gE
@@ -336,43 +406,34 @@ class Parameter():
 
         # put them back together
         # Reconstructing W0 from the submatrices, negating where indicated
-        # TODO: either leave the values in this order or sort them in the parameter file!
-        #rowA3b1 = np.hstack([
-        #rowA3b2 = np.hstack([
-        #rowA3b3 = np.hstack([
-        row1 = np.hstack([Wee_S1, -Wep_S1, -Wes_S1, -Wev_S1, Wee_S1S2, -Wep_S1S2, -Wes_S1S2, -Wev_S1S2])
-        row2 = np.hstack([Wpe_S1, -Wpp_S1, -Wps_S1, -Wpv_S1, Wpe_S1S2, -Wpp_S1S2, -Wps_S1S2, -Wpv_S1S2])
-        row3 = np.hstack([Wse_S1, -Wsp_S1, -Wss_S1, -Wsv_S1, Wse_S1S2, -Wsp_S1S2, -Wss_S1S2, -Wsv_S1S2])
-        row4 = np.hstack([Wve_S1, -Wvp_S1, -Wvs_S1, -Wvv_S1, Wve_S1S2, -Wvp_S1S2, -Wvs_S1S2, -Wvv_S1S2])
-        row5 = np.hstack([Wee_S2S1, -Wep_S2S1, -Wes_S2S1, -Wev_S2S1, Wee_S2, -Wep_S2, -Wes_S2, -Wev_S2])
-        row6 = np.hstack([Wpe_S2S1, -Wpp_S2S1, -Wps_S2S1, -Wpv_S2S1, Wpe_S2, -Wpp_S2, -Wps_S2, -Wpv_S2])
-        row7 = np.hstack([Wse_S2S1, -Wsp_S2S1, -Wss_S2S1, -Wsv_S2S1, Wse_S2, -Wsp_S2, -Wss_S2, -Wsv_S2])
-        row8 = np.hstack([Wve_S2S1, -Wvp_S2S1, -Wvs_S2S1, -Wvv_S2S1, Wve_S2, -Wvp_S2, -Wvs_S2, -Wvv_S2])
+        rowA3b1 = np.hstack([Wee_A3b, -Wep_A3b, -Wes_A3b, Wee_A3bS1, -Wep_A3bS1, -Wes_A3bS1, -Wev_A3bS1, Wee_A3bS2, -Wep_A3bS2, -Wes_A3bS2, -Wev_A3bS2])
+        rowA3b2 = np.hstack([Wpe_A3b, -Wpp_A3b, -Wps_A3b, Wpe_A3bS1, -Wpp_A3bS1, -Wps_A3bS1, -Wpv_A3bS1, Wpe_A3bS2, -Wpp_A3bS2, -Wps_A3bS2, -Wpv_A3bS2])
+        rowA3b3 = np.hstack([Wse_A3b, -Wsp_A3b, -Wss_A3b, Wse_A3bS1, -Wsp_A3bS1, -Wss_A3bS1, -Wsv_A3bS1, Wse_A3bS2, -Wsp_A3bS2, -Wss_A3bS2, -Wsv_A3bS2])
+        row1 = np.hstack([Wee_S1A3b, -Wep_S1A3b, -Wes_S1A3b, Wee_S1, -Wep_S1, -Wes_S1, -Wev_S1, Wee_S1S2, -Wep_S1S2, -Wes_S1S2, -Wev_S1S2])
+        row2 = np.hstack([Wpe_S1A3b, -Wpp_S1A3b, -Wps_S1A3b, Wpe_S1, -Wpp_S1, -Wps_S1, -Wpv_S1, Wpe_S1S2, -Wpp_S1S2, -Wps_S1S2, -Wpv_S1S2])
+        row3 = np.hstack([Wse_S1A3b, -Wsp_S1A3b, -Wss_S1A3b, Wse_S1, -Wsp_S1, -Wss_S1, -Wsv_S1, Wse_S1S2, -Wsp_S1S2, -Wss_S1S2, -Wsv_S1S2])
+        row4 = np.hstack([Wve_S1A3b, -Wvp_S1A3b, -Wvs_S1A3b, Wve_S1, -Wvp_S1, -Wvs_S1, -Wvv_S1, Wve_S1S2, -Wvp_S1S2, -Wvs_S1S2, -Wvv_S1S2])
+        row5 = np.hstack([Wee_S2A3b, -Wep_S2A3b, -Wes_S2A3b, Wee_S2S1, -Wep_S2S1, -Wes_S2S1, -Wev_S2S1, Wee_S2, -Wep_S2, -Wes_S2, -Wev_S2])
+        row6 = np.hstack([Wpe_S2A3b, -Wpp_S2A3b, -Wps_S2A3b, Wpe_S2S1, -Wpp_S2S1, -Wps_S2S1, -Wpv_S2S1, Wpe_S2, -Wpp_S2, -Wps_S2, -Wpv_S2])
+        row7 = np.hstack([Wse_S2A3b, -Wsp_S2A3b, -Wss_S2A3b, Wse_S2S1, -Wsp_S2S1, -Wss_S2S1, -Wsv_S2S1, Wse_S2, -Wsp_S2, -Wss_S2, -Wsv_S2])
+        row8 = np.hstack([Wve_S2A3b, -Wvp_S2A3b, -Wvs_S2A3b, Wve_S2S1, -Wvp_S2S1, -Wvs_S2S1, -Wvv_S2S1, Wve_S2, -Wvp_S2, -Wvs_S2, -Wvv_S2])
         
         # Vertically stack the rows to form W0
-        W0_S1S2 = np.vstack([row1, row2, row3, row4, row5, row6, row7, row8])
-        # add area 3b
-        to_area3b = W[0:3, 3:]
-        #from_area3b = W[:, :3# TODO: this has to be sorted so that S1 receives input from 3b in the correct order!!!
-        W0 = np.vstack((to_area3b, W0_S1S2))
-        W0 = np.hstack((from_area3b, W0))
-        #print(Wee_S1.shape)
-        #print(W.shape, W0.shape)
+        W0 = np.vstack([rowA3b1, rowA3b2, rowA3b3, row1, row2, row3, row4, row5, row6, row7, row8])
 
         # include the external input to the matrix 
         if include_Iext:
-            #print('W0', W0.shape) # this should be 13x13
-            
+            print('append input connectivity')
             # append the thalamus population(s) values to the matrix
             W0 = np.append(W0, W_to_thal, axis=0)
-            #print('W from thalamus 2\n', W_from_thal.shape)
-            #print(W_from_thal)
+            print('W from thalamus 2\n', W_from_thal.shape)
+            print(W_from_thal)
 
             W0 = np.append(W0, W_from_thal.T, axis=1)
 
             W = np.concatenate((W0, Wb, Wext), axis=1)
-            #print('\nW matrix shape', W.shape) 
-            #print('W matrix', W[:,-4:]) 
+            print('\nW matrix shape', W.shape) 
+            print('W matrix\n', W[:,-4:]) 
 
         return W
 

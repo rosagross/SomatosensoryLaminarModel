@@ -5,11 +5,11 @@ import matplotlib.pyplot as plt
 from jr_model import JR_Model
 import pandas as pd 
 import csv 
+
 # %% 
 def plot_minmax(rates, coupling_strengths_Es):
     minRate = np.min(rates[:,:,-100:],axis=2)
     maxRate = np.max(rates[:,:,-100:],axis=2)
-
 
     # Plottign Area 3b Activity
     fig, axs = plt.subplots(1, 1, figsize=(3, 6)) 
@@ -63,9 +63,9 @@ def plot_minmax(rates, coupling_strengths_Es):
 
 def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
-
     fig, axs = plt.subplots(1, 2, figsize=(8, 2))  # Set figure size
 
+    # thalamus
     axs[0].plot(steps[start_plot:], Iext[start_plot:], label='Iext rate')
     axs[0].plot(steps[start_plot:], Ib[start_plot:], label='Ib rate')
     axs[0].legend(title='')
@@ -77,6 +77,7 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
 
     plt.tight_layout() 
 
+    # area 3b
     figA3b, axsA3b = plt.subplots(1, 1, figsize=(5, 5))
     axsA3b.plot(steps[start_plot:], rates[0, :3].T[start_plot:], linewidth=1)
     axsA3b.legend(['E', 'PV', 'SOM'])
@@ -209,7 +210,7 @@ def main():
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
     input_durations = [1] #np.arange(0.5, 2, 0.5) # in sec 
-    input_strengths = [80] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
+    input_strengths = [10] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
     backgrndI_strengths = [2] #[1,2,3,4,5,6,7,8,9,10]
 
     for d in input_durations:
