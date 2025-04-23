@@ -1,6 +1,9 @@
 """
 Perform forward modelling with simulated EEG data. 
-
+Steps:
+1. Compute forward operator 
+2. Perform co-registration
+3. 
 """
 
 # %% 
