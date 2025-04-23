@@ -38,35 +38,25 @@ def adjust_connectivity_matrix(conmatrix):
 figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/PosterFigures'
 
 params = Parameter()
-population_names = ['E3b','PV3b','SST3b', 'E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4',
+population_names = ['E3b','PV3b','SST3b','VIP3b', 'E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4',
                                           'E1S2','PV1S2','SST1S2','VIP1S2','E2S2','PV2S2','SST2S2','E3S2','PV3S2','SST3S2','E4S2','PV4S2','SST4S2']
-plot_populations = ['E3b','PV3b','SST3b', 'E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1', 
-                                          'E1S2','E2S2','E3S2','E4S2','PV1S2','PV2S2','PV3S2','PV4S2','SST1S2','SST2S2','SST3S2','SST4S2','VIP1S2']
 all_pops = np.concatenate((population_names,['ThalE', 'ThalI', 'B', 'Ext']))
 # Synaptic strengths
 S = np.abs(params.get_connectStrength())
-df_S = pd.DataFrame(S, index=population_names, columns=population_names)
+df_S = pd.DataFrame(S, index=population_names[4:], columns=population_names[4:])
 # Connection Probability
 P = params.get_connectProb()
-df_P = pd.DataFrame(P, index=population_names, columns=population_names)
+df_P = pd.DataFrame(P, index=population_names[4:], columns=population_names[4:])
 # Cell counts
 C = params.get_cellcounts()
-df_C = pd.DataFrame(C, index=population_names)
+df_C = pd.DataFrame(C, index=population_names[4:])
 # Total Connectivity
-W = params.get_connectivity(60, 40)
+gE, gI = [1,1]
+thal_connect = [0, 0, 0, 0] 
+W = params.get_connectivity(gE, gI, thal_connect)
 df_W = pd.DataFrame(W, index=all_pops[:-2], columns=all_pops)
 
 # %% Plot Synaptic strengths
-plt.figure(figsize=(12, 10))
-sns.heatmap(df_S, annot=False, cmap='viridis', xticklabels=True, yticklabels=True)
-
-# Rotate x-axis labels for better visibility
-plt.xticks(rotation=45, ha='right')
-plt.yticks(rotation=0)
-plt.ylabel('Target Population')
-plt.xlabel('Source Population')
-plt.title("Synaptic Strength")
-plt.tight_layout() 
 plt.figure(figsize=(12, 10))
 sns.heatmap(df_S, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
@@ -83,17 +73,7 @@ plt.show()
 # %%
 # Connectivity Probabilities
 plt.figure(figsize=(12, 10))
-sns.heatmap(df_W, annot=False, cmap='viridis', xticklabels=True, yticklabels=True)
-
-# Rotate x-axis labels for better visibility
-plt.xticks(rotation=45, ha='right')
-plt.yticks(rotation=0)
-plt.ylabel('Target Population')
-plt.xlabel('Source Population')
-plt.title("Connection Probability")
-plt.tight_layout() 
-plt.figure(figsize=(12, 10))
-sns.heatmap(df_W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
+sns.heatmap(df_P, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
 # Rotate x-axis labels for better visibility
 plt.xticks(rotation=45, ha='right')
@@ -110,7 +90,7 @@ plt.show()
 fig, ax = plt.subplots()
 sns.barplot(df_C.T, ax=ax)
 sns.despine(fig, trim=True, bottom=False)
-ax.set_ylabel('Proportional Cellcount')
+ax.set_ylabel('Absolute Cellcount')
 ax.set_xlabel('Populations')
 plt.xticks(rotation=45, ha='right')
 plt.tight_layout() 
@@ -120,7 +100,7 @@ plt.show()
 # %% 
 # Connectivity matrix
 plt.figure(figsize=(12, 10))
-sns.heatmap(df_W, annot=False, cmap='viridis', xticklabels=True, yticklabels=True)
+sns.heatmap(df_W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
 # Rotate x-axis labels for better visibility
 plt.xticks(rotation=45, ha='right')
@@ -132,43 +112,7 @@ plt.tight_layout()
 #plt.savefig("Figures/Connect_Probability.pdf")
 plt.show()
 
-# %% 
-
-fig, axs = plt.subplots(4, 4, figsize=(10,10), sharey=False)
-x = population_names
-for i, ax in enumerate(axs.flatten()):
-    sns.barplot(data=df_W, ax=ax, x=plot_populations*2, y=plot_populations[i], hue='cortex_type', palette=[colors['visual'], colors['somato']])
-
-    #sns.barplot(x=x, y=y, ax=ax, color=colors['visual'])
-    #sns.barplot(x=x, y=y2, ax=ax, color=colors['somato'])
-    ax.set_ylabel("Connection weight")
-    ax.set_title(f'from {plot_populations[i]}')
-    legend = ax.legend(title='cortex type', facecolor='white', edgecolor='black', framealpha=1)
-    if not i%4 == 0:
-        ax.get_legend().remove()
-    ax.set_xlabel('')
-    ax.tick_params(axis='x', labelsize=8, rotation=60)
-
-sns.despine(fig, trim=True, bottom=False)
-plt.tight_layout()
-filename = 'Connection_weight.pdf'
-#plt.savefig(os.path.join(figure_dir, filename))
-plt.show()
-
-# %% Input matrix: connections pattern in the thalamus and to the cortex)
-fig, ax = plt.subplots(1,1,figsize=[2,7])
-plot_populations = ['E1','E2','E3','E4','PV1','PV2','PV3','PV4','SST1','SST2','SST3','SST4','VIP1','ThalE']
-
-somato_Wext = params_somato.get_connectivity(1, include_Iext=True)[:, -2:-1]
-sns.heatmap(somato_Wext, yticklabels=plot_populations, xticklabels=['ThalE'], cmap='BuGn', ax=ax)
-filename = 'Wext_somato.pdf'
-#plt.savefig(os.path.join(figure_dir, filename), bbox_inches='tight')
-
-#thalamic_circuit = 
-
-plt.show()
-
-
+# %%
 ################ Connectivity matrix #############
 plt.figure(figsize=(12, 10))
 sns.heatmap(df_W, annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
@@ -184,13 +128,13 @@ plt.tight_layout()
 plt.show()
 
 #%% 
-################ Thlamus connectivity ##################
+################ Thalamus connectivity ##################
 plt.figure(figsize=(5,12))
 sns.heatmap(df_W[["ThalE", 'ThalI']], annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
 
 #%% 
 ################ Background & External input ##################
 plt.figure(figsize=(5,12))
-sns.heatmap(df_W[["B", 'Ext']], annot=False, cmap='coolwarm', xticklabels=True, yticklabels=True)
+sns.heatmap(df_W[["B", 'Ext']], annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
 
 # %%

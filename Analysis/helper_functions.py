@@ -10,8 +10,13 @@ import ast
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths_E, coupling_strengths_I,  
                         backgroundI_strengths, step_size, sample_delay, input_onset, sample_dur, cortex_type, input_type,
-                        thalamus_source, load_trajectory, load_full_potentials, load_population_potential = 3):
-    
+                        thalamus_source, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1):
+    '''
+    Parameter:
+    sample_dur: duration of sampling baseline and longterm activity in s 
+    load_population_potential : the index of the cell population of which the potential (all incoming input to the population) will be loaded - (if it was saved after the simulation)
+    offset : time in s between baseline sampling and start of input 
+    '''
     # create summary matrix: should include (max/min_value x population   
     min_data = []
     max_data = []
@@ -26,20 +31,17 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                 for gI in coupling_strengths_I:
                     for bI in backgroundI_strengths:
 
-                        
-                        #print('Input strength', s)
-
                         df = pd.DataFrame()
 
                         # read in firing rates in data matrix (datapoints x populations)
-                        filename_rates = f"rates_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0.csv"
+                        filename_rates = f"rates_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
                         rates_df = pd.read_csv(os.path.join(output_dir, filename_rates))
                         
                         # read in potentials in data matrix (datapoints x populations)
-                        filename_potentials = f"potentials_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0.csv"
+                        filename_potentials = f"potentials_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
                         potentials_df = pd.read_csv(os.path.join(output_dir, filename_potentials))
 
-                        # LONG TERM (sample for 100ms starting at 0.5 sec after offset)
+                        # LONG TERM (sample for x ms starting at 0.5 sec after offset)
                         start_sample = int((input_onset+d+sample_delay)/step_size)
                         stop_sample = int(start_sample + sample_dur/step_size)
                         df['rate_longterm'] = rates_df.iloc[start_sample:stop_sample].mean()
@@ -64,7 +66,6 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         df['diffPotential_duringInput'] = df['maxPotential_duringInput'] - df['minPotential_duringInput']
                     
                         # BASELINE SAMPLE
-                        offset = 0.1 # time between baseline sampling and start of input 
                         baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
                         baseline_stop = int(baseline_start + sample_dur/step_size)
                         df['rate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].mean()

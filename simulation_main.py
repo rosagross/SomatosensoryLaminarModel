@@ -4,7 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from jr_model import JR_Model
 import pandas as pd 
-import csv 
+import csv
 
 # %% 
 def plot_minmax(rates, coupling_strengths_Es):
@@ -163,7 +163,9 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     Safe the simulated data in a csv file
     '''    
 
-    cells = np.array(['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3', 'S4', 'V1', 'ThalE', 'ThalI']) 
+    population_names = ['E3b','PV3b','SST3b','VIP3b', 'E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4',
+                                          'E1S2','PV1S2','SST1S2','VIP1S2','E2S2','PV2S2','SST2S2','E3S2','PV3S2','SST3S2','E4S2','PV4S2','SST4S2']
+    cells = np.concatenate((population_names,['ThalE', 'ThalI']))
     
     rates_df = pd.DataFrame(rates.T, columns=cells)
     filename = filename + '.csv'
@@ -196,23 +198,27 @@ def write_3D_csv(filename, data):
 # %% 
 def main():
 
-    save_results = False
+    save_results = True
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = True
+    plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths_E = [60] #np.arange(0, 100, 10)
-    coupling_strengths_I = [30] #np.arange(0, 100, 10)
+    coupling_strengths_E = np.arange(0, 0.6, 0.1)
+    coupling_strengths_I = np.arange(0, 0.6, 0.1)
     step_size = 0.001
     cortex_type = 'somato'
-    filedir = '' #'/data/p_02989/Modelling/output/'
+    filedir = 'output' #'/data/p_02989/Modelling/output/'
 
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [2] #np.arange(0.5, 2, 0.5) # in sec 
-    input_strengths = [100] #[0, 20, 40, 60, 80, 100] # np.arange(0, 80, 10)
-    backgrndI_strengths = [2] #[1,2,3,4,5,6,7,8,9,10]
+    input_durations = np.arange(0, 1, 1) # in sec 
+    input_strengths = np.arange(0, 1, 1)
+    backgrndI_strengths = [1]
+
+    # connections within the thalamus
+    # in this order: tEE, tEI, tIE, tII 
+    thal_connect = [0, 0, 0, 0] 
 
     for d in input_durations:
         simulation_time = int(input_onset) + d + 1
@@ -232,13 +238,16 @@ def main():
                         print('Background Input strength:', sb)
                         print('gE', gE)
                         print('gI', gI)
+                        print(f'Thalamus EtoE:{thal_connect[0]} ItoE: {thal_connect[1]}')
+                        print(f'Thalamus EtoI:{thal_connect[2]} ItoI: {thal_connect[3]}')
+
 
                         filename = f'_gE{gE}gI{gI}_{cortex_type}_IbStrength{sb}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0_S1S2'
 
                         # create input array 
                         Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
                         Ib = create_Ibackground(simulation_time, step_size, sb)
-                        model = JR_Model(Iext, Ib, gE, gI, filedir, filename, step_size, simulation_time)
+                        model = JR_Model(Iext, Ib, gE, gI, thal_connect, filedir, filename, step_size, simulation_time)
 
                         # perform simulation with current coupling strength g
                         rate, potential = model.run_simulation()
@@ -263,7 +272,7 @@ def main():
                         # used to plot with coupling strength on the x-axis and max/min rate on the y
                         plot_minmax(all_rates, coupling_strengths_E)
 
-# %%       
+#   
 if __name__ == '__main__':
    main()
 
