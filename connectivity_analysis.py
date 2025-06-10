@@ -51,9 +51,10 @@ df_P = pd.DataFrame(P, index=population_names[4:], columns=population_names[4:])
 C = params.get_cellcounts()
 df_C = pd.DataFrame(C, index=population_names[4:])
 # Total Connectivity
-gE, gI = [1,1]
+gE, gI = [1/6448, 1/6448]
+gEthal, gIthal = [1/6448, 1/6448]
 thal_connect = [0, 0, 0, 0] 
-W = params.get_connectivity(gE, gI, thal_connect)
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect)
 df_W = pd.DataFrame(W, index=all_pops[:-2], columns=all_pops)
 
 # %% Plot Synaptic strengths
@@ -115,7 +116,36 @@ plt.show()
 # %%
 ################ Connectivity matrix #############
 plt.figure(figsize=(12, 10))
-sns.heatmap(df_W, annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
+sns.heatmap(df_W.loc[:, ~df_W.columns.isin(['ThalE', 'ThalI','B', 'Ext'])], annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
+
+# Rotate x-axis labels for better visibility
+plt.xticks(rotation=45, ha='right')
+plt.yticks(rotation=0)
+plt.ylabel('Target Population')
+plt.xlabel('Source Population')
+plt.title("Connectivity Matrix")
+plt.tight_layout() 
+#plt.savefig("Figures/Connect_Probability.pdf")
+plt.show()
+
+# %%
+
+S1_pops = ['E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4']
+C_S1 = C[:13]
+W_reversed = np.array(pd.read_csv("param_reversed.csv", index_col=False)) # df_W/np.sum(C_S1)
+df_W_reversed = pd.DataFrame(W_reversed, index=all_pops[:-2], columns=all_pops)
+df_W_reversed_S1 = df_W_reversed.loc[S1_pops, S1_pops]
+W_reversedinit = np.array(pd.read_csv("param_reversed_init.csv", index_col=False))
+df_W_reversedinit = pd.DataFrame(W_reversedinit, index=all_pops[:-2], columns=all_pops)
+df_W_reversedinit_S1 = df_W_reversedinit.loc[S1_pops, S1_pops]
+df_W_S1 = df_W.loc[S1_pops, S1_pops]
+W_relative = np.array(pd.read_csv("param_relative.csv", index_col=False))
+df_W_relative = pd.DataFrame(W_relative, index=all_pops[:-2], columns=all_pops)
+df_W_relative_S1 = df_W_relative.loc[S1_pops, S1_pops]
+
+# %%
+plt.figure(figsize=(12, 10))
+sns.heatmap(df_W_diff, annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
 
 # Rotate x-axis labels for better visibility
 plt.xticks(rotation=45, ha='right')

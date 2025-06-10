@@ -198,13 +198,21 @@ def write_3D_csv(filename, data):
 # %% 
 def main():
 
-    save_results = True
+    save_results = False
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = False
+    plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
-    coupling_strengths_E = np.arange(0, 0.6, 0.1)
-    coupling_strengths_I = np.arange(0, 0.6, 0.1)
+    # connectivity reverse factor is the absolute cell count divided by  
+    connect_reverse_factor =  6448 # TODO: adapt this factor also to S2 cell populations!
+
+    coupling_strengths_E = [60/connect_reverse_factor] #np.arange(0, 0.6, 0.1)
+    coupling_strengths_I = [50/connect_reverse_factor] # np.arange(0, 0.6, 0.1)
+    
+    # since the connectivity to and from the thalamus is also scaled by the cellcounts
+    # we need to scale the coupling strength as well  
+    coupling_thalE = 1/connect_reverse_factor
+    coupling_thalI = 1/connect_reverse_factor
     step_size = 0.001
     cortex_type = 'somato'
     filedir = 'output' #'/data/p_02989/Modelling/output/'
@@ -212,9 +220,9 @@ def main():
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = np.arange(0, 1, 1) # in sec 
-    input_strengths = np.arange(0, 1, 1)
-    backgrndI_strengths = [1]
+    input_durations = [0.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = [100] # np.arange(0, 1, 1)
+    backgrndI_strengths = [5]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
@@ -247,7 +255,7 @@ def main():
                         # create input array 
                         Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
                         Ib = create_Ibackground(simulation_time, step_size, sb)
-                        model = JR_Model(Iext, Ib, gE, gI, thal_connect, filedir, filename, step_size, simulation_time)
+                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect, filedir, filename, step_size, simulation_time)
 
                         # perform simulation with current coupling strength g
                         rate, potential = model.run_simulation()

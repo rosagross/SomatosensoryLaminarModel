@@ -5,12 +5,13 @@ import os
 
 class JR_Model():
 
-    def __init__(self, Iext, Ib, gE, gI, thal_connect, filedir, filename, step_size=0.001, simulation_time=1):
+    def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, filedir, filename, step_size=0.001, simulation_time=1):
         
         # load in all parameters
         self.p = Parameter()
         # safe connectivty parameter in yaml file 
-        self.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, thal_connect)
+        #TODO: check the filename here
+        # self.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, thal_connect)
 
         # Simulation parameters
         self.tau = self.p.tau
@@ -20,6 +21,8 @@ class JR_Model():
         self.step_size = step_size # in s
         self.gE = gE
         self.gI = gI
+        self.gEthal = gEthal
+        self.gIthal = gIthal
         self.thal_connect = thal_connect
 
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
@@ -51,7 +54,7 @@ class JR_Model():
         self.u_t = np.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
 
         # Weight matrix [to x from]
-        W = self.p.get_connectivity(self.gE, self.gI, self.thal_connect) 
+        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect) 
 
         for timestep, time in enumerate(self.steps):
             
