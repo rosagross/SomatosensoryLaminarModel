@@ -333,16 +333,11 @@ class Parameter():
         # scale the coupling strength
         W0[:,idx_I] = W0[:,idx_I] * -gI # negative weight for inhibitory connections
         W0[:,idx_E] = W0[:,idx_E] * gE
-        print(W_to_thal.shape)
-        print(W0.shape)
         W_to_thal[:,idx_I] = W_to_thal[:,idx_I] * -gIthal
         W_to_thal[:,idx_E] = W_to_thal[:,idx_E] * gEthal
-        print(W_from_thal.shape)
-        print(W_from_thal)
         W_from_thal[0,:] = W_from_thal[0,:] * gEthal
         # weight the inhibitory popultaion (from the reticular nucleus in the thalamus) as negative
         W_from_thal[1,:] = W_from_thal[1,:] * -gIthal
-        print(W_from_thal)
         
         # include the external input to the matrix 
         if include_Iext:
@@ -412,6 +407,10 @@ class Parameter():
 
         # Convert numpy arrays to lists
         parameters = {
+            'gE': gE,
+            'gI': gI,
+            'gEthal': gEthal, 
+            'gIthal': gIthal,
             'S': S.tolist(),
             'P': P.tolist(),
             'C': C.tolist(),

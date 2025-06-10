@@ -198,21 +198,21 @@ def write_3D_csv(filename, data):
 # %% 
 def main():
 
-    save_results = False
+    save_results = True
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = True
+    plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
     # connectivity reverse factor is the absolute cell count divided by  
     connect_reverse_factor =  6448 # TODO: adapt this factor also to S2 cell populations!
+    # to simulate:
+    # bEI 0.7, 0.6 and 0.4
+    # input strength 0 
+    # coupling 50, 150, 250
 
-    coupling_strengths_E = [60/connect_reverse_factor] #np.arange(0, 0.6, 0.1)
-    coupling_strengths_I = [50/connect_reverse_factor] # np.arange(0, 0.6, 0.1)
-    
-    # since the connectivity to and from the thalamus is also scaled by the cellcounts
-    # we need to scale the coupling strength as well  
-    coupling_thalE = 1/connect_reverse_factor
-    coupling_thalI = 1/connect_reverse_factor
+
+    coupling_strengths = [100, 200, 300]
+    balance_EI = [1, 0.8, 0.5, 0.2]
     step_size = 0.001
     cortex_type = 'somato'
     filedir = 'output' #'/data/p_02989/Modelling/output/'
@@ -220,16 +220,15 @@ def main():
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [100] # np.arange(0, 1, 1)
-    backgrndI_strengths = [5]
+    input_durations = [0.5, 1] # np.arange(0, 1, 1) # in sec 
+    input_strengths = np.arange(100, 200, 20)
+    backgrndI_strengths = [0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
     thal_connect = [0, 0, 0, 0] 
-
     for d in input_durations:
-        simulation_time = int(input_onset) + d + 1
+        simulation_time = int(input_onset) + d + 4
         for sb in backgrndI_strengths:
         
             for s in input_strengths:
@@ -238,23 +237,30 @@ def main():
                 all_rates = []
                 all_potentials = []
 
-                for gE in coupling_strengths_E:
-                    for gI in coupling_strengths_I:
+                for g in coupling_strengths:
+                    for bEI in balance_EI:
 
                         print('\nInput duration:', d)
                         print('Input strength:', s)
                         print('Background Input strength:', sb)
-                        print('gE', gE)
-                        print('gI', gI)
+                        print('g', g)
+                        print('bEI', bEI)
                         print(f'Thalamus EtoE:{thal_connect[0]} ItoE: {thal_connect[1]}')
                         print(f'Thalamus EtoI:{thal_connect[2]} ItoI: {thal_connect[3]}')
 
-
-                        filename = f'_gE{gE}gI{gI}_{cortex_type}_IbStrength{sb}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0_S1S2'
+                        filename = f'_g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0_S1S2'
+                        #filename = f'_gE{int(gE*connect_reverse_factor)}gI{int(gI*connect_reverse_factor)}_{cortex_type}_IbStrength{sb}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0_S1S2'
 
                         # create input array 
                         Iext = create_Iext(simulation_time, step_size, input_onset, d, s, input_type)
                         Ib = create_Ibackground(simulation_time, step_size, sb)
+                        gE = g * bEI /connect_reverse_factor
+                        gI = g * (1 - bEI) /connect_reverse_factor
+                        # for now we use the same coupling strength for the thalamus connections as for the cortical connections
+                        coupling_thalE = gE
+                        coupling_thalI = gI
+                        print('gE', gE)
+                        print('gI', gI)
                         model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect, filedir, filename, step_size, simulation_time)
 
                         # perform simulation with current coupling strength g
@@ -270,7 +276,7 @@ def main():
                 if plot:
                     all_rates = np.array(all_rates)
                     all_potentials = np.squeeze(np.array(all_potentials))
-                    if len(coupling_strengths_E) == 1:
+                    if len(coupling_strengths) == 1:
                         # when to start plotting (in ms)
                         start_plot = 500
                         # plot only one coupling strength value with time on the x-axis
@@ -278,7 +284,7 @@ def main():
                         #plot_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot)
                     else: 
                         # used to plot with coupling strength on the x-axis and max/min rate on the y
-                        plot_minmax(all_rates, coupling_strengths_E)
+                        plot_minmax(all_rates, coupling_strengths)
 
 #   
 if __name__ == '__main__':

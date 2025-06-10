@@ -10,12 +10,10 @@ class JR_Model():
         # load in all parameters
         self.p = Parameter()
         # safe connectivty parameter in yaml file 
-        #TODO: check the filename here
-        # self.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, thal_connect)
+        self.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, gEthal, gIthal, thal_connect)
 
         # Simulation parameters
         self.tau = self.p.tau
-        #print('tau', self.tau[0])
         self.nPop = self.p.nPop
         self.simulation_time = simulation_time# in s
         self.step_size = step_size # in s
