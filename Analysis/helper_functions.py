@@ -8,7 +8,7 @@ import seaborn as sns
 import pandas as pd
 import ast
 
-def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths_E, coupling_strengths_I,  
+def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, balance_EI,  
                         backgroundI_strengths, step_size, sample_delay, input_onset, sample_dur, cortex_type, input_type,
                         thalamus_source, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1):
     '''
@@ -25,20 +25,27 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
     potential_data_df = pd.DataFrame()
 
     for d in input_durations:
-        print('\nInput duration', d)
         for s in input_strengths:
-            for gE in coupling_strengths_E:
-                for gI in coupling_strengths_I:
+            for g in coupling_strengths:
+                for bEI in balance_EI:
                     for bI in backgroundI_strengths:
+
+                        print('\nInput duration:', d)
+                        print('Input strength:', s)
+                        print('Background Input strength:', bI)
+                        print('g', g)
+                        print('bEI', bEI)
 
                         df = pd.DataFrame()
 
                         # read in firing rates in data matrix (datapoints x populations)
-                        filename_rates = f"rates_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
+                        filename_rates = f'rates_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv'
+                        # filename_rates = f"rates_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
                         rates_df = pd.read_csv(os.path.join(output_dir, filename_rates))
                         
                         # read in potentials in data matrix (datapoints x populations)
-                        filename_potentials = f"potentials_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
+                        #filename_potentials = f"potentials_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
+                        filename_potentials = f'potentials_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv'
                         potentials_df = pd.read_csv(os.path.join(output_dir, filename_potentials))
 
                         # LONG TERM (sample for x ms starting at 0.5 sec after offset)
@@ -105,8 +112,8 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
 
                         # set info in data frame
                         df['population'] = df.index.values
-                        df['coupling_strength_E'] = gE
-                        df['coupling_strength_I'] = gI
+                        df['globalCoupling'] = g
+                        df['balanceEI'] = bEI
                         df['InputDuration'] = d
                         df['InputStrength'] = s
                         df['BckgndInputStrength'] = bI
@@ -123,8 +130,8 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                                 pop_df['rate'] = rate_trajectory
                                 pop_df['potential'] = potential_trajectory
                                 pop_df['time'] = rate_trajectory.index.values * 1e-3 # time in s
-                                pop_df['coupling_strength_E'] = gE
-                                pop_df['coupling_strength_I'] = gI
+                                pop_df['global_coupling'] = g
+                                pop_df['balance_EI'] = bEI
                                 pop_df['InputDuration'] = d
                                 pop_df['InputStrength'] = s 
                                 pop_df['BckgndInputStrength'] = bI
@@ -132,7 +139,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
 
                         if load_full_potentials:
                             # load full 3D (target x source x timestep) potential of selected population 
-                            filename = f"full_potentials_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0.csv"
+                            filename = f"full_potentials_g{g}_bEI{bEI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0.csv"
                             potential_df = pd.read_csv(os.path.join(output_dir, filename), sep=',', header=None)
                             potential_df = potential_df.applymap(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('[') and x.endswith(']') else x)
                             potential_df = potential_df.iloc[load_population_potential]
@@ -149,8 +156,8 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
 
                             longterm_pot_df['lt_potential'] = longterm_input
                             longterm_pot_df['population'] = load_population_potential
-                            longterm_pot_df['coupling_strength_E'] = gE
-                            longterm_pot_df['coupling_strength_I'] = gI
+                            longterm_pot_df['global_coupling'] = g
+                            longterm_pot_df['balance_EI'] = bEI
                             longterm_pot_df['InputDuration'] = d
                             longterm_pot_df['InputStrength'] = s 
                             potential_data_df = pd.concat([potential_data_df, longterm_pot_df]) 
