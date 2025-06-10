@@ -1,5 +1,6 @@
 # %%
 import numpy as np
+import pandas as pd
 import yaml
 
 # %%
@@ -166,7 +167,7 @@ class Parameter():
 
         return C 
 
-    def get_connectivity(self, gE, gI, thal_connect, include_Iext=True):
+    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, include_Iext=True):
         # g is a scaling factor scaling the general coupling strength
 
         S = self.get_connectStrength()
@@ -215,38 +216,42 @@ class Parameter():
         W_A3bA3b_VV = np.dot(WS1_collapse_sources_V[idx_S1_V], C[idx_S1_V])/np.sum(C[idx_S1_V])
 
         # stack them all together to create the A3b to A3b connection matrix
-        W_A3bA3b = np.hstack((np.vstack((W_A3bA3b_EE, W_A3bA3b_PE, W_A3bA3b_SE, W_A3bA3b_VE)),
-                            np.vstack((W_A3bA3b_EP, W_A3bA3b_PP, W_A3bA3b_SP, W_A3bA3b_VP)),
-                            np.vstack((W_A3bA3b_ES, W_A3bA3b_PS, W_A3bA3b_SS, W_A3bA3b_VS)),
-                            np.vstack((W_A3bA3b_EV, W_A3bA3b_PV, W_A3bA3b_SV, W_A3bA3b_VV))))
-
+        #W_A3bA3b = np.hstack((np.vstack((W_A3bA3b_EE, W_A3bA3b_PE, W_A3bA3b_SE, W_A3bA3b_VE)),
+        #                    np.vstack((W_A3bA3b_EP, W_A3bA3b_PP, W_A3bA3b_SP, W_A3bA3b_VP)),
+        #                    np.vstack((W_A3bA3b_ES, W_A3bA3b_PS, W_A3bA3b_SS, W_A3bA3b_VS)),
+        #                    np.vstack((W_A3bA3b_EV, W_A3bA3b_PV, W_A3bA3b_SV, W_A3bA3b_VV))))
+        
+        W_A3bA3b = np.zeros((4, 4))
+        
         # ... from  area 3b to S1
         # this means we have to fuse the source populations together
-        W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
-
+        #W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
+        W_S1A3b = np.zeros((13, 4))
+ 
         # ... from S1 to area 3b
         # we need to compress the target populations 
         WS1_collapse_targets_E = np.dot(W0[idx_S1_E,:int(len(W0)/2)].T, C[idx_S1_E])/np.sum(C[idx_S1_E])
         WS1_collapse_targets_P = np.dot(W0[idx_S1_P,:int(len(W0)/2)].T, C[idx_S1_P])/np.sum(C[idx_S1_P])
         WS1_collapse_targets_S = np.dot(W0[idx_S1_S,:int(len(W0)/2)].T, C[idx_S1_S])/np.sum(C[idx_S1_S])
         WS1_collapse_targets_V = np.dot(W0[idx_S1_V,:int(len(W0)/2)].T, C[idx_S1_V])/np.sum(C[idx_S1_V])
-        W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
+        #W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
+        W_A3bS1 = np.zeros((4, 13))
 
         # connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
-        W_S2A3b[4,0] = 100
-        W_S2A3b[5,0] = 100
+        #W_S2A3b[4,0] = 100
+        #W_S2A3b[5,0] = 100
         W_A3bS2 = np.zeros(W_A3bS1.shape) 
-        W_A3bS2[0,4] = 50
-        W_A3bS2[1,4] = 50
+        #W_A3bS2[0,4] = 50
+        #W_A3bS2[1,4] = 50
 
         # connectivity between S2 and S1 also has to be defined manually
         # feedforward
-        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 100 # S1 layer 5 E to S2 layer 4 E
-        W0[idx_S1_P[1]+13,idx_S1_E[2]] = 100
+        #W0[idx_S1_E[1]+13,idx_S1_E[2]] = 100 # S1 layer 5 E to S2 layer 4 E
+        #W0[idx_S1_P[1]+13,idx_S1_E[2]] = 100
         # feedback
-        W0[idx_S1_E[0],idx_S1_E[2]+13] = 50 # S2 layer 5 E to S1 layer 1 E 
-        W0[idx_S1_P[0],idx_S1_E[2]+13] = 50 # S2 layer 5 E to S1 layer 1 PV
+        #W0[idx_S1_E[0],idx_S1_E[2]+13] = 50 # S2 layer 5 E to S1 layer 1 E 
+        #W0[idx_S1_P[0],idx_S1_E[2]+13] = 50 # S2 layer 5 E to S1 layer 1 PV
 
         # stack the matrices together 
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))
@@ -285,7 +290,7 @@ class Parameter():
         PS_from_thal_S1 = np.multiply(P_thalToS1, S_thalToS1)
         W_from_thal_S1 = np.multiply(PS_from_thal_S1, C[:int(len(C)/2)])
 
-        # now that we have the connectivity from & to thalamus and S1/S2,
+        # now that we have the connectivity from- and to thalamus and S1/S2,
         # we can collapse it to get input array to area 3b 
         W_A3bThal_E = np.sum(W_from_thal_S1[:,idx_S1_E], axis=1)
         W_A3bThal_P = np.sum(W_from_thal_S1[:,idx_S1_P], axis=1)
@@ -302,9 +307,6 @@ class Parameter():
         # add within thalamus (E and I) connectivity 
         tEE, tEI, tIE, tII = thal_connect
         W_from_thal = np.hstack((W_from_thal, [[tEE,tEI],[tIE,tII]]))
-
-        # weight the inhibitory popultaion (from the reticular nucleus in the thalamus) as negative
-        W_from_thal[1] = W_from_thal[1]*-1
 
         # Create the external input matrix
         # Only the thalamus E population receives the external input (from the brain stem)
@@ -328,10 +330,20 @@ class Parameter():
         idx_E_S2 = np.array(idx_E_S)+17
         idx_E = np.concatenate((idx_E_A3b,idx_E_S1,idx_E_S2))
 
+        # scale the coupling strength
         W0[:,idx_I] = W0[:,idx_I] * -gI # negative weight for inhibitory connections
         W0[:,idx_E] = W0[:,idx_E] * gE
-
-        #print('Test')
+        print(W_to_thal.shape)
+        print(W0.shape)
+        W_to_thal[:,idx_I] = W_to_thal[:,idx_I] * -gIthal
+        W_to_thal[:,idx_E] = W_to_thal[:,idx_E] * gEthal
+        print(W_from_thal.shape)
+        print(W_from_thal)
+        W_from_thal[0,:] = W_from_thal[0,:] * gEthal
+        # weight the inhibitory popultaion (from the reticular nucleus in the thalamus) as negative
+        W_from_thal[1,:] = W_from_thal[1,:] * -gIthal
+        print(W_from_thal)
+        
         # include the external input to the matrix 
         if include_Iext:
             #print('append input connectivity')
@@ -389,16 +401,14 @@ class Parameter():
 
         sigmoid_params = np.vstack((sigmoid_params_A3b, sigmoid_params_S1, sigmoid_params_S2))
                                        
-        
-            
         return sigmoid_params
     
-    def save_to_yaml(self, filename, gE, gI, thal_connect):
+    def save_to_yaml(self, filename, gE, gI, gEthal, gIthal, thal_connect):
         
         S = self.get_connectStrength()
         P = self.get_connectProb()
         C = self.get_cellcounts()
-        W = self.get_connectivity(gE, gI, thal_connect)
+        W = self.get_connectivity(gE, gI, gEthal, gIthal, thal_connect)
 
         # Convert numpy arrays to lists
         parameters = {
