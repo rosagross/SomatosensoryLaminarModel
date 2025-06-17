@@ -39,17 +39,17 @@ colors, _ = figure_style()
 
 # %% define directories of stored data and figures
 output_dir = '/data/p_02989/Modelling/output/'
-output_dir = os.path.join(os.getcwd(),'..', 'output')
+#output_dir = os.path.join(os.getcwd(),'..', 'output')
 figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/PosterFigures' #"../Figures"
 
 # %%
 
 # read in data
-input_durations = [0.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
-input_strengths = np.arange(100, 200, 20)  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
-coupling_strengths = [100, 200, 300]
-balance_EI = [1, 0.8, 0.5, 0.2]
-backgroundI_strengths = [0, 5, 10, 20]
+input_durations = [0.5, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
+input_strengths = np.arange(0, 500, 100)  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
+coupling_strengths = [100, 150, 200, 250, 300]
+balance_EI = [1, 0.8, 0.6, 0.5, 0.4, 0.2]
+backgroundI_strengths = [0, 5, 10, 15, 20]
 step_size = 0.001
 sample_delay = 0.3
 input_onset = 1.001
@@ -57,7 +57,7 @@ sample_dur = 0.3 # amount of time in sec in which we look at the long term firin
 cortex_type = 'somato'
 stimulation_type = 'step'
 thalamus_source = 'thalJiang'
-load_trajectory = True
+load_trajectory = False
 load_full_potentials = False
 load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is E3)
 
@@ -67,8 +67,9 @@ summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, fig
     
 # %% 
 # Save the summary data frame in a separate CSV, so that it does not take that much time to load anymore ...
-summary_df.to_csv(f'stepAndBackground_g_bEI_sampledelay{sample_delay}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
-trajectory_df.to_csv(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
+summary_df.to_csv(os.path.join(output_dir, f'stepAndBackground_g_bEI_sampledelay{sample_delay}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv'), index=True, index_label='pop')
+#trajectory_df.to_csv(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
+
 # %% Read in summary data frame
 summary_df = pd.read_csv(f'stepAndBackground_g_bEI_sampledelay{sample_delay}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index_col=False)
 
@@ -165,7 +166,7 @@ plt.show()
 g = 100
 bEI = 0.8
 backgroundI_strength = 5
-population = 'E2'
+population = 'E3'
 data_df = summary_df[summary_df['globalCoupling']==g]
 data_df = data_df[data_df['balanceEI']==bEI]
 data_df = data_df[data_df['population']==population]
@@ -296,7 +297,7 @@ for i,g in enumerate(coupling_strengths):
             print('black')
             sns.heatmap(data_heatmap, cmap=ListedColormap(['black']), ax=axes[i,j], norm = Normalize(vmin=0, vmax=1))
         else:
-            sns.heatmap(data_heatmap, cmap='magma', ax=axes[i,j])
+            sns.heatmap(data_heatmap, cmap='magma', ax=axes[i,j], vmin=-2, vmax=2)
 
         cbar = axes[i, j].collections[0].colorbar
         # here set the labelsize by 20
@@ -368,35 +369,37 @@ plt.show()
 
 # %%
 '''
-3.1) External input strength 
+3.1) Background input strength 
 - x-axis: input strength
 - y-axis: PSP of E3 population
 '''
 
 bEI = 0.5
+backinputs = [5, 10, 15, 20] 
 input_duration = 0.5
-input_strengths = [100, 120] #, 120, 140, 160, 180]
+input_strength = 100 #, 200, 300, 400]
 population = 'E3'
 summary_df['population'] = summary_df.index
 data_df = summary_df[summary_df['population']==population]
 data_df = data_df[data_df['balanceEI']==bEI]
 data_df = data_df[data_df['InputDuration']==input_duration]
-data_df = data_df[data_df['InputStrength'].isin(input_strengths)]
+data_df = data_df[data_df['BckgndInputStrength'].isin(backinputs)]
+data_df = data_df[data_df['InputStrength']==input_strength]
 
 # plot results
 fig, axs = plt.subplots(figsize=(6,3)) 
 
 # Create a colormap
-cmap = cm.get_cmap('Dark2', len(input_strengths))  # Choose a colormap, e.g., 'viridis'
-cmap_max = cm.get_cmap('Dark2', len(input_strengths))  # Choose a colormap, e.g., 'viridis'
+cmap = cm.get_cmap('Dark2', len(backinputs))  # Choose a colormap, e.g., 'viridis'
+cmap_max = cm.get_cmap('Dark2', len(backinputs))  # Choose a colormap, e.g., 'viridis'
 data_df['minPotential_longterm_mV'] = data_df['minPotential_longterm'] *1e3
 data_df['maxPotential_longterm_mV'] = data_df['maxPotential_longterm'] *1e3
-input_strengths = data_df['InputStrength'].unique()
+backinputs = data_df['BckgndInputStrength'].unique()
 
-for i, s in enumerate(input_strengths):
-    Istrength_df = data_df[data_df['InputStrength']==s]
-    color = cmap(i / (len(input_strengths) - 1))  # Normalize i to [0, 1] for colormap
-    color_max = cmap_max(i / (len(input_strengths) - 1))  # Normalize i to [0, 1] for colormap
+for i, s in enumerate(backinputs):
+    Istrength_df = data_df[data_df['BckgndInputStrength']==s]
+    color = cmap(i / (len(backinputs)))  # Normalize i to [0, 1] for colormap
+    color_max = cmap_max(i / (len(backinputs)))  # Normalize i to [0, 1] for colormap
     plt.plot(Istrength_df['globalCoupling'], Istrength_df['minRate_longterm'], label=s, color=color)
     plt.plot(Istrength_df['globalCoupling'], Istrength_df['maxRate_longterm'], color=color_max)
 
@@ -405,7 +408,7 @@ axs.set_xlabel('Coupling Strength')
 axs.set_ylabel('Rate (Hz)')
 #axs.set_xlim([0,100])
 sns.despine(trim=True)
-plt.legend(title='Input Strength', loc='right')
+plt.legend(title='BackgroundInput Strength', loc='right')
 plt.tight_layout() 
 figure_name = f'BackgroundSteadyState_pop{population}_tauVisual_{thalamus_source}.pdf'
 #plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
@@ -436,7 +439,7 @@ for l, ax in zip(layers, axs):
     sns.lineplot(layer_df, y='minRate_longterm', x='globalCoupling', hue='population', ax=ax)
     sns.lineplot(layer_df, y='maxRate_longterm', x='globalCoupling', hue='population', ax=ax, legend=False)
     ax.set_ylabel('Rate (Hz)')
-    ax.set_xlabel('Coupling Strength E')
+    ax.set_xlabel('Global Coupling Strength')
     ax.legend(prop={'size':8})
 
 axs[0].set_title(f'Layer 2/3')
@@ -537,14 +540,14 @@ Look at the change of rate difference comparing populations
 # %% Heatmap gE versus gI
 
 '''
-Look at the interaction between gE and gI coupling values in different populations.
+Look at the interaction between global coupling and E-I balance in different populations.
 '''
 
 input_duration = 0.5
-input_strength = [0, 20, 60, 40, 80]
+input_strength = [100, 200, 300, 400]
 coupling_strengths = np.arange(100, 400, 100)
 backinput = 5
-rate_measure = 'diffRate_longterm'
+rate_measure = 'longtermVSbaseline_rate'
 
 populations = np.array(['E1', 'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
@@ -567,13 +570,13 @@ for i,input_s in enumerate(input_strength):
         minmax_df = minmax_df[minmax_df['population']==p]
         #minmax_df['InputDuration'] = minmax_df['InputDuration'].round(4)
 
-        data_heatmap = minmax_df.pivot(index='coupling_strength_E',columns='coupling_strength_I', values=rate_measure)
+        data_heatmap = minmax_df.pivot(index='globalCoupling',columns='balanceEI', values=rate_measure)
 
         if (minmax_df[rate_measure].isna() | (minmax_df[rate_measure] == 0)).all().all():
             print('black')
             sns.heatmap(data_heatmap, cmap=ListedColormap(['black']), ax=axes[i,j], norm = Normalize(vmin=0, vmax=1))
         else:
-            sns.heatmap(data_heatmap, cmap='magma', ax=axes[i,j])
+            sns.heatmap(data_heatmap, cmap='magma', ax=axes[i,j], vmin=-1, vmax=2)
 
         cbar = axes[i, j].collections[0].colorbar
         # here set the labelsize by 20
@@ -582,16 +585,16 @@ for i,input_s in enumerate(input_strength):
         axes[i, j].set_ylabel('')
         axes[i, j].set_xlabel('')
         axes[i, j].tick_params(axis='both', labelsize=12)
-        axes[len(input_strength)-1, j].set_xlabel('gI')
+        axes[len(input_strength)-1, j].set_xlabel('E-I balance')
         axes[0,j].set_title(f'pop: {p}')
         axes[i,0].set_ylabel(f'input strength: {input_s}', rotation=0, labelpad=60)
 
-fig.text(0.04, 0.2, 'gE', va='center', rotation='vertical')
-fig.text(0.04, 0.5, 'gE', va='center', rotation='vertical')
-fig.text(0.04, 0.83, 'gE', va='center', rotation='vertical')
+fig.text(0.04, 0.2, 'global g', va='center', rotation='vertical')
+fig.text(0.04, 0.5, 'global g', va='center', rotation='vertical')
+fig.text(0.04, 0.83, 'global g', va='center', rotation='vertical')
 
 plt.tight_layout(h_pad=1)
-figure_name = f'gEvsgI_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
+figure_name = f'gvsbEI_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
 #plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
