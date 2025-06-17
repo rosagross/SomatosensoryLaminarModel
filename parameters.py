@@ -83,7 +83,10 @@ class Parameter():
         
         #P_A3btoS2 = np.zeros((13,3)) 
         P_S1toS2 = np.zeros((13,13)) # TODO: implement S1 to S2 connection! 
+        # forward connections: S1 Layer 5, E3 --> S2 layer 4 E2 
         P_S2toS1 = np.zeros((13,13)) # TODO: implement feedback from S2 to S1
+        # feedback connections: S2 Layer 5, E3 --> S2 layer 4 E2 
+
         P_toS1 = np.hstack((P_S1, P_S2toS1))
         P_toS2 = np.hstack((P_S1toS2, P_S2))
         P = np.vstack((P_toS1, P_toS2)) #  26x26 (with nPop=13 per S1/S2)
