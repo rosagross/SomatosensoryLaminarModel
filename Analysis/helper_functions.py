@@ -9,7 +9,7 @@ import pandas as pd
 import ast
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, balance_EI,  
-                        backgroundI_strengths, step_size, sample_delay, input_onset, sample_dur, cortex_type, input_type,
+                        backgroundI_strengths, step_size, sample_delay_immediate, sample_delay_late, input_onset, sample_dur, cortex_type, input_type,
                         thalamus_source, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1):
     '''
     Parameter:
@@ -48,17 +48,29 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         filename_potentials = f'potentials_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv'
                         potentials_df = pd.read_csv(os.path.join(output_dir, filename_potentials))
 
-                        # LONG TERM (sample for x ms starting at 0.5 sec after offset)
-                        start_sample = int((input_onset+d+sample_delay)/step_size)
-                        stop_sample = int(start_sample + sample_dur/step_size)
-                        df['rate_longterm'] = rates_df.iloc[start_sample:stop_sample].mean()
-                        df['minRate_longterm'] = rates_df.iloc[start_sample:stop_sample].min()
-                        df['maxRate_longterm'] = rates_df.iloc[start_sample:stop_sample].max()
-                        df['diffRate_longterm'] = df['maxRate_longterm'] - df['minRate_longterm']
-                        df['potential_longterm'] = potentials_df.iloc[start_sample:stop_sample].mean()
-                        df['minPotential_longterm'] = potentials_df.iloc[start_sample:stop_sample].min()
-                        df['maxPotential_longterm'] = potentials_df.iloc[start_sample:stop_sample].max()
-                        df['diffPotential_longterm'] = df['maxPotential_longterm'] - df['minPotential_longterm']
+                        # LONG TERM immediate (sample for x ms starting x secs after offset)
+                        start_sample_immediate = int((input_onset+d+sample_delay_immediate)/step_size)
+                        stop_sample_immediate = int(start_sample_immediate + sample_dur/step_size)
+                        df['rate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].mean()
+                        df['minRate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].min()
+                        df['maxRate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].max()
+                        df['diffRate_immediateLongterm'] = df['maxRate_immediateLongterm'] - df['minRate_immediateLongterm']
+                        df['potential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].mean()
+                        df['minPotential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].min()
+                        df['maxPotential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].max()
+                        df['diffPotential_immediateLongterm'] = df['maxPotential_immediateLongterm'] - df['minPotential_immediateLongterm']
+
+                        # LONG TERM late (sample for x ms starting at x sec after offset)
+                        start_sample_late = int((input_onset+d+sample_delay_late)/step_size)
+                        stop_sample_late = int(start_sample_late + sample_dur/step_size)
+                        df['rate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].mean()
+                        df['minRate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].min()
+                        df['maxRate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].max()
+                        df['diffRate_lateLongterm'] = df['maxRate_lateLongterm'] - df['minRate_lateLongterm']
+                        df['potential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].mean()
+                        df['minPotential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].min()
+                        df['maxPotential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].max()
+                        df['diffPotential_lateLongterm'] = df['maxPotential_lateLongterm'] - df['minPotential_lateLongterm']
                         
                         # DURING INPUT
                         start_sample_during = int((input_onset)/step_size)
@@ -80,9 +92,9 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         
                         # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
                         # oscillate and we want to compare if the long term activity is still larger than baseline)
-                        df['longtermVSbaseline_rate'] = df['rate_longterm'] - df['rate_baseline']
+                        df['longtermVSbaseline_rate'] = df['rate_lateLongterm'] - df['rate_baseline']
                         df['duringInputVSbaseline_rate'] = df['rate_duringInput'] - df['rate_baseline']
-                        df['longtermVSbaseline_potential'] = df['potential_longterm'] - df['potential_baseline']
+                        df['longtermVSbaseline_potential'] = df['potential_lateLongterm'] - df['potential_baseline']
                         df['duringInputVSbaseline_potential'] = df['potential_duringInput'] - df['potential_baseline']
                         
                         # name the behaviour switch through, memory and non reponsive
@@ -98,11 +110,11 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         transfer = ((np.abs(df['duringInputVSbaseline_potential'])>0.001) & (np.abs(df['longtermVSbaseline_potential'])<0.001))
                         memory = (np.abs(df['longtermVSbaseline_potential'])>0.001)
 
-                        if d == 1.5:
+                        """if d == 1.5:
                             if (not non_responsive.iloc[2]) & (not transfer.iloc[2]) & (not memory.iloc[2]): 
                                 print('no function')
                                 print(np.abs(df['duringInputVSbaseline_potential'][2]))
-                                print(np.abs(df['longtermVSbaseline_potential'][2]))
+                                print(np.abs(df['longtermVSbaseline_potential'][2]))"""
 
                         df.loc[non_responsive,'dynamic_function_potential'] = 1 #'non-responsive'
                         df.loc[transfer,'dynamic_function_potential'] = 2 #'transfer'
