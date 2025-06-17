@@ -51,7 +51,8 @@ coupling_strengths = [100, 200, 300]
 balance_EI = [1, 0.8, 0.5, 0.2]
 backgroundI_strengths = [0, 5, 10, 20]
 step_size = 0.001
-sample_delay = 0.3
+sample_delay_immediate = 0.3
+sample_delay_late = 4
 input_onset = 1.001
 sample_dur = 0.3 # amount of time in sec in which we look at the long term firing rate (min and max)
 cortex_type = 'somato'
@@ -63,14 +64,14 @@ load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is
 
 # %% load rate and potential files 
 summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, balance_EI, backgroundI_strengths,
-                        step_size, sample_delay, input_onset, sample_dur, cortex_type, stimulation_type, thalamus_source, load_trajectory, load_full_potentials, load_population_potential)
-    
+                        step_size, sample_delay_immediate, sample_delay_late, input_onset, sample_dur, cortex_type, stimulation_type, thalamus_source, load_trajectory, load_full_potentials, load_population_potential)
+
 # %% 
 # Save the summary data frame in a separate CSV, so that it does not take that much time to load anymore ...
-summary_df.to_csv(f'stepAndBackground_g_bEI_sampledelay{sample_delay}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
-trajectory_df.to_csv(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
+summary_df.to_csv(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
+trajectory_df.to_csv(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
 # %% Read in summary data frame
-summary_df = pd.read_csv(f'stepAndBackground_g_bEI_sampledelay{sample_delay}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index_col=False)
+summary_df = pd.read_csv(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index_col=False)
 
 # %% Make plots that demonstrate the sampling time line 
 
@@ -686,27 +687,59 @@ figure_name = f'BackgroundSteadyState_pop{population}_tauVisual_{thalamus_source
 plt.show()
 
 # %%
-# PLOT 2: long-term behaviour after input
+# PLOT 2: behaviour during input
 
-g = 100
-bEI = 0.8
-backgroundI_strength = 5
+Idur = 0.5
 population = 'E3'
 
 fig, axs = plt.subplots(ncols=len(bEIs), nrows=len(gs), figsize=(20,10)) 
 
 data_df = summary_df[summary_df['population']==population]
-data_df = data_df[data_df['BckgndInputStrength']==backgroundI_strength]
+data_df = data_df[data_df['InputDuration']==Idur]
 
 for i, g in enumerate(gs):
     coupling_df = data_df[data_df['globalCoupling']==g]
     for j, bEI in enumerate(bEIs):
         balance_df = coupling_df[coupling_df['balanceEI']==bEI]
         ax = axs[i][j]
-        if j ==0:
-            ax.set_ylabel(f'g={g}\nRate (Hz)')
-        if i == len(gs)-1:
-            ax.set_xlabel(f'Background Input Strength\n E-I Balance={bEI}')
 
-        data_heatmap = balance_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_rate')
-        sns.heatmap(data_heatmap, cmap='magma', ax=ax)
+        data_heatmap = balance_df.pivot(index='BckgndInputStrength',columns='InputStrength', values='diffRate_duringInput')
+        sns.heatmap(data_heatmap, cmap='magma', ax=ax, vmin=0, vmax=40)
+        ax.invert_yaxis()
+        if j ==0:
+            ax.set_ylabel(f'g={g}\n Background Input')
+        if i == len(gs)-1:
+            ax.set_xlabel(f'Input Strength\n E-I Balance={bEI}')
+        else:
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+
+# %%
+# PLOT 3: long-term behaviour compared to baseline
+
+Idur = 0.5
+population = 'E3'
+
+fig, axs = plt.subplots(ncols=len(bEIs), nrows=len(gs), figsize=(20,10)) 
+
+data_df = summary_df[summary_df['population']==population]
+data_df = data_df[data_df['InputDuration']==Idur]
+
+for i, g in enumerate(gs):
+    coupling_df = data_df[data_df['globalCoupling']==g]
+    for j, bEI in enumerate(bEIs):
+        balance_df = coupling_df[coupling_df['balanceEI']==bEI]
+        ax = axs[i][j]
+
+        data_heatmap = balance_df.pivot(index='BckgndInputStrength',columns='InputStrength', values='longtermVSbaseline_rate')
+        sns.heatmap(data_heatmap, cmap='magma', ax=ax, vmin=0, vmax=10)
+        ax.invert_yaxis()
+        print(j)
+        if i ==0:
+            ax.set_ylabel(f'g={g}\n Background Input')
+        if i == len(gs)-1:
+            ax.set_xlabel(f'Input Strength\n E-I Balance={bEI}')
+        else:
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+# %%
