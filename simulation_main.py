@@ -206,27 +206,26 @@ def main():
     # connectivity reverse factor is the absolute cell count divided by  
     connect_reverse_factor =  6448 # TODO: adapt this factor also to S2 cell populations!
     # to simulate:
-    # bEI 0.7, 0.6 and 0.4
-    # input strength 0 
-    # coupling 50, 150, 250
-
-
-    coupling_strengths = [100, 200, 300]
-    balance_EI = [1, 0.8, 0.5, 0.2]
+    # thalamus I to E inhibition
+    # 
+    
+    coupling_strengths = [100, 150, 200, 250, 300]
+    balance_EI = [1, 0.8, 0.6, 0.5, 0.4, 0.2]
     step_size = 0.001
     cortex_type = 'somato'
-    filedir = 'output' #'/data/p_02989/Modelling/output/'
+    filedir = '/data/p_02989/Modelling/output/'
 
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0.5, 1] # np.arange(0, 1, 1) # in sec 
-    input_strengths = np.arange(100, 200, 20)
+    input_durations = [0.5, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = np.arange(0, 500, 100)
     backgrndI_strengths = [0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
     thal_connect = [0, 0, 0, 0] 
+
     for d in input_durations:
         simulation_time = int(input_onset) + d + 4
         for sb in backgrndI_strengths:
@@ -261,7 +260,8 @@ def main():
                         coupling_thalI = gI
                         print('gE', gE)
                         print('gI', gI)
-                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect, filedir, filename, step_size, simulation_time)
+                        thal_connect_scaled = thal_connect/connect_reverse_factor
+                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time)
 
                         # perform simulation with current coupling strength g
                         rate, potential = model.run_simulation()
