@@ -4,6 +4,7 @@ import os
 import matplotlib.pyplot as plt
 from jr_model import JR_Model
 import pandas as pd 
+import time
 import csv
 
 # %% 
@@ -264,7 +265,10 @@ def main():
                         model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time)
 
                         # perform simulation with current coupling strength g
+                        start = time.time()
                         rate, potential = model.run_simulation()
+                        stop = time.time()
+                        print('Simulation duration (in s):', stop-start)
                         # append results
                         all_rates.append(rate)
                         all_potentials.append(potential)
