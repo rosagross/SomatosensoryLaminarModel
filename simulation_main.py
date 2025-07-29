@@ -199,33 +199,32 @@ def write_3D_csv(filename, data):
 # %% 
 def main():
 
-    save_results = True
+    save_results = False
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = False
+    plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
     # connectivity reverse factor is the absolute cell count divided by  
     connect_reverse_factor =  6448 # TODO: adapt this factor also to S2 cell populations!
     # to simulate:
-    # thalamus I to E inhibition
-    # 
+    # thalamus I to E inhibition 
     
-    coupling_strengths = [100, 150, 200, 250, 300]
-    balance_EI = [1, 0.8, 0.6, 0.5, 0.4, 0.2]
+    coupling_strengths = [0] # [100, 150, 200, 250, 300]
+    balance_EI = [0] # [1, 0.8, 0.6, 0.5, 0.4, 0.2]
     step_size = 0.001
     cortex_type = 'somato'
-    filedir = '/data/p_02989/Modelling/output/'
+    filedir = 'output' #'/data/p_02989/Modelling/output/'
 
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0.5, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = np.arange(0, 500, 100)
-    backgrndI_strengths = [0, 5, 10, 15, 20]
+    input_durations = [0] # [0.5, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = [0] #np.arange(0, 500, 100)
+    backgrndI_strengths = [0] #[0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
-    thal_connect = [0, 0, 0, 0] 
+    thal_connect = np.array([0, 0, 0, 0]) 
 
     for d in input_durations:
         simulation_time = int(input_onset) + d + 4
@@ -276,7 +275,6 @@ def main():
                         if save_results:
                             save_results_csv(rate, potential, filedir, filename, save_full_potentials)
 
-
                 if plot:
                     all_rates = np.array(all_rates)
                     all_potentials = np.squeeze(np.array(all_potentials))
@@ -289,8 +287,7 @@ def main():
                     else: 
                         # used to plot with coupling strength on the x-axis and max/min rate on the y
                         plot_minmax(all_rates, coupling_strengths)
-
-#   
+ 
 if __name__ == '__main__':
    main()
 

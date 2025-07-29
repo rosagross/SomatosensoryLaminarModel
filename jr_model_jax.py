@@ -1,12 +1,15 @@
+# %%
 import numpy as np
 import matplotlib.pyplot as plt
 from parameters import Parameter
 import os
 import jax.numpy as jnp
+from jax import jit, lax, vmap
 from jax_simulation import run_jax_simulation  # <- contains the JAX version
 from parameters import Parameter
 import os
 
+# %%
 class JR_Model():
 
     def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, filedir, filename, step_size=0.001, simulation_time=1):
@@ -28,7 +31,7 @@ class JR_Model():
         self.thal_connect = jnp.array(thal_connect)
 
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
-        self.sigm = self.p.sigmoid_params
+        self.sigm = jnp.array(self.p.sigmoid_params)
 
         # Synaptic kernel 
         self.H = jnp.ones((self.nPop, self.nPop+1))
@@ -54,18 +57,21 @@ class JR_Model():
         self.W = jnp.array(self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect))
 
         
-
     def run_simulation(self):
         '''
         Simulation loop
         '''
 
         # parameter dictionary
-        params = 
+        params = {
+        'nPop': self.nPop,
+        'sigm': self.sigm
+        }
 
         # call JAX simulation function
-        rate, potential = run_simulation_jax(
-            params=params,
+        rate, potential = run_jax_simulation(
+            nPop=self.nPop,
+            sigm=self.sigm,
             W=self.W,
             H=self.H,
             tau=self.tau,
@@ -75,46 +81,7 @@ class JR_Model():
             steps=self.steps
         )
 
-
-        for timestep, time in enumerate(self.steps):
-            
-            # Update RATE (calculated from the current potential)
-            # technically this could also go to the end of the for-loop but we need a rate value calculated from the initial potential value
-            for i in range(self.nPop):
-                # the incoming potential has to be defined in mV because of how the sigmoid parameter are defined (also in mV!)
-                self.rate_current[i] = self.sigm[i][2] / (1 + np.exp(self.sigm[i][0]*(self.sigm[i][1] - np.sum(self.v_current[i,:])*1e3)))  
-
-            # Save the new values
-            self.rate[:, timestep] = self.rate_current 
-            self.potential[:, :, timestep] = self.v_current
-            
-
-            # We go through every population and evaluate the new membrane potential based on the connectivity
-            for i in range(self.nPop):
-                for j in range(self.nPop):
-
-                    # 1. Calculate new POTENTIAL (calculated using the current first derivative) - but it's only updated/saved in the next step
-                    v_dot = self.u_t[i, j]
-                    self.v_current[i, j] = self.v_current[i, j] + v_dot * self.step_size
-                    
-                    # 2. Update the first derivative based on the current potential (NOT the just updated one!) current first derivative
-                    u_dot = (self.H[i, j]/self.tau[i,j]) * (W[i, j]*self.rate_current[j]) - 2 * self.u_t[i, j]/self.tau[i,j] - self.potential[i, j, timestep]/(self.tau[i,j]**2)
-                    self.u_t[i, j] = self.u_t[i,j] + u_dot * self.step_size
-
-                # Add external input (goes to thalamus only, so it's kind of a brain stem input) 
-                v_dot = self.u_t[i, -1]
-                self.v_current[i, -1] = self.v_current[i, -1] + v_dot * self.step_size
-                u_dot = (self.H[i,-1]/self.tau[i,-1]) * (W[i, -1] * self.Iext[i, timestep]) - 2 * self.u_t[i, -1]/self.tau[i,-1] - self.potential[i, -1, timestep]/(self.tau[i,-1]**2)
-                self.u_t[i, -1] = self.u_t[i,-1] + u_dot * self.step_size
-
-                # Add background input 
-                v_dot = self.u_t[i, -2]
-                self.v_current[i, -2] = self.v_current[i, -2] + v_dot * self.step_size
-                u_dot = (self.H[i,-2]/self.tau[i,-2]) * (W[i, -2] * self.Ib[i, timestep]) - 2 * self.u_t[i, -2]/self.tau[i,-2] - self.potential[i, -2, timestep]/(self.tau[i,-2]**2)
-                self.u_t[i, -2] = self.u_t[i,-2] + u_dot * self.step_size
-        
-        
-        return self.rate, self.potential
+        return rate, potential
     
 
 

@@ -1,7 +1,3 @@
-"""
-Jax simulation function to run simulations faster!
-"""
-
 import jax
 import jax.numpy as jnp
 from jax import jit, lax
@@ -12,29 +8,22 @@ def sigmoid(v, r, v_thr, m_max):
     return m_max / (1 + jnp.exp(r * (v_thr - v)))
 
 def compute_rate(v_current, sigm_params):
-    v_sum = jnp.sum(v_current, axis=-1) * 1e3  # mV
-    return jax.vmap(sigmoid)(v_sum, sigm_params[:,0], sigm_params[:,1], sigm_params[:,2])
+    v_sum = jnp.sum(v_current, axis=-1) * 1e3  # Convert to mV
+    return jax.vmap(sigmoid)(v_sum, sigm_params[:, 0], sigm_params[:, 1], sigm_params[:, 2])
 
+@partial(jit, static_argnums=(0))
+def run_jax_simulation(nPop, sigm, W, H, tau, Iext, Ib, step_size, steps):
+    print('type', type(sigm))
 
-# the partial function is part of the jit package, allowing for compilation
-@partial(jit, static_argnums=(0,))
-def run_simulation_jax(params, W, H, tau, Iext, Ib, step_size, steps):
-
-    nPop = params['nPop']
-    sigm = params['sigm']
-
-    def step_fn(carry, t):
+    def step_fn(carry, t_idx):
         v_current, u_t, rate_hist, pot_hist = carry
 
-        # Compute rate from current potential
         rate_current = compute_rate(v_current, sigm)
 
-        # Update v and u (second derivative)
-        def update(i, args):
-            v_i, u_i = args
-            
-            def update_j(j, acc):
+        def update_i(i, carry_ij):
+            v_i, u_i = carry_ij
 
+            def update_j(j, acc):
                 v_row, u_row = acc
                 tau_ij = tau[i, j]
                 h_ij = H[i, j]
@@ -43,28 +32,32 @@ def run_simulation_jax(params, W, H, tau, Iext, Ib, step_size, steps):
                 u_row = u_row.at[j].add(u_dot * step_size)
                 v_row = v_row.at[j].add(u_row[j] * step_size)
                 return v_row, u_row
-            
+
             v_i, u_i = jax.lax.fori_loop(0, nPop, update_j, (v_i, u_i))
-            return v_i, u_i 
+            return v_i, u_i
 
-            # external input 
+        v_current, u_t = jax.lax.fori_loop(0, nPop, update_i, (v_current, u_t))
 
-            # background input
+        for i in range(nPop):
+            # External input
+            v_current = v_current.at[i, -1].add(u_t[i, -1] * step_size)
+            u_dot_ext = (H[i, -1] / tau[i, -1]) * (W[i, -1] * Iext[i, t_idx]) - 2 * u_t[i, -1] / tau[i, -1] - v_current[i, -1] / (tau[i, -1] ** 2)
+            u_t = u_t.at[i, -1].add(u_dot_ext * step_size)
 
-        v_current, u_t = jax.lax.fori_loop(0, nPop, update, (v_current, u_t))
+            # Background input
+            v_current = v_current.at[i, -2].add(u_t[i, -2] * step_size)
+            u_dot_bg = (H[i, -2] / tau[i, -2]) * (W[i, -2] * Ib[i, t_idx]) - 2 * u_t[i, -2] / tau[i, -2] - v_current[i, -2] / (tau[i, -2] ** 2)
+            u_t = u_t.at[i, -2].add(u_dot_bg * step_size)
 
-
-        # Save history
-        rate_hist = rate_hist.at[:, t].set(rate_current)
-        pot_hist = pot_hist.at[:, :, t].set(v_current)
+        rate_hist = rate_hist.at[:, t_idx].set(rate_current)
+        pot_hist = pot_hist.at[:, :, t_idx].set(v_current)
 
         return (v_current, u_t, rate_hist, pot_hist), None
 
-    # Init
-    v_init = jnp.zeros((nPop, nPop+2))
-    u_init = jnp.zeros((nPop, nPop+2))
+    v_init = jnp.zeros((nPop, nPop + 2))
+    u_init = jnp.zeros((nPop, nPop + 2))
     rate_hist = jnp.zeros((nPop, len(steps)))
-    pot_hist = jnp.zeros((nPop, nPop+2, len(steps)))
+    pot_hist = jnp.zeros((nPop, nPop + 2, len(steps)))
 
     (v_final, u_final, rate_out, pot_out), _ = lax.scan(
         step_fn,
