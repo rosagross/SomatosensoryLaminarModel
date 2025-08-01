@@ -37,7 +37,7 @@ from helper_functions import *
 
 colors, _ = figure_style() 
 
-# %% define directories of stored data and figures
+# define directories of stored data and figures
 output_dir = '/data/p_02989/Modelling/output/'
 #output_dir = os.path.join(os.getcwd(),'..', 'output')
 figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/PosterFigures' #"../Figures"
@@ -45,12 +45,12 @@ figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS Summer
 # %%
 
 # read in data
-input_durations = [0.5, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
-input_strengths = np.arange(0, 500, 100)  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
-coupling_strengths = [100, 150, 200, 250, 300]
-balance_EI = [1, 0.8, 0.6, 0.5, 0.4, 0.2]
-backgroundI_strengths = [0, 5, 10, 15, 20]
-step_size = 0.001
+input_durations = [0.5] #, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
+input_strengths = [0] #, 50, 300, 500]  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
+coupling_strengths = [100] #, 150, 200, 250, 300]
+balance_EI = [0.9]  #, 0.7, 0.5, 0.3, 0.1]
+backgroundI_strengths = [0] #, 5, 10, 15, 20]
+step_size = 0.01 # this is NOT the simulation step_size!!!! Simulation step size is usually smaller, like 0.001
 sample_delay_immediate = 0.3
 sample_delay_late = 4
 input_onset = 1.001
@@ -58,7 +58,7 @@ sample_dur = 0.3 # amount of time in sec in which we look at the long term firin
 cortex_type = 'somato'
 stimulation_type = 'step'
 thalamus_source = 'thalJiang'
-load_trajectory = False
+load_trajectory = True
 load_full_potentials = False
 load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is E3)
 
@@ -68,32 +68,34 @@ summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, fig
 
 # %% 
 # Save the summary data frame in a separate CSV, so that it does not take that much time to load anymore ...
-summary_df.to_csv(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
-trajectory_df.to_csv(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index=True, index_label='pop')
+summary_df.to_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_thalUncon_S1S2Uncon.h5', key='data', index=True) #, index_label='pop')
+#trajectory_df.to_hdf(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_thalUncon_S1S2Uncon.h5', index=True, index_label='pop')
+
 # %% Read in summary data frame
-summary_df = pd.read_csv(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}.csv', index_col=False)
+summary_df = pd.read_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_thalUncon_S1S2Uncon.h5', index_col=False)
 
 # %% Make plots that demonstrate the sampling time line 
 
 # choose example settings
 g = 100
-bEI = 0.5
-population = 'E3'
+bEI = 0.9
+population = 7 # 'E3'
 input_duration = 0.5
-input_strength = 100
-backgroundI_strength = 5
+input_strength = 0
+backgroundI_strength = 0
 line_df = trajectory_df[trajectory_df['global_coupling']==g]
 line_df = line_df[line_df['balance_EI']==bEI]
 line_df = line_df[line_df['population']==population]
 line_df = line_df[line_df['InputDuration']==input_duration]
 line_df = line_df[line_df['InputStrength']==input_strength]
 line_df = line_df[line_df['BckgndInputStrength']==backgroundI_strength]
-
+print(len(line_df))
+print(len(trajectory_df))
 # LONG TERM and DURING INPUT
 
 # Add a red vertical line at time of input offset (start of sampling) and stop of sampling
-simulation_time = len(line_df)*1e-3
-start_sample = input_onset + input_duration + sample_delay
+simulation_time = 6*1e-3
+start_sample = input_onset + input_duration + sample_delay_immediate
 stop_sample = start_sample + sample_dur
 input_offset = input_onset + input_duration
 offset = 0.1 # time between baseline sampling and start of input 
@@ -106,7 +108,7 @@ steps = np.arange(step_size, simulation_time+step_size, step_size)
 input_line = np.zeros(len(line_df))
 input_line[int((input_onset)/step_size):int(input_offset/step_size)] = input_strength
 fig = plt.figure(figsize=(10,5))
-plt.plot(steps[:-plotting_cut], input_line[:-plotting_cut], color='green', linewidth=2)
+#plt.plot(steps[:-plotting_cut], input_line[:-plotting_cut], color='green', linewidth=2)
 sns.lineplot(data=line_df[:-plotting_cut], x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
 #sns.lineplot(data=line_df[:-plotting_cut], x='time', y='potential', hue='InputStrength', legend='', palette=['grey'])
 plt.axvline(x=baseline_start, color='purple', linestyle='--', linewidth=1, label='Baseline Sample')
@@ -164,7 +166,7 @@ plt.show()
 
 # choose a coupling strength, background input strength and a population
 g = 100
-bEI = 0.8
+bEI = 0.7
 backgroundI_strength = 5
 population = 'E3'
 data_df = summary_df[summary_df['globalCoupling']==g]

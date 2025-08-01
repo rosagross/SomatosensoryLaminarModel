@@ -2,7 +2,8 @@
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-from jr_model import JR_Model
+import jax.numpy as jnp
+from jr_model_jax import JR_Model
 import pandas as pd 
 import time
 import csv
@@ -167,19 +168,22 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     population_names = ['E3b','PV3b','SST3b','VIP3b', 'E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4',
                                           'E1S2','PV1S2','SST1S2','VIP1S2','E2S2','PV2S2','SST2S2','E3S2','PV3S2','SST3S2','E4S2','PV4S2','SST4S2']
     cells = np.concatenate((population_names,['ThalE', 'ThalI']))
-    
-    rates_df = pd.DataFrame(rates.T, columns=cells)
-    filename = filename + '.csv'
+
+    filename = filename + '.h5'
     filename_rates = 'rates' + filename
-    rates_df.to_csv(os.path.join(filedir, filename_rates), index=False)
+
+    # only safe every second datapoint
+    resolution_tstep = 0.01
+    rates_downsampled = rates[:, ::int(1000*resolution_tstep)] 
+    rates_df = pd.DataFrame(rates_downsampled.T)
+    rates_df.to_hdf(os.path.join(filedir, filename_rates), index=False, key='data', mode='w')
 
     # sum the potentials together and save them 
-    potential_sum = np.zeros((rates.shape[0], rates.shape[-1])) # (16x1000)
-    for i in range(rates.shape[0]):
-        potential_sum[i] = np.sum(potentials[i], axis=0)
-    potential_df = pd.DataFrame(potential_sum.T, columns=cells)
+    potential_sum = np.sum(potentials, axis=1)
+    potential_sum_downsampled = potential_sum[:, ::int(1000*resolution_tstep)]
+    potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
     filename = 'potentials' + filename
-    potential_df.to_csv(os.path.join(filedir, filename), index=False)
+    potential_df.to_hdf(os.path.join(filedir, filename), index=False, key='data', mode='w')
 
     if full:
         # save all potentials additionally
@@ -189,19 +193,19 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
 
 def write_3D_csv(filename, data):
     '''
-    Write results in form of a 3D numpy array into a csv file. 
+    Write results in form of a 3D hdf5 file.
     '''
-    data = data.tolist()
-    with open(filename, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        writer.writerows(data)
+
+    with h5py.File(filename, 'w') as f:
+        f.create_dataset(dataset_name, data=data, compression='gzip')
         
 # %% 
 def main():
 
-    save_results = False
+    save_params = False
+    save_results = True
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = True
+    plot = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
     # connectivity reverse factor is the absolute cell count divided by  
@@ -209,25 +213,25 @@ def main():
     # to simulate:
     # thalamus I to E inhibition 
     
-    coupling_strengths = [0] # [100, 150, 200, 250, 300]
-    balance_EI = [0] # [1, 0.8, 0.6, 0.5, 0.4, 0.2]
+    coupling_strengths = [100, 150, 200, 250, 300]
+    balance_EI = [0.9, 0.7, 0.5, 0.3, 0.1]
     step_size = 0.001
     cortex_type = 'somato'
-    filedir = 'output' #'/data/p_02989/Modelling/output/'
+    filedir = '/data/p_02989/Modelling/output/'
 
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0] # [0.5, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [0] #np.arange(0, 500, 100)
-    backgrndI_strengths = [0] #[0, 5, 10, 15, 20]
+    input_durations = [0.5, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = [0, 50, 300, 500] #np.arange(0, 500, 100)
+    backgrndI_strengths = [0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
     thal_connect = np.array([0, 0, 0, 0]) 
 
     for d in input_durations:
-        simulation_time = int(input_onset) + d + 4
+        simulation_time = int(input_onset) + 5
         for sb in backgrndI_strengths:
         
             for s in input_strengths:
@@ -235,6 +239,8 @@ def main():
                 # arrays to store rate (for plotting)
                 all_rates = []
                 all_potentials = []
+                all_durations = []
+                all_durations_saving = []
 
                 for g in coupling_strengths:
                     for bEI in balance_EI:
@@ -247,7 +253,7 @@ def main():
                         print(f'Thalamus EtoE:{thal_connect[0]} ItoE: {thal_connect[1]}')
                         print(f'Thalamus EtoI:{thal_connect[2]} ItoI: {thal_connect[3]}')
 
-                        filename = f'_g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0_S1S2'
+                        filename = f'_g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_thalJiang_thalUncon_S1S2Uncon'
                         #filename = f'_gE{int(gE*connect_reverse_factor)}gI{int(gI*connect_reverse_factor)}_{cortex_type}_IbStrength{sb}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0_S1S2'
 
                         # create input array 
@@ -261,19 +267,32 @@ def main():
                         print('gE', gE)
                         print('gI', gI)
                         thal_connect_scaled = thal_connect/connect_reverse_factor
+                        
                         model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time)
+                        if save_params:
+                            # safe connectivty parameter in yaml file 
+                            model.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, coupling_thalE, coupling_thalI, thal_connect)
 
                         # perform simulation with current coupling strength g
                         start = time.time()
                         rate, potential = model.run_simulation()
+                        rate.block_until_ready() 
                         stop = time.time()
-                        print('Simulation duration (in s):', stop-start)
+                        duration = stop-start
+                        all_durations.append(duration)
+                        print('Simulation duration (in s):', duration)
+
                         # append results
                         all_rates.append(rate)
                         all_potentials.append(potential)
 
                         if save_results:
+                            start = time.time()
                             save_results_csv(rate, potential, filedir, filename, save_full_potentials)
+                            stop = time.time()
+                            duration = stop-start
+                            all_durations_saving.append(duration)
+                            print('Saving duration (in s):', duration)
 
                 if plot:
                     all_rates = np.array(all_rates)
@@ -288,6 +307,9 @@ def main():
                         # used to plot with coupling strength on the x-axis and max/min rate on the y
                         plot_minmax(all_rates, coupling_strengths)
  
+    print('Mean Simulation duration: ', np.mean(all_durations))
+    print('Mean Saving duration: ', np.mean(all_durations_saving))
+
 if __name__ == '__main__':
    main()
 
