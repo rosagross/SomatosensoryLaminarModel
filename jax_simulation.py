@@ -13,7 +13,6 @@ def compute_rate(v_current, sigm_params):
 
 @partial(jit, static_argnums=(0))
 def run_jax_simulation(nPop, sigm, W, H, tau, Iext, Ib, step_size, steps):
-    print('type', type(sigm))
 
     def step_fn(carry, t_idx):
         v_current, u_t, rate_hist, pot_hist = carry
