@@ -8,7 +8,7 @@ Now you can create your own working directories:
 
 ```bash
 mkdir ${USER}_wd
-mkdir output_${USER}
+mkdir output_${USER} # if you are generating any output files (like model simulations), save it here!
 ````
 
 ## Continue with Setup a Project with Gitlab
