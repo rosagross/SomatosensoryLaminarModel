@@ -1,3 +1,4 @@
+# %%
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
 
@@ -62,3 +63,5 @@ for V in results:
     
 plt.legend()
 plt.show()
+
+# %%

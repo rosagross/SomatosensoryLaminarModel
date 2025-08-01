@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 from parameters import Parameter
 import numpy as np
 
+# TODO:
+# implement parameters.py!
+
 
 #Parameter
 N_cells = 5
