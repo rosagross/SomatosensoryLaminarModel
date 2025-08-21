@@ -1,0 +1,116 @@
+# %%
+from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
+from copy import deepcopy
+from parameters import Parameter
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from numba import njit
+
+# https://parameters.readthedocs.io/en/latest/
+#Parameter
+cells = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3']
+N_cells = len(cells)
+cortex_type = 'visual'
+params = Parameter(cortex_type)
+sigm = params.get_sigmoid()
+
+r = []
+v_thr = []
+m_max = []
+for row in range(N_cells):
+    r.append(sigm[row,0])      
+    v_thr.append(sigm[row,1]) 
+    m_max.append(sigm[row,2]) 
+
+tau,_ = params.get_params()                  
+tau = tau[0]
+
+w0 = 100.0
+W = params.get_connectivity(1, include_Iext=False) * w0
+# %%
+# Operator template for the PRO
+
+pro_names = ['PRO_E1', 'PRO_E2', 'PRO_E3', 'PRO_E4',
+             'PRO_P1', 'PRO_P2', 'PRO_P3', 'PRO_P4',
+             'PRO_S1', 'PRO_S2', 'PRO_S3']
+
+rpo_names = ['RPO_E1', 'RPO_E2', 'RPO_E3', 'RPO_E4',
+             'RPO_P1', 'RPO_P2', 'RPO_P3', 'RPO_P4',
+             'RPO_S1', 'RPO_S2', 'RPO_S3']
+
+pro = OperatorTemplate(
+    name='PRO', path=None,
+    equations=["m_out = 2.*m_max / (1 + exp(r*(V_thr - (v*1000))))"],
+    variables={'m_out': 'output',
+               'v': 'input',
+               'r': 0.1,
+               'V_thr': 35.0,
+               'm_max': 70.0},
+    description="sigmoidal potential-to-rate operator")
+
+pros = [deepcopy(pro).update_template(name=pro_names[i],
+                                      variables={'r': r[i],
+                                                 'V_thr': v_thr[i],
+                                                 'm_max': m_max[i]}) for i in range(N_cells)]
+
+# %%
+# Operator template for the RPO
+rpo = OperatorTemplate(
+    name='RPO', path=None,
+    equations=['d/dt * v = i',
+               'd/dt * i = H/tau * m_in - 2 * i/tau - v/tau^2'],
+    variables={'v': 'output',
+               'i': 'variable',
+               'm_in': 'input',
+               'tau': 0.01,
+               'H': 1.0},
+    description="excitatory rate-to-potential operator")
+
+rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau[i]}) for i in range(N_cells)]
+
+# %%
+# Node templates
+nodes = [NodeTemplate(name=cells[i], path=None, operators= [pros[i]] + rpos) for i in range(N_cells)]
+
+# Define edges
+edges=[]
+# i : target 
+for i, cell_i in enumerate(cells):
+    # j : source
+    for j, cell_j in enumerate(cells):
+        edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': W[i, j]}))
+
+# Set up the Model Circuit 
+jrc = CircuitTemplate(
+    name = 'cir',
+    nodes = {name: node for name, node in zip(cells, nodes)},
+    edges = edges,
+    path = None)
+
+# Run the simulation 
+outputs = {}
+for target_cell in cells:  
+    for rpo_name in rpo_names[:N_cells]:
+        outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
+
+results = jrc.run(simulation_time=2.0,
+                  step_size=1e-4,
+                  sampling_step_size=1e-4,
+                  outputs=outputs,
+                  backend='default',
+                  vectorize=True,
+                  clear=False,
+                  float_precision="float64",
+                  decorator=njit)
+
+# Save output in csv file
+all_potentials = []
+for i in cells:
+    sources = results[[f'V_{i}/{rpo_name}' for rpo_name in rpo_names[:N_cells]]]
+    all_potentials.append(np.sum(sources, axis=1))
+all_potentials = np.array(all_potentials).T
+
+potential_df = pd.DataFrame(all_potentials, columns=cells)
+potential_df.plot()
+plt.show()
