@@ -47,6 +47,7 @@ jrc = CircuitTemplate(
            ("IIN/PRO/m_out", "PC/RPO_i/m_in", None, {'weight': 33.75})],
     path=None)
 
+# %%
 # Run the simulation 
 results = jrc.run(simulation_time=2.0,
                   step_size=1e-4,
