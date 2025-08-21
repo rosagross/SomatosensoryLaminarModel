@@ -19,7 +19,7 @@ class JR_Model():
         # Simulation parameters
         self.tau = jnp.array(self.p.tau)
         self.nPop = self.p.nPop
-        self.simulation_time = simulation_time# in s
+        self.simulation_time = simulation_time # in s
         self.step_size = step_size # in s
         self.gE = gE
         self.gI = gI

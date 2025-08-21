@@ -1,3 +1,12 @@
+"""
+File: simulation_main.py
+Author: Rosa Grossmann
+Contact: grossmannr@cbs.mpg.de
+Date: 2025-08-05
+Description: Run this file to run the simulation! 
+
+"""
+
 # %%
 import numpy as np
 import os
@@ -205,7 +214,7 @@ def main():
     save_params = False
     save_results = True
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = False
+    plot = True
 
     # set coupling strengths, step size and cortex type (visual or somato)
     # connectivity reverse factor is the absolute cell count divided by  
@@ -213,8 +222,8 @@ def main():
     # to simulate:
     # thalamus I to E inhibition 
     
-    coupling_strengths = [100, 150, 200, 250, 300]
-    balance_EI = [0.9, 0.7, 0.5, 0.3, 0.1]
+    coupling_strengths = [50] # , 150, 200, 250, 300]
+    balance_EI = [0.6]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
     step_size = 0.001
     cortex_type = 'somato'
     filedir = '/data/p_02989/Modelling/output/'
@@ -222,9 +231,9 @@ def main():
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0.5, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [0, 50, 300, 500] #np.arange(0, 500, 100)
-    backgrndI_strengths = [0, 5, 10, 15, 20]
+    input_durations = [0.5]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = [80] #[0, 50, 300, 500] #np.arange(0, 500, 100)
+    backgrndI_strengths = [5] #[0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
