@@ -97,7 +97,10 @@ results, results_map = grid_search(circuit_template=jrc,
                                    solver="euler",
                                    #cutoff=cutoff
                                    )
-
+"""permute_grid (default: False)
+        If true, all combinations of the provided param_grid values will be realized. If false, the param_grid values
+        will be traversed pairwise.
+- for the other arguments see CircuitTemplate.run() """
 # SAVE IN .CSV
 
 # %%
@@ -110,12 +113,13 @@ results_map.sort_values('p', inplace=True, axis=0)
 for ax, key in zip(axes, results_map.index):
     psp_e = results['V_pce'][key].iloc[:, 0]
     psp_i = results['V_pci'][key].iloc[:, 0]
-    ax.plot(psp_e)
-    ax.plot(psp_i)
-    ax.plot(psp_e + psp_i)
-    ax.set_title(f"p = {results_map.at[key, 'p']} Hz", loc='right')
-    ax.set_ylabel(r'$V = V_{pce} - V_{pci}$')
-axes[-1].set_xlabel('time')
+    ax.plot(psp_e, label=r"$V_{pce}$ (excitatory)", color="tab:blue")
+    ax.plot(psp_i, label=r"$V_{pci}$ (inhibitory)", color="tab:orange")
+    ax.plot(psp_e + psp_i, label=r"$V_{pc}$", color="tab:green")
+    ax.set_title(f"p = {results_map.at[key, 'p']} Hz")
+    ax.set_ylabel(r'$[V]$')
+    ax.legend(fontsize="small", loc="lower right")
+axes[-1].set_xlabel('time [s]')
 plt.tight_layout()
 plt.show()
 

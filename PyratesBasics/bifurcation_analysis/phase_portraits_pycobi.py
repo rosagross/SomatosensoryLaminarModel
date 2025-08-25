@@ -59,64 +59,210 @@ jrc = CircuitTemplate(
            ("IIN/PRO/m_out", "PC/RPO_i/m_in", None, {'weight': 33.75})],
     path=None)
 
+# %%
+"""
+jrc.get_run_func(func_name='jrc_rhs', file_name='jrc_pprova', step_size=1e-4, auto=True, backend='python', solver='scipy',
+                 vectorize=False, float_precision='float64')
+best version:                 
+jrc.get_run_func(func_name='jrc_v1', step_size=1e-4, file_name='jrc_pprova1', backend='numpy',
+                 vectorize=False, float_precision='float64')
 
-# %% Definition of the system with PyCobi
+Generate a function that evaluates the vector field of the dynamical system represented by this
+        `CircuitTemplate` instance.
 
-auto_dir = "/data/u_mecozzi_software/miniforge3/envs/pyrates_project/auto-07p"
-jrc_auto = ODESystem.from_template(jrc, auto_dir=auto_dir, init_cont = False, NPR=100, NMX=30000)
-# - the option "init_cont = False" does not perform a time integration when defining the system
-pprint(jrc_auto._var_map)
+        Parameters
+        ----------
+        func_name
+            Name of the vector field evaluation function.
+        step_size
+            Integration step-size. Required for the implementation of the extrinsic inputs.
+        inputs
+            Dictionary providing extrinsic, time-dependent inputs to the system. Keys are the names of system variables,
+            following the `*circuit/node/op/var` notation. Values are 1D numpy arrays that represent the input over time
+            with time steps of size `step_size`.
+        backend
+            Name of the backend that should be used for implementing the system equations. Possible choices are:
+                - 'default' or 'numpy': A backend based on `numpy` functions, representing all system variables as
+                    `np.ndarray`.
+                - 'tensorflow': A backend that represents the system equations as a `tensorflow` graph, in which all
+                    system variables are stored as `tf.constant` or `tf.Variable`.
+                - 'torch': A backend based on `pytorch` which represents all variables as `torch.tensor`.
+                - 'fortran': Translates all system variables and equations into Fortran90 equivalents and uses
+                    `numpy.f2py` to make them available via Python. Requires `vectorize` to be set to `False`.
+                - 'julia': Translates all system variables and equations into Julia equivalents and uses `PyJulia` to
+                    make them available via Python. Requires `vectorize` to be set to `False`. Also requires that
+                    the path to the julia executable that should be used for the simulation is provided via the
+                    keyword argument `julia_path`.
+        vectorize
+            If true, nodes that are governed by the same equation sets will be grouped and the respective equations will
+            be vectorized. If false, all equations will be scalar in nature.
+        verbose
+            If true updates regarding the status of the `run` procedure will be displayed.
+        clear
+            If true, all cached variables will be freed and all temporary files will be deleted after the `run`
+            procedure. To inspect the vector field evaluation function, `clear` should be set to `False`.
+        in_place
+        kwargs
+            Additional keyword arguments.
 
-# %% Time continuation
+        Returns
+        -------
+        Tuple[Callable, tuple, tuple, dict]
+            The vector field evaluation function, all its positional arguments, the argument keys, and the indices of
+            the different state variables in the state vector.
 
-t_sols, t_cont = jrc_auto.run(
-    c='ivp', name='time', DS=1e-4, DSMIN=1e-10, EPSL=1e-08, EPSU=1e-08, EPSS=1e-06,
-    DSMAX=1e-4, NMX=100000, UZR={14: 2.0}, STOP={'UZ1'})
+        """
 
-# %% plot of the solution
+# result of this function:
 
-v_pce = t_sols["PC/RPO_e_in/v"]
-u_pce = t_sols["PC/RPO_e_in/i"]
-v_pci = t_sols["PC/RPO_i/v"]
-u_pci = t_sols["PC/RPO_i/i"]
-pc = v_pce + v_pci
-t = t_sols["t"]
-plt.plot(t,v_pce,label='V_PCE')
-plt.plot(t,v_pci,label='V_PCI')
-plt.plot(t,pc,label='PC')
-plt.ylabel('[V]')
-plt.xlabel('[s]')
-plt.legend()
-plt.show()
+# see how to call it from the file
+# %%
+# -------------------------------------------------------------------------------------------------------------------------------------------------------
+from numpy import pi, sqrt
+from numpy import exp
 
+def jrc_rhs(y,u,tau,H,tau_v1,H_v1,tau_v2,H_v2,tau_v3,H_v3,V_thr,r,m_max,weight_v2,V_thr_v1,r_v1,m_max_v1,weight_v3,V_thr_v2,r_v2,m_max_v2,weight,weight_v1):
+    """{'PC/RPO_e_in/v': 0, # y1
+    'PC/RPO_e_in/i': 1,
+    'PC/RPO_i/v': 2, # y2
+    'PC/RPO_i/i': 3,
+    'EIN/RPO_e/v': 4, # y0_ein
+    'EIN/RPO_e/i': 5,
+    'IIN/RPO_e/v': 6, # y0_iin
+    'IIN/RPO_e/i': 7}
+    """
+    v = y[0] # y1 
+    i = y[1]
+    v_v1 = y[2] # y2
+    i_v1 = y[3]
+    v_v2 = y[4] # y0_ein
+    i_v2 = y[5]
+    v_v3 = y[6] # y0_iin
+    i_v3 = y[7]
 
-# %% Phase portraits
+    dy = np.zeros_like(y) 
 
-""" usare questo in una griglia
-qif.get_run_func(func_name='qif_rhs', file_name='qif', step_size=1e-4, auto=True, backend='fortran', solver='scipy',
-                 vectorize=False, float_precision='float64')"""
+    m_out_v2 = 2.0*m_max/(exp(r*(V_thr - v - v_v1)) + 1)
+    m_in_v2 = m_out_v2*weight_v2
+    m_out = 2.0*m_max_v1/(exp(r_v1*(V_thr_v1 - v_v2)) + 1)
+    m_in_v3 = m_out_v2*weight_v3
+    m_out_v1 = 2.0*m_max_v2/(exp(r_v2*(V_thr_v2 - v_v3)) + 1)
+    m_in = m_out*weight
+    m_in_v1 = m_out_v1*weight_v1
+	
+    dy[0] = i 
+    dy[1] = H*(m_in + u)/tau - 2*i/tau - v/tau**2
+    dy[2] = i_v1
+    dy[3] = H_v1*m_in_v1/tau_v1 - 2*i_v1/tau_v1 - v_v1/tau_v1**2
+    dy[4] = i_v2
+    dy[5] = H_v2*m_in_v2/tau_v2 - 2*i_v2/tau_v2 - v_v2/tau_v2**2
+    dy[6] = i_v3
+    dy[7] = H_v3*m_in_v3/tau_v3 - 2*i_v3/tau_v3 - v_v3/tau_v3**2
 
-# next, define a grid of points at which we will show arrows
-x0=np.linspace(-2,2,20)
-x1=np.linspace(-2,3,20)
-
-# create a grid
-X0,X1=np.meshgrid(v_pce,v_pci)
+    return dy
+# -------------------------------------------------------------------------------------------------------------------------------------------------------
 
 # %%
-# projections of the trajectory tangent vector 
-dX0=np.zeros(X0.shape)
-dX1=np.zeros(X1.shape)
+C= 135
+params = dict(
+    tau=0.01, H=0.00325,
+    tau_v1=0.01, H_v1=0.00325,
+    tau_v2=0.01, H_v2=0.00325,
+    tau_v3=0.02, H_v3=-0.022,
+    V_thr=6e-3, r=560.0, m_max=2.5, weight_v2= C,
+    V_thr_v1=6e-3, r_v1=560.0, m_max_v1=2.5, weight_v3= 0.25*C,
+    V_thr_v2=6e-3, r_v2=560.0, m_max_v2=2.5, weight= 0.8*C,
+    weight_v1= 0.25*C
+)
 
-shape1,shape2=X1.shape
+u = 0.0
 
-for indexShape1 in range(shape1):
-    for indexShape2 in range(shape2):
-        dxdtAtX=dynamicsStateSpace([X0[indexShape1,indexShape2],X1[indexShape1,indexShape2]],0)
-        dX0[indexShape1,indexShape2]=dxdtAtX[0]
-        dX1[indexShape1,indexShape2]=dxdtAtX[1]
-      
-# %%        
+# %% grid construction
+y0=np.linspace(-0.2,0.2,20)
+y1=np.linspace(-0.2,0.2,20)
+y2=np.linspace(-0.2,0.2,20)
+y3=np.linspace(-0.2,0.2,20)
+y4=np.linspace(-0.2,0.2,20)
+y5=np.linspace(-0.2,0.2,20)
+y6=np.linspace(-0.2,0.2,20)
+y7=np.linspace(-0.2,0.2,20)
+# grid for the phase portrait
+Y0,Y1,Y2,Y3,Y4,Y5,Y6,Y7 =np.meshgrid(y0,y1,y2,y3,y4,y5,y6,y7)
+
+dY0=np.zeros(Y0.shape)
+dY1=np.zeros(Y1.shape)
+dY2=np.zeros(Y2.shape)
+dY3=np.zeros(Y3.shape)
+dY4=np.zeros(Y4.shape)
+dY5=np.zeros(Y5.shape)
+dY6=np.zeros(Y6.shape)
+dY7=np.zeros(Y7.shape)
+
+#%%
+n_iterations = Y0.size
+dy_matrix = np.zeros((8, n_iterations))
+for idx, (yy0, yy1, yy2, yy3) in enumerate(zip(Y0.ravel(), Y1.ravel(), Y2.ravel(), Y3.ravel())):
+    y = np.array([yy0, 0, yy1, 0, yy2, 0, yy3, 0])
+    dy = jrc_rhs(
+        y, u,
+        params["tau"], params["H"],
+        params["tau_v1"], params["H_v1"],
+        params["tau_v2"], params["H_v2"],
+        params["tau_v3"], params["H_v3"],
+        params["V_thr"], params["r"], params["m_max"], params["weight_v2"],
+        params["V_thr_v1"], params["r_v1"], params["m_max_v1"], params["weight_v3"],
+        params["V_thr_v2"], params["r_v2"], params["m_max_v2"], params["weight"],
+        params["weight_v1"]
+    )
+    dy_matrix[:, idx] = dy
+    #dV.ravel()[idx] = dy[0]
+    #dI.ravel()[idx] = dy[1]
+
+"""import numpy as np
+import itertools
+
+# %% grid construction
+y0 = np.linspace(-0.2, 0.2, 20)
+y1 = np.linspace(-0.2, 0.2, 20)
+y2 = np.linspace(-0.2, 0.2, 20)
+y3 = np.linspace(-0.2, 0.2, 20)
+y4 = np.linspace(-0.2, 0.2, 20)
+y5 = np.linspace(-0.2, 0.2, 20)
+y6 = np.linspace(-0.2, 0.2, 20)
+y7 = np.linspace(-0.2, 0.2, 20)
+
+# number of total points
+n_iterations = len(y0) * len(y1) * len(y2) * len(y3) * len(y4) * len(y5) * len(y6) * len(y7)
+
+# container for results (8 x N matrix)
+dy_matrix = np.zeros((8, n_iterations))
+
+# %% iterate through the grid without building a huge array
+for idx, point in enumerate(itertools.product(y0, y1, y2, y3, y4, y5, y6, y7)):
+    # point is a tuple (yy0, yy1, ..., yy7)
+    y = np.array(point)
+
+    dy = jrc_rhs(
+        y, u,
+        params["tau"], params["H"],
+        params["tau_v1"], params["H_v1"],
+        params["tau_v2"], params["H_v2"],
+        params["tau_v3"], params["H_v3"],
+        params["V_thr"], params["r"], params["m_max"], params["weight_v2"],
+        params["V_thr_v1"], params["r_v1"], params["m_max_v1"], params["weight_v3"],
+        params["V_thr_v2"], params["r_v2"], params["m_max_v2"], params["weight"],
+        params["weight_v1"]
+    )
+
+    dy_matrix[:, idx] = dy
+"""
+# %%
+#   RELAZIONE TRA LE VARIABILI
+
+# PLOT
+
+# %%
+
 #adjust the figure size
 plt.figure(figsize=(8, 8))
 # plot the phase portrait
