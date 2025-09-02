@@ -12,7 +12,7 @@ import numpy as np
 import os
 import matplotlib.pyplot as plt
 import jax.numpy as jnp
-from jr_model_jax import JR_Model
+from jr_model import JR_Model
 import pandas as pd 
 import time
 import csv
@@ -71,6 +71,34 @@ def plot_minmax(rates, coupling_strengths_Es):
     plt.tight_layout() 
     plt.legend()
     plt.show()
+
+def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot):
+
+    print(potentials.shape)
+    steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
+        
+    # plot results for the S1 column 
+    figS1, axs = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
+   
+    # Plot settings for all subplots
+    axs_flat = axs.flatten()
+    
+    # Layer 2/3
+    axs_flat[0].plot(steps[start_plot:], potentials[:4].T[start_plot:])
+    axs_flat[0].set_title('L2/3')
+    # Layer 4
+    axs_flat[1].plot(steps[start_plot:], potentials[4:4+3].T[start_plot:])
+    axs_flat[1].set_title('L4')
+    # Layer 5
+    axs_flat[2].plot(steps[start_plot:], potentials[4+3:4+6].T[start_plot:])
+    # Layer 6
+    axs_flat[3].plot(steps[start_plot:], potentials[4+6:4+9].T[start_plot:])
+    
+    axs_flat[0].legend(['E', 'PV', 'SST', 'VIP'])
+
+    plt.show()
+
+
 
 def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
@@ -193,7 +221,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
     filename = 'potentials' + filename
     potential_df.to_hdf(os.path.join(filedir, filename), index=False, key='data', mode='w')
-
+    
     if full:
         # save all potentials additionally
         psp_filename = 'full_' + filename
@@ -209,12 +237,13 @@ def write_3D_csv(filename, data):
         f.create_dataset(dataset_name, data=data, compression='gzip')
         
 # %% 
-def main():
+def main(): 
 
     save_params = False
     save_results = True
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
     plot = True
+    jax_mode = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
     # connectivity reverse factor is the absolute cell count divided by  
@@ -222,8 +251,10 @@ def main():
     # to simulate:
     # thalamus I to E inhibition 
     
-    coupling_strengths = [50] # , 150, 200, 250, 300]
-    balance_EI = [0.6]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
+    coupling_strengths = [100] # , 150, 200, 250, 300]
+    balance_EI = [0.5]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
+    g_thal = 0
+    bEI_thal = 0.5
     step_size = 0.001
     cortex_type = 'somato'
     filedir = '/data/p_02989/Modelling/output/'
@@ -231,16 +262,17 @@ def main():
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    input_durations = [0.5]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [80] #[0, 50, 300, 500] #np.arange(0, 500, 100)
-    backgrndI_strengths = [5] #[0, 5, 10, 15, 20]
+    simulation_dur = 1 
+    input_durations = [0]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = [0] #[0, 50, 300, 500] #np.arange(0, 500, 100)
+    backgrndI_strengths = [0] #[0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
     thal_connect = np.array([0, 0, 0, 0]) 
 
     for d in input_durations:
-        simulation_time = int(input_onset) + 5
+        simulation_time = int(input_onset) + simulation_dur
         for sb in backgrndI_strengths:
         
             for s in input_strengths:
@@ -270,14 +302,29 @@ def main():
                         Ib = create_Ibackground(simulation_time, step_size, sb)
                         gE = g * bEI /connect_reverse_factor
                         gI = g * (1 - bEI) /connect_reverse_factor
+                        gE_thal = g_thal * bEI_thal /connect_reverse_factor
+                        gI_thal = g_thal * (1 - bEI_thal) /connect_reverse_factor
                         # for now we use the same coupling strength for the thalamus connections as for the cortical connections
-                        coupling_thalE = gE
-                        coupling_thalI = gI
+                        coupling_thalE = gE_thal
+                        coupling_thalI = gI_thal
                         print('gE', gE)
                         print('gI', gI)
                         thal_connect_scaled = thal_connect/connect_reverse_factor
                         
-                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time)
+                        # implement option to choose only one part of the cortical circuit 
+                        # this can be done by putting the connectivity for those parts to zero
+                        # options:
+                        # 1. only thalamus & Area 3b 
+                        # 2. A3b and Area 1
+                        # 3. A3b and Area 1 and thalamus
+                        # 4. only Area 1
+                        # 5. only Area 1 and S2 and thalamus
+                        # 6. only Area 1 and S2 
+                        # 7. only S2 
+                        # 8. default: all
+
+
+                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time, area='A1')
                         if save_params:
                             # safe connectivty parameter in yaml file 
                             model.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, coupling_thalE, coupling_thalI, thal_connect)
@@ -285,7 +332,10 @@ def main():
                         # perform simulation with current coupling strength g
                         start = time.time()
                         rate, potential = model.run_simulation()
-                        rate.block_until_ready() 
+                        
+                        if jax_mode:
+                            rate.block_until_ready() 
+
                         stop = time.time()
                         duration = stop-start
                         all_durations.append(duration)
@@ -308,10 +358,17 @@ def main():
                     all_potentials = np.squeeze(np.array(all_potentials))
                     if len(coupling_strengths) == 1:
                         # when to start plotting (in ms)
-                        start_plot = 500
+                        start_plot = 0
                         # plot only one coupling strength value with time on the x-axis
-                        plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot)
-                        #plot_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot)
+                        #plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot)
+                        
+                        # plot the potentials (this only works for a single simulation)
+                        print(potential.shape)
+                        potential_sum = np.sum(potential, axis=1)
+                        resolution_tstep = 0.01
+                        potential_sum_downsampled = potential_sum[:, ::int(1000*resolution_tstep)]
+                        plot_potentials(potential_sum, Iext, Ib, step_size, simulation_time, start_plot)
+
                     else: 
                         # used to plot with coupling strength on the x-axis and max/min rate on the y
                         plot_minmax(all_rates, coupling_strengths)

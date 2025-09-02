@@ -12,7 +12,7 @@ import os
 # %%
 class JR_Model():
 
-    def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, filedir, filename, step_size=0.001, simulation_time=1):
+    def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, filedir, filename, step_size=0.001, simulation_time=1, area='all'):
         
         # load in all parameters
         self.p = Parameter()
@@ -51,7 +51,10 @@ class JR_Model():
         self.u_t = jnp.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
 
         # Weight matrix [to x from]
-        self.W = jnp.array(self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect))
+        self.W = jnp.array(self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, area=area))
+
+
+
 
         
     def run_simulation(self):

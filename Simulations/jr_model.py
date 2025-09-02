@@ -5,7 +5,7 @@ import os
 
 class JR_Model():
 
-    def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, filedir, filename, step_size=0.001, simulation_time=1):
+    def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, filedir, filename, step_size=0.001, simulation_time=1, area='all'):
         
         # load in all parameters
         self.p = Parameter()
@@ -33,6 +33,9 @@ class JR_Model():
         # external input matrix and background input matrix
         self.Iext = np.tile(Iext, (self.nPop,1))
         self.Ib = np.tile(Ib, (self.nPop,1))
+
+        # the area to isolate (default is just the entire model)
+        self.area = area
         
 
     def run_simulation(self):
@@ -50,7 +53,7 @@ class JR_Model():
         self.u_t = np.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
 
         # Weight matrix [to x from]
-        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect) 
+        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, area=self.area) 
 
         for timestep, time in enumerate(self.steps):
             
