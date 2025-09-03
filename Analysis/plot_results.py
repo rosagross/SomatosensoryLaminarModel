@@ -45,12 +45,12 @@ figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS Summer
 # %%
 
 # read in data
-input_durations = [0.5] #, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
-input_strengths = [0] #, 50, 300, 500]  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
-coupling_strengths = [100] #, 150, 200, 250, 300]
-balance_EI = [0.9]  #, 0.7, 0.5, 0.3, 0.1]
-backgroundI_strengths = [0] #, 5, 10, 15, 20]
-step_size = 0.01 # this is NOT the simulation step_size!!!! Simulation step size is usually smaller, like 0.001
+input_durations = [0.5, 1, 1.5]  #, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
+input_strengths = [0, 50, 300, 500] #, 50, 300, 500]  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
+coupling_strengths = [100, 150, 200, 250, 300]
+balance_EI = [0.9, 0.7, 0.5, 0.3, 0.1]
+backgroundI_strengths = [0, 5, 10, 15, 20] #, 5, 10, 15, 20]
+step_size = 0.01 # this is the saving step size, NOT the simulation step_size!!!! Simulation step size is usually smaller, like 0.001
 sample_delay_immediate = 0.3
 sample_delay_late = 4
 input_onset = 1.001
@@ -58,6 +58,7 @@ sample_dur = 0.3 # amount of time in sec in which we look at the long term firin
 cortex_type = 'somato'
 stimulation_type = 'step'
 thalamus_source = 'thalJiang'
+name_addOn = 'thalUncon_S1S2Uncon'
 load_trajectory = True
 load_full_potentials = False
 load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is E3)
@@ -68,11 +69,11 @@ summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, fig
 
 # %% 
 # Save the summary data frame in a separate CSV, so that it does not take that much time to load anymore ...
-summary_df.to_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_thalUncon_S1S2Uncon.h5', key='data', index=True) #, index_label='pop')
+summary_df.to_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_{name_addOn}.h5', key='data', index=True) #, index_label='pop')
 #trajectory_df.to_hdf(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_thalUncon_S1S2Uncon.h5', index=True, index_label='pop')
 
 # %% Read in summary data frame
-summary_df = pd.read_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_thalUncon_S1S2Uncon.h5', index_col=False)
+summary_df = pd.read_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_{name_addOn}.h5', index_col=False)
 
 # %% Make plots that demonstrate the sampling time line 
 
@@ -206,6 +207,7 @@ sns.heatmap(data_heatmap, cmap='magma')
     - plotwise: coupling strength
     - measure: dynamic function 
 '''
+
 # look at several difference E-I balance values
 bEIs = balance_EI
 # choose a global coupling strength and a population

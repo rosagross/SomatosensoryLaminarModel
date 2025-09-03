@@ -42,7 +42,6 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         filename_rates = f'rates_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalUncon_S1S2Uncon.h5'  #thalEI0_S1S2.csv'
                         # filename_rates = f"rates_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
                         rates_df = pd.read_hdf(os.path.join(output_dir, filename_rates))
-                        print(rates_df)
                         
                         # read in potentials in data matrix (datapoints x populations)
                         #filename_potentials = f"potentials_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
@@ -143,9 +142,6 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                                 pop_df['rate'] = rate_trajectory
                                 pop_df['potential'] = potential_trajectory
                                 pop_df['time'] = rate_trajectory.index.values * step_size # time in s
-                                print(rate_trajectory.index.values)
-                                print(step_size)
-                                break
                                 pop_df['global_coupling'] = g
                                 pop_df['balance_EI'] = bEI
                                 pop_df['InputDuration'] = d
