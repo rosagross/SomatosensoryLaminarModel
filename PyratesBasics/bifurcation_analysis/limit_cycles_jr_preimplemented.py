@@ -1,13 +1,15 @@
 """Bifurcation analysis of the original Jansen-Rit Model (.yaml pre-implemented in Pyrates)"""
 
-# %% Libraries import:
+# %%
+from pprint import pprint
 from pycobi import ODESystem
+import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
 from pyrates.frontend import CircuitTemplate
 import os 
 os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/bifurcation_analysis/""")
 
-# %% Initialize the Jansen-Rit model in PyRates:
 jrc = CircuitTemplate.from_yaml("model_templates.neural_mass_models.jansenrit.JRC")
 
 # update input variable to start in a high-activity state
@@ -35,7 +37,7 @@ t_sols, t_cont = jrc_auto.run(
     c='ivp', name='time', DS=1e-4, DSMIN=1e-10, EPSL=1e-08, EPSU=1e-08, EPSS=1e-06,
     DSMAX=1e-3, NMX=50000, UZR={14: 2.0}, STOP={'UZ1'})
 
-# %% Outputs of the time continuation:
+# Outputs of the time continuation:
 #   - t_sols: pandas Dataframe with the summary of the results of the simulation
 #   - t_cont: type 'branch' or 'bifDiag', an auto-07p object that can be used for subsequent parameter continuations
 
@@ -93,22 +95,80 @@ u_sols, u_cont = jrc_auto.run(
 jrc_auto.plot_continuation('pc/rpo_e_in/u', 'pc/rpo_e_in/v', cont='u')
 plt.show()
 
-# %% Continuation of the limit cycles
-for i in range(1,4):
-    jrc_auto.run(origin=u_cont, starting_point=f'HB{i}', name=f'u_lc{i}', IPS=2, ISP=2, ISW=-1, STOP=['BP2'])
+# %% plotting the y state variable with the PyCobi function (=y1-y2)
 
-# %% Plotting of the limit cycle continuations
+y1 = u_sols["pc/rpo_e_in/v"]
+y2 = u_sols["pc/rpo_i/v"]
+y = y1+y2
+u_sols["y"] = y # adding the y as a variable in the dataframe with the continuation
+jrc_auto.plot_continuation('pc/rpo_e_in/u', 'y', cont='u')
+plt.show()
+
+# %% plotting the y0 with the PyCobi function 
 fig, ax = plt.subplots()
-jrc_auto.plot_continuation('pc/rpo_e_in/u', 'pc/rpo_e_in/v', cont='u', ax=ax)
+C = 135
+y0 = u_sols["ein/rpo_e/v"]/C
+u_sols["y0"] = y0 # adding the y0 as a variable in the dataframe with the continuation
+jrc_auto.plot_continuation('pc/rpo_e_in/u', 'y0', cont='u',ax=ax)
+ax.set_xlim([-50,150])
+plt.show()
+
+# %% Continuation of the limit cycles - updated
+
+limit_cycles_sols = {}
+limit_cycles_conts = {}
 for i in range(1,4):
-    jrc_auto.plot_continuation('pc/rpo_e_in/u', 'pc/rpo_e_in/v', cont=f'u_lc{i}', ax=ax, ignore=["UZ", "BP"],
+    limit_cycles_sols[f'u_lc{i}_sols'],limit_cycles_conts[f'u_lc{i}_conts'] = jrc_auto.run(origin=u_cont, starting_point=f'HB{i}', name=f'u_lc{i}', IPS=2, ISP=2, ISW=-1, STOP=['BP2'], get_period=True)
+
+# %% Plotting of the limit cycle continuations - y0
+fig, ax = plt.subplots()
+jrc_auto.plot_continuation('pc/rpo_e_in/u', 'y0', cont='u',ax=ax)
+
+for i in range(1,4):
+    # lower branch
+    y0_d = limit_cycles_sols[f'u_lc{i}_sols']["ein/rpo_e/v"].iloc[:, 0]/C
+    # upper branch
+    y0_u = limit_cycles_sols[f'u_lc{i}_sols']["ein/rpo_e/v"].iloc[:, 1]/C
+    
+    limit_cycles_sols[f'u_lc{i}_sols'][('y0', 0)] = y0_d
+    limit_cycles_sols[f'u_lc{i}_sols'][('y0', 1)] = y0_u
+    jrc_auto.plot_continuation('pc/rpo_e_in/u', 'y0', cont=f'u_lc{i}', ax=ax, ignore=["UZ", "BP"],
                                line_color_stable="green")
+#ax.set_ylim([0.0, 0.012]) 
+#ax.set_xlim([-50, 150])
+plt.show()
+
+# %% Plotting of the limit cycle continuations - y
+# parameters [V]:
+A = 0.00325
+a = 100
+B = 0.022
+b = 50
+C = 135
+e0 = 2.5
+r = 560
+v0 = 0.006
+
+fig, ax = plt.subplots()
+jrc_auto.plot_continuation('pc/rpo_e_in/u', 'y', cont='u',ax=ax)
+
+for i in range(1,4):
+   
+    # lower branch
+    y0_d = limit_cycles_sols[f'u_lc{i}_sols']["ein/rpo_e/v"].iloc[:, 0]/C
+    # upper branch
+    y0_u = limit_cycles_sols[f'u_lc{i}_sols']["ein/rpo_e/v"].iloc[:, 1]/C
+
+    y_d = np.real(v0 - (1/r) * np.log(((2*A*e0)/(a*y0_d.astype(complex))) - 1))
+    y_u = np.real(v0 - (1/r) * np.log(((2*A*e0)/(a*y0_u.astype(complex))) - 1))
+
+    limit_cycles_sols[f'u_lc{i}_sols'][('yy', 0)] = y_d
+    limit_cycles_sols[f'u_lc{i}_sols'][('yy', 1)] = y_u
+    jrc_auto.plot_continuation('pc/rpo_e_in/u', 'yy', cont=f'u_lc{i}', ax=ax, ignore=["UZ", "BP"],
+                               line_color_stable="green")
+
+    periods_per_cont = limit_cycles_sols[f'u_lc{i}_sols']["period"]
+    freqs_per_cont = 1/periods_per_cont
 plt.show()
 
 # %%
-# This concludes our use example. As a final step, we clear all the temporary files we created and make sure all
-# working directory changes that have happened in the background during file creation and parameter continuation are
-# undone. This can be done via a single call:
-
-jrc.clear()
-jrc_auto.close_session(clear_files=True)

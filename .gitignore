@@ -1,3 +1,12 @@
 output
 output/*.csv
+PyratesBasics/bifurcation_analysis/*.f90
+PyratesBasics/bifurcation_analysis/*.ivp
+PyratesBasics/bifurcation_analysis/*.exe
+PyratesBasics/bifurcation_analysis/fort.*
+PyratesBasics/bifurcation_analysis/*.mod
+PyratesBasics/bifurcation_analysis/*.o
+__pycache__/
+*.pyc
+PyratesBasics/exp_model/simulations/*.csv
 Figures
