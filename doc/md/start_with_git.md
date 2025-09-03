@@ -1,19 +1,19 @@
 # How to use git
 
-Git helps us to keep track of all changes and work simultaniously on the same project. the here used Gitlab server is (GWDG): https://gitlab.gwdg.de/r.grossmann/NearThresholdDetection/
+Git helps us to keep track of all changes and work simultaniously on the same project. the here used Gitlab server is (GWDG): https://gitlab.gwdg.de/r.grossmann/SomatosensoryLaminarModel.git
 For initially using Git, follow this recipe in the terminal:
 ```bash
-cd /data/p_02989/shared_workspace/ # enter the project directory
+cd /data/p_02989/Modelling/ # enter the project directory
 ```
 
-Before you start, make sure you access to gitlab.gwdg.de to this repository: https://gitlab.gwdg.de/r.grossmann/NearThresholdDetection/
+Before you start, make sure you access to gitlab.gwdg.de to this repository: https://gitlab.gwdg.de/r.grossmann/SomatosensoryLaminarModel.git
 (An ssh key should be stored in gitLab, otherwise gitlab may ask for passwords whenever so the repository can be cloned. A detailed description can be found here: [Use SSH keys to communicate with GitLab](https://docs.gitlab.com/ee/user/ssh.html "Use SSH keys to communicate with GitLab"))
 
 In a first step, you clone the entire repository into an empty directory to establish your own working directory.
 ```bash
 echo $USER               # checks content of variable USER, this should be username in the institute, eg grossmannr, heurkens, etc 
 #export USER=yourname    #  run this to set variable USER if its not your common username
-git clone git@gitlab.gwdg.de:r.grossmann/NearThresholdDetection.git ${USER}_wd   # copying the info from the server into your own working directory
+git clone git@gitlab.gwdg.de:r.grossmann/SomatosensoryLaminarModel.git ${USER}_wd   # copying the info from the server into your own working directory
 ```
 This working directory now contains the information of the git server. The current version of the unpacked files is the so-called HEAD of the default branch. Within your working directory, you find subdir .git - please do not delete it, as git needs it for administrative purposes. please work within your own local branch und merge the changes you like to suggest later with the branch main or master. The name of the branch is arbitrary. We suggest to use your username from the institute:
 ```bash
@@ -21,24 +21,13 @@ cd ${USER}_wd
 git branch ${USER}_wd        # introduce a new local branch
 git checkout ${USER}_wd      # switch into this branch
 ```
-### last steps 
-Last but not least you have to personalize a file so that it works for you. Either open a filebrowser or a terminal and go to /data/p_02989/shared_workspace/$USER_wd/bat (insert your Username as $USER) and open the file start.sh.
+
+### Get to your working environment
 
 ```bash
-cd /data/p_02989/shared_workspace/$USER_wd/bat
-gedit start.sh
-```
-
-Now go to line 23 (check the #-comments) and change $USER to your individual Username. This guarantees, that the starting-process works every time. Make sure you save those changes and close the file!
-
-### Create your working environment
-
-```bash
-cd /data/p_02989/shared_workspace/
-${USER}_wd/bat/start.sh results_${USER}   # activates the working environment
+cd /data/p_02989/Modelling/
 cd ${USER}_wd                             # enters the working directory
 ```
-If you get an Error like "permission denied", change in the properties of the 'start.sh' file the permission to run as a program.
 
 ## Useful codes regarding Gitlab
 If you create new files, you need to stage them:
