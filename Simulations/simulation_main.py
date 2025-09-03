@@ -72,29 +72,96 @@ def plot_minmax(rates, coupling_strengths_Es):
     plt.legend()
     plt.show()
 
-def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot):
+def plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot, area='all'):
+    steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
+    
+    # Area 3b
+    fig, axes = plt.subplots(4, 1, figsize=(14, 10), sharex=True, sharey=True)
+    for i, ax in enumerate(axes.flatten()):
+        ax.plot(steps, all_potentials[i,:,:].T)
+    plt.show()
+
+    # Area A1
+    fig, axes = plt.subplots(4, 4, figsize=(14, 10), sharex=True, sharey=True)
+    for i, ax in enumerate(axes.flatten()):
+        ax.plot(steps, all_potentials[i+4,:,:].T)
+    plt.show()
+
+    # Area S2 & Thal
+    fig, axes = plt.subplots(4, 4, figsize=(14, 10), sharex=True, sharey=True)
+    for i, ax in enumerate(axes.flatten()):
+        if i==15:
+            break
+        ax.plot(steps, all_potentials[i+17,:,:].T)
+    plt.show()
+
+
+
+def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot, area='all'):
 
     print(potentials.shape)
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
+
+    if area=='all':
+
+        # Layout: 4 rows (max 4 layers), 3 columns (3 areas)
+        fig, axes = plt.subplots(4, 3, figsize=(14, 10), sharex=True, sharey=False)
+        axes = np.array(axes)
+
+        # --- Column 1: Area 3b + Thalamus stacked ---
+        axes[0, 0].plot(potentials[:4].T)
+        axes[0, 0].legend(['E', 'PV', 'SOM', 'VIP'])
+        axes[0, 0].set_title("Area 3b")
+
+        axes[1, 0].plot(potentials[30:].T)
+        axes[1, 0].set_title("Thalamus")
+
+        # Hide extra rows in col 1 (since only 2 plots)
+        for r in range(2, 4):
+            axes[r, 0].axis("off")
+
+        # --- Column 2: Area 1 layers ---
+        area_1_layers = [[4,5,6,7],[8,9,10],[11,12,13],[14,15,16]]
+        pop_names = ['E', 'PV', 'SOM', 'VIP']
+        for i, layer_idx in enumerate(area_1_layers):
+            axes[i, 1].plot(potentials[layer_idx].T)
+            axes[i, 1].set_title(f"Area 1 - Layer {i+1}")
+            if len(layer_idx)==4:
+                axes[i, 1].legend([f'E {np.round(potentials[layer_idx[0], -1], 3)}', f'PV {np.round(potentials[layer_idx[1], -1], 3)}', f'SOM {np.round(potentials[layer_idx[2], -1], 3)}', f'VIP {np.round(potentials[layer_idx[3], -1], 3)}'], loc='upper right')
+            else:
+                axes[i, 1].legend([f'E {np.round(potentials[layer_idx[0], -1], 3)}', f'PV {np.round(potentials[layer_idx[1], -1], 3)}', f'SOM {np.round(potentials[layer_idx[2], -1], 3)}'], loc='upper right')
+
+
+        # --- Column 3: Area S2 layers ---
+        area_s2_layers = [[17,18,19,20],[21,22,23],[24,25,26],[27,28,29]]
+        for i, layer_idx in enumerate(area_s2_layers):
+            axes[i, 2].plot(potentials[layer_idx].T)
+            axes[i, 2].set_title(f"Area S2 - Layer {i+1}")
+
+        plt.tight_layout()
+        plt.show()
+            
+
+    elif area=='A1':
+
+        # plot results for the S1 column 
+        figS1, axs = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
+    
+        # Plot settings for all subplots
+        axs_flat = axs.flatten()
+
+        # Layer 2/3
+        axs_flat[0].plot(steps[start_plot:], potentials[:4].T[start_plot:])
+        axs_flat[0].set_title('L2/3')
+        # Layer 4
+        axs_flat[1].plot(steps[start_plot:], potentials[4:4+3].T[start_plot:])
+        axs_flat[1].set_title('L4')
+        # Layer 5
+        axs_flat[2].plot(steps[start_plot:], potentials[4+3:4+6].T[start_plot:])
+        # Layer 6
+        axs_flat[3].plot(steps[start_plot:], potentials[4+6:4+9].T[start_plot:])
         
-    # plot results for the S1 column 
-    figS1, axs = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
-   
-    # Plot settings for all subplots
-    axs_flat = axs.flatten()
-    
-    # Layer 2/3
-    axs_flat[0].plot(steps[start_plot:], potentials[:4].T[start_plot:])
-    axs_flat[0].set_title('L2/3')
-    # Layer 4
-    axs_flat[1].plot(steps[start_plot:], potentials[4:4+3].T[start_plot:])
-    axs_flat[1].set_title('L4')
-    # Layer 5
-    axs_flat[2].plot(steps[start_plot:], potentials[4+3:4+6].T[start_plot:])
-    # Layer 6
-    axs_flat[3].plot(steps[start_plot:], potentials[4+6:4+9].T[start_plot:])
-    
-    axs_flat[0].legend(['E', 'PV', 'SST', 'VIP'])
+        axs_flat[0].legend(['E', 'PV', 'SST', 'VIP'])
 
     plt.show()
 
@@ -211,6 +278,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
 
     # only safe every second datapoint
     resolution_tstep = 0.01
+    print('tstep resolution' ,resolution_tstep)
     rates_downsampled = rates[:, ::int(1000*resolution_tstep)] 
     rates_df = pd.DataFrame(rates_downsampled.T)
     rates_df.to_hdf(os.path.join(filedir, filename_rates), index=False, key='data', mode='w')
@@ -255,7 +323,7 @@ def main():
     balance_EI = [0.5]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
     g_thal = 0
     bEI_thal = 0.5
-    step_size = 0.001
+    step_size = 1e-4
     cortex_type = 'somato'
     filedir = '/data/p_02989/Modelling/output/'
 
@@ -356,18 +424,23 @@ def main():
                 if plot:
                     all_rates = np.array(all_rates)
                     all_potentials = np.squeeze(np.array(all_potentials))
+                    print('potential shapes', all_potentials.shape)
+                    print('potential A3b E to A1:', all_potentials[0,:,1000])
+                    print('potential A3b PV to A1:', all_potentials[1,:,1000])
+                    print('potential A3b SOM to A1:', all_potentials[2,:,1000])
                     if len(coupling_strengths) == 1:
                         # when to start plotting (in ms)
                         start_plot = 0
                         # plot only one coupling strength value with time on the x-axis
-                        #plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot)
+                        plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot)
                         
                         # plot the potentials (this only works for a single simulation)
                         print(potential.shape)
                         potential_sum = np.sum(potential, axis=1)
-                        resolution_tstep = 0.01
+                        resolution_tstep = 1e-2
                         potential_sum_downsampled = potential_sum[:, ::int(1000*resolution_tstep)]
                         plot_potentials(potential_sum, Iext, Ib, step_size, simulation_time, start_plot)
+                        plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot)
 
                     else: 
                         # used to plot with coupling strength on the x-axis and max/min rate on the y
