@@ -1,7 +1,7 @@
 # %%
 # 
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/""") 
+os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from parameters import Parameter
 import numpy as np
 import matplotlib.pyplot as plt
