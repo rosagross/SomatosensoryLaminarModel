@@ -30,6 +30,7 @@ class Parameter():
         # the last two values are used for the external input and background input
         # with nPopTotal = 28 the shape of tau should be (28, 32) 
         
+        # order: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 
         tauA3b = np.tile(np.array([6,3,20,15])*1e-3, (nPopTotal,1)) # sec
         tauS1 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20])*1e-3, (nPopTotal,1)) # sec
         tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3])*1e-3, (nPopTotal,1)) # sec
@@ -320,7 +321,7 @@ class Parameter():
 
         # .. and also for the background input (all cells receive input except the thalamus)
         Wb = np.zeros((W_from_thal.shape[1],1))
-        Wb[:-2] = 1
+        Wb[:-2] = 0
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])
@@ -368,6 +369,8 @@ class Parameter():
             W[:4,:] = 0 # cut out Area3b
             W[:,:4] = 0 # cut out Area3b
             W[4+13:,4+13:] = 0 
+            W[-2:,-4:] = 0 # cut out Thalamus
+            W[:,-4:] = 0 # cut out input from Thalamus
         elif area=='ThalA1S2':
             W[:4,:] = 0 # cut out Area3b
             W[:,:4] = 0 # cut out Area3b
