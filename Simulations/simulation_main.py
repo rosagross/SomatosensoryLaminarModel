@@ -99,7 +99,6 @@ def plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, st
 
 def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot, area='all'):
 
-    print(potentials.shape)
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
 
     if area=='all':
@@ -127,9 +126,9 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
             axes[i, 1].plot(potentials[layer_idx].T)
             axes[i, 1].set_title(f"Area 1 - Layer {i+1}")
             if len(layer_idx)==4:
-                axes[i, 1].legend([f'E {np.round(potentials[layer_idx[0], -1], 3)}', f'PV {np.round(potentials[layer_idx[1], -1], 3)}', f'SOM {np.round(potentials[layer_idx[2], -1], 3)}', f'VIP {np.round(potentials[layer_idx[3], -1], 3)}'], loc='upper right')
+                axes[i, 1].legend([f'E {np.round(potentials[layer_idx[0], -1], 6)}', f'PV {np.round(potentials[layer_idx[1], -1], 6)}', f'SOM {np.round(potentials[layer_idx[2], -1], 6)}', f'VIP {np.round(potentials[layer_idx[3], -1], 6)}'], loc='upper right')
             else:
-                axes[i, 1].legend([f'E {np.round(potentials[layer_idx[0], -1], 3)}', f'PV {np.round(potentials[layer_idx[1], -1], 3)}', f'SOM {np.round(potentials[layer_idx[2], -1], 3)}'], loc='upper right')
+                axes[i, 1].legend([f'E {np.round(potentials[layer_idx[0], -1], 6)}', f'PV {np.round(potentials[layer_idx[1], -1], 6)}', f'SOM {np.round(potentials[layer_idx[2], -1], 6)}'], loc='upper right')
 
 
         # --- Column 3: Area S2 layers ---
@@ -195,13 +194,26 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     figS1, axs = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
    
     # Plot settings for all subplots
-    for i, ax in enumerate(axs.flatten(), start=1):
-        if i == 4:
-            ax.plot(steps[start_plot:], rates[0, 12].T[start_plot:], linewidth=1)
-        else:
-            ax.plot(steps[start_plot:], rates[0, ((i-1)*4)+3:i*4+3].T[start_plot:], linewidth=1)
-        ax.grid(True)
-        ax.set_ylabel('Hz')
+    # E
+    axs[0][0].plot(steps[start_plot:], rates[0, 0+4].T[start_plot:], linewidth=1)
+    axs[0][0].plot(steps[start_plot:], rates[0, 4+4].T[start_plot:], linewidth=1)
+    axs[0][0].plot(steps[start_plot:], rates[0, 7+4].T[start_plot:], linewidth=1)
+    axs[0][0].plot(steps[start_plot:], rates[0, 10+4].T[start_plot:], linewidth=1)
+    
+    # PV
+    axs[0][1].plot(steps[start_plot:], rates[0, 1+4].T[start_plot:], linewidth=1)
+    axs[0][1].plot(steps[start_plot:], rates[0, 5+4].T[start_plot:], linewidth=1)
+    axs[0][1].plot(steps[start_plot:], rates[0, 8+4].T[start_plot:], linewidth=1)
+    axs[0][1].plot(steps[start_plot:], rates[0, 11+4].T[start_plot:], linewidth=1)
+
+    # SST
+    axs[1][0].plot(steps[start_plot:], rates[0, 2+4].T[start_plot:], linewidth=1)
+    axs[1][0].plot(steps[start_plot:], rates[0, 6+4].T[start_plot:], linewidth=1)
+    axs[1][0].plot(steps[start_plot:], rates[0, 9+4].T[start_plot:], linewidth=1)
+    axs[1][0].plot(steps[start_plot:], rates[0, 12+4].T[start_plot:], linewidth=1)
+
+    # VIP
+    axs[1][1].plot(steps[start_plot:], rates[0, 12+4].T[start_plot:], linewidth=1)
     
     axs[0][1].legend(['L2/3', 'L4', 'L5', 'L6'])
 
@@ -225,7 +237,7 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
         if i == 4:
             ax.plot(steps[start_plot:], rates[0, 25].T[start_plot:], linewidth=1)
         else:
-            ax.plot(steps[start_plot:], rates[0, (i-1)*4+16:i*4+16].T[start_plot:], linewidth=1)
+            ax.plot(steps[start_plot:], rates[0, (i-1)*4+17:i*4+17].T[start_plot:], linewidth=1)
         ax.grid(True)
         ax.set_ylabel('Hz')
     
@@ -323,7 +335,7 @@ def main():
     balance_EI = [0.5]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
     g_thal = 0
     bEI_thal = 0.5
-    step_size = 1e-4
+    step_size = 1e-3
     cortex_type = 'somato'
     filedir = '/data/p_02989/Modelling/output/'
 
@@ -331,9 +343,9 @@ def main():
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
     simulation_dur = 1 
-    input_durations = [0]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [0] #[0, 50, 300, 500] #np.arange(0, 500, 100)
-    backgrndI_strengths = [0] #[0, 5, 10, 15, 20]
+    input_durations = [0.5]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = [5] #[0, 50, 300, 500] #np.arange(0, 500, 100)
+    backgrndI_strengths = [5] #[0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
@@ -392,7 +404,7 @@ def main():
                         # 8. default: all
 
 
-                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time, area='A1')
+                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time, area='ThalA1')
                         if save_params:
                             # safe connectivty parameter in yaml file 
                             model.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, coupling_thalE, coupling_thalI, thal_connect)
@@ -424,10 +436,6 @@ def main():
                 if plot:
                     all_rates = np.array(all_rates)
                     all_potentials = np.squeeze(np.array(all_potentials))
-                    print('potential shapes', all_potentials.shape)
-                    print('potential A3b E to A1:', all_potentials[0,:,1000])
-                    print('potential A3b PV to A1:', all_potentials[1,:,1000])
-                    print('potential A3b SOM to A1:', all_potentials[2,:,1000])
                     if len(coupling_strengths) == 1:
                         # when to start plotting (in ms)
                         start_plot = 0
@@ -435,7 +443,6 @@ def main():
                         plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot)
                         
                         # plot the potentials (this only works for a single simulation)
-                        print(potential.shape)
                         potential_sum = np.sum(potential, axis=1)
                         resolution_tstep = 1e-2
                         potential_sum_downsampled = potential_sum[:, ::int(1000*resolution_tstep)]
@@ -449,7 +456,53 @@ def main():
     print('Mean Simulation duration: ', np.mean(all_durations))
     print('Mean Saving duration: ', np.mean(all_durations_saving))
 
+    return potential, rate
 if __name__ == '__main__':
-   main()
+   potential, rate = main()
 
+# %%
+# compute the rate from the potential
+potentialA1 = potential[4:4+13]
+n_cells = potentialA1.shape[0]
+n_timepoints = potentialA1.shape[2]
+m_out_all = np.zeros((n_timepoints, n_cells))  # NumPy array, not list!
+
+# %% 
+
+import parameters
+par = parameters.Parameter()
+
+# get the parameter
+sigm = par.get_sigmoid()
+sigmA1 = sigm[4:4+13]
+
+# %%
+# loop over the potentials
+
+for t in range(n_timepoints):
+    for i, target_pop in enumerate(potentialA1):
+
+        #print(target_pop.shape)
+        m_out_all[t, i] = sigmA1[i][2] / (1 + np.exp(sigmA1[i][0]*(sigmA1[i][1] - np.sum(target_pop[:, t]))))  
+
+cells = ['E1', 'PV1', 'SST1', 'VIP', 'E2', 'PV2', 'SST2', 'E3', 'PV3', 'SST3', 'E4', 'PV4', 'SST4']
+rates_df = pd.DataFrame(m_out_all, columns=cells)
+
+# %%
+# plot rates
+layers = [rates_df.columns[[0,4,7,10]],   # first 4 
+          rates_df.columns[[1,5,8,11]],  # next 4
+          rates_df.columns[[2,6,9,12]], # next 4
+          rates_df.columns[[3]]]  # in case of extras (not needed here)
+
+fig, axes = plt.subplots(2, 2, figsize=(14, 10))  # 2x2 grid
+axes = axes.flatten()
+
+for ax, cols in zip(axes, layers):
+    rates_df[cols].plot(ax=ax)
+    ax.set_title(", ".join(cols))  # show which cols are in this subplot
+    ax.legend(loc="best")
+
+plt.tight_layout()
+plt.show() 
 # %%

@@ -55,14 +55,17 @@ class JR_Model():
         # Weight matrix [to x from]
         W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, area=self.area) 
 
+        last_step = self.steps[-1] 
+
         for timestep, time in enumerate(self.steps):
             
             # Update RATE (calculated from the current potential)
             # technically this could also go to the end of the for-loop but we need a rate value calculated from the initial potential value
             for i in range(self.nPop):
-                # the incoming potential has to be defined in mV because of how the sigmoid parameter are defined (also in mV!)
-                self.rate_current[i] = self.sigm[i][2] / (1 + np.exp(self.sigm[i][0]*(self.sigm[i][1] - np.sum(self.v_current[i,:])*1e3)))  
 
+                # the incoming potential has to be defined in mV because of how the sigmoid parameter are defined (also in mV!)
+                self.rate_current[i] = self.sigm[i][2] / (1 + np.exp(self.sigm[i][0]*(self.sigm[i][1] - np.sum(self.v_current[i,:]))))  
+                
             # Save the new values
             self.rate[:, timestep] = self.rate_current 
             self.potential[:, :, timestep] = self.v_current
@@ -92,7 +95,8 @@ class JR_Model():
                 u_dot = (self.H[i,-2]/self.tau[i,-2]) * (W[i, -2] * self.Ib[i, timestep]) - 2 * self.u_t[i, -2]/self.tau[i,-2] - self.potential[i, -2, timestep]/(self.tau[i,-2]**2)
                 self.u_t[i, -2] = self.u_t[i,-2] + u_dot * self.step_size
         
-        
+        print('finished loop...')
+
         return self.rate, self.potential
     
 
