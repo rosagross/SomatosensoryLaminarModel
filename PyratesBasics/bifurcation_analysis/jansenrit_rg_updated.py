@@ -1,12 +1,72 @@
-"""Bifurcation analysis of the original Jansen-Rit Model (.yaml pre-implemented in Pyrates)"""
+"""
+Bifurcation analysis of the Jansen-Rit Model
+============================================
+
+Jansen-Rit model, a neural mass model of the dynamic interactions between 3 populations:
+
+    - pyramidal cells (PCs)
+    - excitatory interneurons (EINs)
+    - inhibitory interneurons (IINs)
+
+Originally, the model has been developed to describe the waxing-and-waning of EEG activity in the alpha frequency range
+(8-12 Hz) in the visual cortex [1]_. In the past years, however, it has been used as a generic model to describe the
+macroscopic electrophysiological activity within a cortical column [2]_. Membrane potential deflections that are caused
+at the somata of a neural population by synaptic input are modeled by a convolution of the input with an alpha
+kernel. This choice has been shown to reflect the dynamic process of polarization propagation from the synapse via the
+dendritic tree to the soma [3]_. The convolution operation can be expressed via a second-order differential equation:
+
+.. math::
+        \\dot V &= I, \n
+        \\dot I &= \\frac{H}{\\tau} m_{in} - \\frac{2 I}{\\tau} - \\frac{V}{\\tau^2},
+
+where :math:`V` represents the average post-synaptic potential and :math:`H` and :math:`\\tau` are the efficacy and
+the timescale of the synapse, respectively. As a second operator, the translation of the average membrane potential
+deflection at the soma to the average firing of the population is given by a sigmoidal function:
+
+.. math::
+        m_{out} = S(V) = \\frac{m_{max}}{1 + e^{(r (V_{thr} - V))}}.
+
+In this equation, :math:`m_{out}` and :math:`V` represent the average firing rate and membrane potential, respectively,
+while :math:`m_{max}`, :math:`r` and :math:`V_{thr}` are constants defining the maximum firing rate, firing threshold
+variance and average firing threshold within the modeled population, respectively.
+
+By using the linearity of the convolution operation, the dynamic interactions between PCs, EINs and IINs can be
+expressed via 6 coupled ordinary differential equations that are composed of the two operators defined above:
+
+.. math::
+
+        \\dot V_{pce} &= I_{pce}, \n
+        \\dot I_{pce} &= \\frac{H_e}{\\tau_e} c_4 S(c_3 V_{in}) - \\frac{2 I_{pce}}{\\tau_e} - \\frac{V_{pce}}{\\tau_e^2}, \n
+        \\dot V_{pci} &= I_{pci}, \n
+        \\dot I_{pci} &= \\frac{H_i}{\\tau_i} c_2 S(c_1 V_{in}) - \\frac{2 I_{pci}}{\\tau_i} - \\frac{V_{pci}}{\\tau_i^2}, \n
+        \\dot V_{in} &= I_{in}, \n
+        \\dot I_{in} &= \\frac{H_e}{\\tau_e} S(V_{pce} - V_{pci}) - \\frac{2 I_{in}}{\\tau_e} - \\frac{V_{in}}{\\tau_e^2},
+
+where :math:`V_{pce}`, :math:`V_{pci}`, :math:`V_{in}` are used to represent the average membrane potential deflection
+caused by the excitatory synapses at the PC population, the inhibitory synapses at the PC population, and the excitatory
+synapses at both interneuron populations, respectively.
+
+Below, we will reproduce the 1D bifurcation diagram for this model that is depicted in Fig.2 of [2]_.
+
+**References**
+
+.. [1] B.H. Jansen & V.G. Rit (1995) *Electroencephalogram and visual evoked potential generation in a mathematical
+       model of coupled cortical columns.* Biological Cybernetics, 73(4): 357-366.
+
+.. [2] A. Spiegler, S.J. Kiebel, F.M. Atay, T.R. Knösche (2010) *Bifurcation analysis of neural mass models: Impact of
+       extrinsic inputs and dendritic time constants.* NeuroImage, 52(3): 1041-1058,
+       https://doi.org/10.1016/j.neuroimage.2009.12.081.
+
+.. [3] P.A. Robinson, C.J. Rennie, J.J. Wright (1997) *Propagation and stability of waves of electrical activity in the
+       cerebral cortex.* Physical Review E, 56(826), https://doi.org/10.1103/PhysRevE.56.826.
+"""
+
 
 # %% Libraries import:
 from pycobi import ODESystem
 import numpy as np
 import matplotlib.pyplot as plt
 from pyrates.frontend import CircuitTemplate
-import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/bifurcation_analysis/""")
 
 # %% Initialize the Jansen-Rit model in PyRates:
 jrc = CircuitTemplate.from_yaml("model_templates.neural_mass_models.jansenrit.JRC")
@@ -21,7 +81,7 @@ jrc.update_var(node_vars={'pc/rpo_i/v': -2.195986e-02})
 jrc.update_var(node_vars={'iin/rpo_e/v': 4.405607e-03 })
 
 # %% PyCobi model definition:
-jrc_auto = ODESystem.from_template(jrc, auto_dir = "/data/u_mecozzi_software/miniforge3/envs/pyrates_project/auto-07p", init_cont=False)
+jrc_auto = ODESystem.from_template(jrc, auto_dir="~/PycharmProjects/auto-07p", init_cont=False)
 
 # %% Time continuation in PyCobi:
 #   - `DS` defines the initial step-size of the time continuation (in ms)
@@ -79,9 +139,9 @@ u_sols, u_cont = jrc_auto.run(
     ITNW=40, 
     NWTN=12, 
     JAC=0, 
-    EPSL=1e-07, # recommended in the auto docs
-    EPSU=1e-07, # recommended in the auto docs
-    EPSS=1e-05, # recommended in the auto docs (approx.100/1000 times EPSL,EPSU)
+    EPSL=1e-07, 
+    EPSU=1e-07, 
+    EPSS=1e-05, # approx.100/1000 times EPSL,EPSU
     DS=1e-03, # initial continuation step size (0.5)
     DSMIN=1e-8, # minimum allowed step size
     DSMAX=0.5, # maximum allowed step size (4)
@@ -93,7 +153,7 @@ u_sols, u_cont = jrc_auto.run(
 )
 jrc_auto.plot_continuation('pc/rpo_e_in/u', 'pc/rpo_e_in/v', cont='u')
 plt.show()
-# %% Plotting the variable y with the PyCobi function
+# %% Plotting the variable y (PC membrane potential) with the PyCobi function
 
 y1 = u_sols["pc/rpo_e_in/v"]
 y2 = u_sols["pc/rpo_i/v"]
@@ -111,13 +171,16 @@ u_sols["y0"] = y0 # adding the y0 as a variable in the dataframe with the contin
 jrc_auto.plot_continuation('pc/rpo_e_in/u', 'y0', cont='u',ax=ax)
 plt.show()
 
-# %% Continuation of the limit cycles
+# %%
+# From the 1D continuation in 'u', we see that the steady-state solution undergoes 3 Hopf bifurcations and 2 Fold
+# bifurcations as we decreased the input parameter 'u' from 'u=400'. Below, we switch onto the limit cycle branches
+# emerging from each Hopf bifurcation and continue the limit cycles in 'u':
 limit_cycles_sols = {}
 limit_cycles_conts = {}
 for i in range(1,4):
     limit_cycles_sols[f'u_lc{i}_sols'],limit_cycles_conts[f'u_lc{i}_conts'] = jrc_auto.run(origin=u_cont, starting_point=f'HB{i}', name=f'u_lc{i}', IPS=2, ISP=2, ISW=-1, STOP=['BP2'])
 
-# %% Plotting of the limit cycle continuations
+# %% Now, we plot the full 1D bifurcation diagram, including the limit cycle continuations:
 fig, ax = plt.subplots()
 jrc_auto.plot_continuation('pc/rpo_e_in/u', 'pc/rpo_e_in/v', cont='u', ax=ax)
 for i in range(1,4):
@@ -174,6 +237,9 @@ for i in range(1,4):
 plt.show()
 
 # %%
+# We find the same bistable oscillatory regime that is depicted in Fig.2 of [2]_, where a large-amplitude limit
+# cycle co-exists with a small-amplitude limit cycle.
+#
 # This concludes our use example. As a final step, we clear all the temporary files we created and make sure all
 # working directory changes that have happened in the background during file creation and parameter continuation are
 # undone. This can be done via a single call:

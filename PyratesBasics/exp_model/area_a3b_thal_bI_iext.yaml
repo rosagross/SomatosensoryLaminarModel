@@ -1,0 +1,400 @@
+PRO_E3b:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_out: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+RPO_E3b:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV3b:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST3b:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_VIP3b:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.015
+    H: 1.0
+RPO_thalE:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_thalI:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+E3b:
+  base: NodeTemplate
+  operators:
+  - PRO_E3b
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV3b:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_out: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+PV3b:
+  base: NodeTemplate
+  operators:
+  - PRO_PV3b
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST3b:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_out: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+SST3b:
+  base: NodeTemplate
+  operators:
+  - PRO_SST3b
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_thalE
+  - RPO_thalI
+PRO_VIP3b:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_out: output
+    v: input
+    v_bIn: input
+    r: 0.0704119
+    V_thr: 37.86409387
+    m_max: 38.52689646
+VIP3b:
+  base: NodeTemplate
+  operators:
+  - PRO_VIP3b
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_thalE
+  - RPO_thalI
+PRO_thalE:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.1
+    V_thr: 40.0
+    m_max: 30.0
+RPO_Iext:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (Iext) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    Iext: input
+    tau: 0.003
+    H: 1.0
+InputOp:
+  base: OperatorTemplate
+  equations:
+  - Iext = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))
+  variables:
+    Iext: output
+    t: variable
+    A: 0.0
+    onset: 1.0
+    dur: 1.0
+thalE:
+  base: NodeTemplate
+  operators:
+  - PRO_thalE
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_thalE
+  - RPO_thalI
+  - RPO_Iext
+  - InputOp
+PRO_thalI:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.1
+    V_thr: 40.0
+    m_max: 30.0
+thalI:
+  base: NodeTemplate
+  operators:
+  - PRO_thalI
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_thalE
+  - RPO_thalI
+RPO_bI:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v_bI = i
+  - d/dt * i = H/tau * (bI) - 2 * i/tau - v_bI/tau^2
+  variables:
+    v_bI: output
+    i: variable
+    bI: input(5)
+    tau: 0.003
+    H: 1.0
+BACKGROUND:
+  base: NodeTemplate
+  operators:
+  - RPO_bI
+area_a3b_thal_bI_iext:
+  base: CircuitTemplate
+  circuits: {}
+  nodes:
+    E3b: E3b
+    PV3b: PV3b
+    SST3b: SST3b
+    VIP3b: VIP3b
+    thalE: thalE
+    thalI: thalI
+    BACKGROUND: BACKGROUND
+  edges:
+  - - BACKGROUND/RPO_bI/v_bI
+    - E3b/PRO_E3b/v_bIn
+    - 
+    - weight: 1.0
+  - - E3b/PRO_E3b/m_out
+    - E3b/RPO_E3b/m_in
+    - 
+    - weight: 0.41577648256552063
+  - - PV3b/PRO_PV3b/m_out
+    - E3b/RPO_PV3b/m_in
+    - 
+    - weight: -0.07692825744633401
+  - - SST3b/PRO_SST3b/m_out
+    - E3b/RPO_SST3b/m_in
+    - 
+    - weight: -0.042967423518274296
+  - - VIP3b/PRO_VIP3b/m_out
+    - E3b/RPO_VIP3b/m_in
+    - 
+    - weight: -0.03069297973531845
+  - - thalE/PRO_thalE/m_out
+    - E3b/RPO_thalE/m_in
+    - 
+    - weight: 8.866560638957816
+  - - thalI/PRO_thalI/m_out
+    - E3b/RPO_thalI/m_in
+    - 
+    - weight: -0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV3b/PRO_PV3b/v_bIn
+    - 
+    - weight: 1.0
+  - - E3b/PRO_E3b/m_out
+    - PV3b/RPO_E3b/m_in
+    - 
+    - weight: 0.9836640099177808
+  - - PV3b/PRO_PV3b/m_out
+    - PV3b/RPO_PV3b/m_in
+    - 
+    - weight: -0.057423147221959875
+  - - SST3b/PRO_SST3b/m_out
+    - PV3b/RPO_SST3b/m_in
+    - 
+    - weight: -0.04581682533827054
+  - - VIP3b/PRO_VIP3b/m_out
+    - PV3b/RPO_VIP3b/m_in
+    - 
+    - weight: -0.022561259305210916
+  - - thalE/PRO_thalE/m_out
+    - PV3b/RPO_thalE/m_in
+    - 
+    - weight: 0.5536133684863523
+  - - thalI/PRO_thalI/m_out
+    - PV3b/RPO_thalI/m_in
+    - 
+    - weight: -0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST3b/PRO_SST3b/v_bIn
+    - 
+    - weight: 1.0
+  - - E3b/PRO_E3b/m_out
+    - SST3b/RPO_E3b/m_in
+    - 
+    - weight: 0.2693726184907254
+  - - PV3b/PRO_PV3b/m_out
+    - SST3b/RPO_PV3b/m_in
+    - 
+    - weight: -0.06755514651394905
+  - - SST3b/PRO_SST3b/m_out
+    - SST3b/RPO_SST3b/m_in
+    - 
+    - weight: -0.008813018469413101
+  - - VIP3b/PRO_VIP3b/m_out
+    - SST3b/RPO_VIP3b/m_in
+    - 
+    - weight: -0.05503981973932707
+  - - thalE/PRO_thalE/m_out
+    - SST3b/RPO_thalE/m_in
+    - 
+    - weight: 0.03647642679900745
+  - - thalI/PRO_thalI/m_out
+    - SST3b/RPO_thalI/m_in
+    - 
+    - weight: -0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - VIP3b/PRO_VIP3b/v_bIn
+    - 
+    - weight: 1.0
+  - - E3b/PRO_E3b/m_out
+    - VIP3b/RPO_E3b/m_in
+    - 
+    - weight: 0.15709593089189283
+  - - PV3b/PRO_PV3b/m_out
+    - VIP3b/RPO_PV3b/m_in
+    - 
+    - weight: -0.03998864673040432
+  - - SST3b/PRO_SST3b/m_out
+    - VIP3b/RPO_SST3b/m_in
+    - 
+    - weight: -0.07046357735075671
+  - - VIP3b/PRO_VIP3b/m_out
+    - VIP3b/RPO_VIP3b/m_in
+    - 
+    - weight: -0.04152450372208437
+  - - thalE/PRO_thalE/m_out
+    - VIP3b/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/PRO_thalI/m_out
+    - VIP3b/RPO_thalI/m_in
+    - 
+    - weight: -0.0
+  - - E3b/PRO_E3b/m_out
+    - thalE/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/PRO_PV3b/m_out
+    - thalE/RPO_PV3b/m_in
+    - 
+    - weight: -0.0
+  - - SST3b/PRO_SST3b/m_out
+    - thalE/RPO_SST3b/m_in
+    - 
+    - weight: -0.0
+  - - VIP3b/PRO_VIP3b/m_out
+    - thalE/RPO_VIP3b/m_in
+    - 
+    - weight: -0.0
+  - - thalE/PRO_thalE/m_out
+    - thalE/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/PRO_thalI/m_out
+    - thalE/RPO_thalI/m_in
+    - 
+    - weight: -0.0
+  - - E3b/PRO_E3b/m_out
+    - thalI/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/PRO_PV3b/m_out
+    - thalI/RPO_PV3b/m_in
+    - 
+    - weight: -0.0
+  - - SST3b/PRO_SST3b/m_out
+    - thalI/RPO_SST3b/m_in
+    - 
+    - weight: -0.0
+  - - VIP3b/PRO_VIP3b/m_out
+    - thalI/RPO_VIP3b/m_in
+    - 
+    - weight: -0.0
+  - - thalE/PRO_thalE/m_out
+    - thalI/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/PRO_thalI/m_out
+    - thalI/RPO_thalI/m_in
+    - 
+    - weight: -0.0
