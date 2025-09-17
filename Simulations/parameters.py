@@ -8,7 +8,6 @@ class Parameter():
     
     def __init__(self):
         self.tau, self.nPop = self.get_params()
-        print('shape of tau', self.tau.shape)
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
         self.C = self.get_cellcounts()
@@ -172,7 +171,7 @@ class Parameter():
 
         return C 
 
-    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, area='all'):
+    def get_raw_connectivity(self, thal_connect):
         # g is a scaling factor scaling the general coupling strength
 
         S = self.get_connectStrength()
@@ -321,7 +320,14 @@ class Parameter():
 
         # .. and also for the background input (all cells receive input except the thalamus)
         Wb = np.zeros((W_from_thal.shape[1],1))
-        Wb[:-2] = 0
+        Wb[:-2] = 1
+
+        return W0, W_to_thal, W_from_thal, Wb, Wext
+
+
+    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, area='all'):
+
+        W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(thal_connect)
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])
@@ -345,42 +351,53 @@ class Parameter():
         W_from_thal[1,:] = W_from_thal[1,:] * -gIthal
         
         # include the external input to the matrix 
-        #print('append input connectivity')
         # append the thalamus population(s) values to the matrix
         W0 = np.append(W0, W_to_thal, axis=0)
-        #print('W from thalamus 2\n', W_from_thal.shape)
-        #print(W_from_thal)
-
         W0 = np.append(W0, W_from_thal.T, axis=1)
-
         W = np.concatenate((W0, Wb, Wext), axis=1)
         #print('\nW matrix shape', W.shape) 
         #print('W matrix\n', W[:,-4:]) 
 
         # based on what area was chosen, set the respective connectivity values to 0 
         if area=='ThalA3b':
-            W[4:-2] = 0 # the last two are thalE and thalI 
-            W[:,4:-4] = 0
+            W[4:-2,:] = 0 # to A1, S2 from everywhere
+            W[:,4:-4] = 0 # to everywhere from A1, S2
+        elif area=='A3b':
+            W[4:] = 0 # to A1, S2, Thal from everywhere
+            W[:,4:-2] = 0 # 
         elif area=='S1':
             W[4+13:,4+13:] = 0
         elif area=='ThalS1':
-            W[4+13:-2,4+13:-4] = 0  
+            # this still includes A3b
+            W[4+13:-2,:] = 0  # cut out S2 
+            W[:,4+13:-4] = 0  # cut out S2 
         elif area=='A1':
             W[:4,:] = 0 # cut out Area3b
             W[:,:4] = 0 # cut out Area3b
-            W[4+13:,4+13:] = 0 
-            W[-2:,-4:] = 0 # cut out Thalamus
-            W[:,-4:] = 0 # cut out input from Thalamus
+            W[4+13:,:] = 0 
+            W[:,4+13:-2] = 0 
+            W[-2:,:] = 0 # cut out Thalamus
+            W[:,-4:-2] = 0 # cut out input from Thalamus
+        elif area=='ThalA1':
+            W[:4,:] = 0 # cut out Area3b
+            W[:,:4] = 0 # cut out Area3b
+            W[4+13:-2,:] = 0  # cut out S2 
+            W[:,4+13:-4] = 0  # cut out S2
         elif area=='ThalA1S2':
             W[:4,:] = 0 # cut out Area3b
             W[:,:4] = 0 # cut out Area3b
         elif area=='A1S2':
             W[:4,:] = 0 # cut out Area3b
             W[:,:4] = 0 # cut out Area3b  
-            W[-2:,-4:] = 0 # cut out Thalamus 
+            W[-2:,:] = 0 # cut out Thalamus
+            W[:,-4:-2] = 0 # cut out input from Thalamus
         elif area=='S2':
-            W[:4+13,4+13] = 0 
-            W[-2:,-4:] = 0 # cut out Thalamus 
+            W[:4,:] = 0 # cut out Area3b
+            W[:,:4] = 0 # cut out Area3b 
+            W[4:4+13,:] = 0 
+            W[:,4:4+13] = 0 
+            W[-2:,:] = 0 # cut out Thalamus
+            W[:,-4:-2] = 0 # cut out input from Thalamus
 
         return W
 
