@@ -1,7 +1,7 @@
-# %%
+# %% 
 # 
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/""") 
+os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations""") 
 from parameters import Parameter
 import numpy as np
 import matplotlib.pyplot as plt
@@ -56,7 +56,7 @@ df_C = pd.DataFrame(C, index=population_names[4:])
 gE, gI = [1/6448, 1/6448]
 gEthal, gIthal = [1/6448, 1/6448]
 thal_connect = [0, 0, 0, 0] 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='A1')
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='A3b')
 df_W = pd.DataFrame(W, index=all_pops[:-2], columns=all_pops)
 
 # %% Plot Synaptic strengths

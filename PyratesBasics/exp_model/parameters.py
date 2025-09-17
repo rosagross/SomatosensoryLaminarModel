@@ -8,12 +8,13 @@ class Parameter():
     
     def __init__(self):
         self.tau, self.nPop = self.get_params()
+        print('shape of tau', self.tau.shape)
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
         self.C = self.get_cellcounts()
         self.sigmoid_params = self.get_sigmoid()
 
-    def get_params(self, col=None):
+    def get_params(self):
 
         # nr. of populations
         nPopA3b = 4 # E2, PV2, SOM2 
@@ -29,20 +30,15 @@ class Parameter():
         # the last two values are used for the external input and background input
         # with nPopTotal = 28 the shape of tau should be (28, 32) 
         
+        # order: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 
         tauA3b = np.tile(np.array([6,3,20,15])*1e-3, (nPopTotal,1)) # sec
         tauS1 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20])*1e-3, (nPopTotal,1)) # sec
-        tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3,3,3])*1e-3, (nPopTotal,1)) # sec
+        tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
         # TODO: MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron whereas the synaptic decay depends on the presynapse)
-        if col =="A3b":
-            return tauA3b, nPopA3b
-        elif col =="S1":
-            return tauS1, nPopS1
-        elif col =="S2":
-            return tauS2, nPopS2
-        else:
-            return tau, nPopTotal
+        
+        return tau, nPopTotal
 
     def get_connectProb(self):
 
@@ -176,7 +172,7 @@ class Parameter():
 
         return C 
 
-    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, include_Iext=True):
+    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, area='all'):
         # g is a scaling factor scaling the general coupling strength
 
         S = self.get_connectStrength()
@@ -225,17 +221,17 @@ class Parameter():
         W_A3bA3b_VV = np.dot(WS1_collapse_sources_V[idx_S1_V], C[idx_S1_V])/np.sum(C[idx_S1_V])
 
         # stack them all together to create the A3b to A3b connection matrix
-        #W_A3bA3b = np.hstack((np.vstack((W_A3bA3b_EE, W_A3bA3b_PE, W_A3bA3b_SE, W_A3bA3b_VE)),
-        #                    np.vstack((W_A3bA3b_EP, W_A3bA3b_PP, W_A3bA3b_SP, W_A3bA3b_VP)),
-        #                    np.vstack((W_A3bA3b_ES, W_A3bA3b_PS, W_A3bA3b_SS, W_A3bA3b_VS)),
-        #                    np.vstack((W_A3bA3b_EV, W_A3bA3b_PV, W_A3bA3b_SV, W_A3bA3b_VV))))
+        W_A3bA3b = np.hstack((np.vstack((W_A3bA3b_EE, W_A3bA3b_PE, W_A3bA3b_SE, W_A3bA3b_VE)),
+                            np.vstack((W_A3bA3b_EP, W_A3bA3b_PP, W_A3bA3b_SP, W_A3bA3b_VP)),
+                            np.vstack((W_A3bA3b_ES, W_A3bA3b_PS, W_A3bA3b_SS, W_A3bA3b_VS)),
+                            np.vstack((W_A3bA3b_EV, W_A3bA3b_PV, W_A3bA3b_SV, W_A3bA3b_VV))))
         
-        W_A3bA3b = np.zeros((4, 4))
+        #W_A3bA3b = np.zeros((4, 4))
         
         # ... from  area 3b to S1
         # this means we have to fuse the source populations together
-        #W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
-        W_S1A3b = np.zeros((13, 4))
+        W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
+        #W_S1A3b = np.zeros((13, 4))
  
         # ... from S1 to area 3b
         # we need to compress the target populations 
@@ -243,8 +239,8 @@ class Parameter():
         WS1_collapse_targets_P = np.dot(W0[idx_S1_P,:int(len(W0)/2)].T, C[idx_S1_P])/np.sum(C[idx_S1_P])
         WS1_collapse_targets_S = np.dot(W0[idx_S1_S,:int(len(W0)/2)].T, C[idx_S1_S])/np.sum(C[idx_S1_S])
         WS1_collapse_targets_V = np.dot(W0[idx_S1_V,:int(len(W0)/2)].T, C[idx_S1_V])/np.sum(C[idx_S1_V])
-        #W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
-        W_A3bS1 = np.zeros((4, 13))
+        W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
+        #W_A3bS1 = np.zeros((4, 13))
 
         # connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
@@ -325,7 +321,7 @@ class Parameter():
 
         # .. and also for the background input (all cells receive input except the thalamus)
         Wb = np.zeros((W_from_thal.shape[1],1))
-        Wb[:-2] = 1
+        Wb[:-2] = 0
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])
@@ -349,26 +345,47 @@ class Parameter():
         W_from_thal[1,:] = W_from_thal[1,:] * -gIthal
         
         # include the external input to the matrix 
-        if include_Iext:
-            #print('append input connectivity')
-            # append the thalamus population(s) values to the matrix
-            W0 = np.append(W0, W_to_thal, axis=0)
-            #print('W from thalamus 2\n', W_from_thal.shape)
-            #print(W_from_thal)
+        #print('append input connectivity')
+        # append the thalamus population(s) values to the matrix
+        W0 = np.append(W0, W_to_thal, axis=0)
+        #print('W from thalamus 2\n', W_from_thal.shape)
+        #print(W_from_thal)
 
-            W0 = np.append(W0, W_from_thal.T, axis=1)
+        W0 = np.append(W0, W_from_thal.T, axis=1)
 
-            W = np.concatenate((W0, Wb, Wext), axis=1)
-            #print('\nW matrix shape', W.shape) 
-            #print('W matrix\n', W[:,-4:]) 
+        W = np.concatenate((W0, Wb, Wext), axis=1)
+        #print('\nW matrix shape', W.shape) 
+        #print('W matrix\n', W[:,-4:]) 
+
+        # based on what area was chosen, set the respective connectivity values to 0 
+        if area=='ThalA3b':
+            W[4:-2] = 0 # the last two are thalE and thalI 
+            W[:,4:-4] = 0
+        elif area=='S1':
+            W[4+13:,4+13:] = 0
+        elif area=='ThalS1':
+            W[4+13:-2,4+13:-4] = 0  
+        elif area=='A1':
+            W[:4,:] = 0 # cut out Area3b
+            W[:,:4] = 0 # cut out Area3b
+            W[4+13:,4+13:] = 0 
+            W[-2:,-4:] = 0 # cut out Thalamus
+            W[:,-4:] = 0 # cut out input from Thalamus
+        elif area=='ThalA1S2':
+            W[:4,:] = 0 # cut out Area3b
+            W[:,:4] = 0 # cut out Area3b
+        elif area=='A1S2':
+            W[:4,:] = 0 # cut out Area3b
+            W[:,:4] = 0 # cut out Area3b  
+            W[-2:,-4:] = 0 # cut out Thalamus 
+        elif area=='S2':
+            W[:4+13,4+13] = 0 
+            W[-2:,-4:] = 0 # cut out Thalamus 
 
         return W
 
-    def get_sigmoid(self, col= None):
+    def get_sigmoid(self):
         # sigmoid function (nPop x 3) --> 3 stands for parameters: r(1/mV), v_thr(mV), m_max (1/s)
-
-        # pop: additional string indicating the column 
-        
         sigmoid_params_A3b = [[  0.12782346,  32.10540543,  31.39696397],
                                     [  0.14218422,  40.03107351, 166.82960408],
                                     [  0.07937015,  42.01276379,  56.95305832],
@@ -405,16 +422,10 @@ class Parameter():
                                     [  0.07937015,  42.01276379,  56.95305832],
                                     [  0.1,  40,  30], # Thalamus E
                                     [  0.1,  40,  30]] # Thalamus I
-        sigmoid_params = np.vstack((sigmoid_params_A3b, sigmoid_params_S1, sigmoid_params_S2))
 
-        if col== "A3b":
-            return np.array(sigmoid_params_A3b)
-        elif col=="S1":
-            return np.array(sigmoid_params_S1)
-        elif col=="S2":
-            return np.array(sigmoid_params_S2)
-        else:  
-            return sigmoid_params
+        sigmoid_params = np.vstack((sigmoid_params_A3b, sigmoid_params_S1, sigmoid_params_S2))
+                                       
+        return sigmoid_params
     
     def save_to_yaml(self, filename, gE, gI, gEthal, gIthal, thal_connect):
         

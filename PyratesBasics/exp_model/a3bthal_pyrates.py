@@ -8,19 +8,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from numba import njit
-
+from yaml_saving import circuit_to_yaml
+from pprint import pprint
 #%%
 # Parameters:
-cells = ['E3b','PV3b','SST3b','VIP3b','ThalE','ThalI'] # taken from the weights matrix
+cells = ['E3b','PV3b','SST3b','VIP3b','thalE', 'thalI'] # taken from the weights matrix
 
 N_cells = len(cells)
 params = Parameter()
 
 # %% sigmoid parameters
-sigm_a3b = params.get_sigmoid("A3b") #already in the correct order
-sigm_s2 = params.get_sigmoid("S2") # thalE and thalI are the last two rows of S2
-sigm_s2 = sigm_s2[-2:,:]
-sigm = np.vstack((sigm_a3b, sigm_s2))
+sigmoid_params = params.get_sigmoid()  #already in the correct order
+sigm = np.vstack((sigmoid_params[:4], sigmoid_params[-2:])) # A3b + thalE and thalI are the last two rows of S2
 
 r = []
 v_thr = []
@@ -31,12 +30,8 @@ for row in range(N_cells):
     m_max.append(sigm[row,2]) 
 
 # %% dendritic time constants
-tau,_ = params.get_params("A3b")           
-tau = tau[0] # + QUARTULTIMO E TERZULTIMO DI S2
-tau_s2,_ = params.get_params("S2") 
-tau_s2 = tau_s2[0]
-tau_thal = tau_s2[-4:-2]
-tau_a3b = np.hstack((tau,tau_thal))
+tau,_ = params.get_params()           
+tau_a3b_thal = np.hstack((tau[0, :4], tau[0, -2:]))
 
 # %% weights
 bEI = 0.5
@@ -44,19 +39,21 @@ connect_reverse_factor =  6448
 g = 100.0 # (g)
 gE = g * bEI /connect_reverse_factor
 gI = g * (1 - bEI) /connect_reverse_factor
-gEthal = 1  # NOT 0 BECAUSE IN THAT CASE THERE IS NO COUPLING
-gIthal = 1
+gEthal = 0  
+gIthal = 0
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, include_Iext=True) 
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='all') 
 
 # selecting the region: 
 # in python the results include the start index but excludes the end index
 
-W_A3b = np.block([
-    [W[0:4, 0:4],       W[0:4, -4:-2]],
-    [W[-2:, 0:4],              W[-2:, -4:-2]]
-])
+rows_A3b_thal = np.r_[:4, 30, 31]   
+cols_A3b_thal = np.r_[:4, 30, 31]
+
+W_A3b = W[rows_A3b_thal[:, None], cols_A3b_thal]  # (6×6 submatrix)
+
+
 # %%
 # Operator template for the PRO
 
@@ -66,7 +63,7 @@ rpo_names=["RPO_"+cell for cell in cells]
 
 pro = OperatorTemplate(
     name='PRO', path=None,
-    equations=["m_out = 2.*m_max / (1 + exp(r*(V_thr - (v*1000))))"],
+    equations=["m_out = m_max / (1 + exp(r*(V_thr - v)))"],
     variables={'m_out': 'output',
                'v': 'input',
                'r': 0.1,
@@ -93,7 +90,7 @@ rpo = OperatorTemplate(
     description="excitatory rate-to-potential operator")
 
 
-rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau_a3b[i]}) for i in range(N_cells)]
+rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau_a3b_thal[i]}) for i in range(N_cells)]
 
 # %%
 # Node templates
@@ -108,11 +105,14 @@ for i, cell_i in enumerate(cells):
         edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': W_A3b[i,j]}))
 
 # Set up the Model Circuit 
-a3b = CircuitTemplate(
+area_a3b_thal = CircuitTemplate(
     name = 'a3b',
     nodes = {name: node for name, node in zip(cells, nodes)},
     edges = edges,
     path = None)
+
+# %%
+#circuit_to_yaml(area_a3b_thal, "area_a3b_thal.yaml")
 
 # %%
 # Run the simulation 
@@ -121,7 +121,7 @@ for target_cell in cells:
     for rpo_name in rpo_names[:N_cells]:
         outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
 
-results = a3b.run(simulation_time=2.0,
+results = area_a3b_thal.run(simulation_time=2.0,
                   step_size=1e-4,
                   sampling_step_size=1e-4,
                   outputs=outputs,
@@ -141,7 +141,7 @@ all_potentials = np.array(all_potentials).T # shape: samples x populations
 
 potential_df = pd.DataFrame(all_potentials, columns=cells)
 
-potential_df.to_csv("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/simulations/a3bthal.csv") 
+#potential_df.to_csv("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/simulations/a3bthal.csv") 
 
 # %% plot
 

@@ -61,7 +61,7 @@ class JR_Model():
             # technically this could also go to the end of the for-loop but we need a rate value calculated from the initial potential value
             for i in range(self.nPop):
                 # the incoming potential has to be defined in mV because of how the sigmoid parameter are defined (also in mV!)
-                self.rate_current[i] = self.sigm[i][2] / (1 + np.exp(self.sigm[i][0]*(self.sigm[i][1] - np.sum(self.v_current[i,:])*1e3)))  
+                self.rate_current[i] = self.sigm[i][2] / (1 + np.exp(self.sigm[i][0]*(self.sigm[i][1] - np.sum(self.v_current[i,:]))))  
 
             # Save the new values
             self.rate[:, timestep] = self.rate_current 

@@ -11,7 +11,7 @@ Description: Run this file to run the simulation!
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-import jax.numpy as jnp
+#import jax.numpy as jnp
 from jr_model import JR_Model
 import pandas as pd 
 import time
