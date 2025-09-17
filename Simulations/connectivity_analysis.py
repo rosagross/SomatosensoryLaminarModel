@@ -51,10 +51,14 @@ df_P = pd.DataFrame(P, index=population_names[4:], columns=population_names[4:])
 C = params.get_cellcounts()
 df_C = pd.DataFrame(C, index=population_names[4:])
 # Total Connectivity
-gE, gI = [1/6448, 1/6448]
-gEthal, gIthal = [1/6448, 1/6448]
+g_thal = 10000
+connect_reverse_factor =  6448
+bEI_thal = 0.5
+gEthal = g_thal * bEI_thal /connect_reverse_factor
+gIthal = g_thal * (1 - bEI_thal) /connect_reverse_factor
 thal_connect = [0, 0, 0, 0] 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='ThalA1')
+gE, gI = [1/6448, 1/6448]
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='ThalA3b')
 df_W = pd.DataFrame(W, index=all_pops[:-2], columns=all_pops)
 
 # %% Plot Synaptic strengths
@@ -143,19 +147,6 @@ W_relative = np.array(pd.read_csv("param_relative.csv", index_col=False))
 df_W_relative = pd.DataFrame(W_relative, index=all_pops[:-2], columns=all_pops)
 df_W_relative_S1 = df_W_relative.loc[S1_pops, S1_pops]
 
-# %%
-plt.figure(figsize=(12, 10))
-sns.heatmap(df_W_diff, annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
-
-# Rotate x-axis labels for better visibility
-plt.xticks(rotation=45, ha='right')
-plt.yticks(rotation=0)
-plt.ylabel('Target Population')
-plt.xlabel('Source Population')
-plt.title("Connectivity Matrix")
-plt.tight_layout() 
-#plt.savefig("Figures/Connect_Probability.pdf")
-plt.show()
 
 #%% 
 ################ Thalamus connectivity ##################

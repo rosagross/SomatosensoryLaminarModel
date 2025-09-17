@@ -94,7 +94,7 @@ class JR_Model():
                 self.v_current[i, -2] = self.v_current[i, -2] + v_dot * self.step_size
                 u_dot = (self.H[i,-2]/self.tau[i,-2]) * (W[i, -2] * self.Ib[i, timestep]) - 2 * self.u_t[i, -2]/self.tau[i,-2] - self.potential[i, -2, timestep]/(self.tau[i,-2]**2)
                 self.u_t[i, -2] = self.u_t[i,-2] + u_dot * self.step_size
-        
+
         print('finished loop...')
 
         return self.rate, self.potential

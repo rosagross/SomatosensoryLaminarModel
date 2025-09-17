@@ -110,6 +110,7 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
         # --- Column 1: Area 3b + Thalamus stacked ---
         axes[0, 0].plot(potentials[:4].T)
         axes[0, 0].legend(['E', 'PV', 'SOM', 'VIP'])
+        axes[0, 0].legend([f'E {np.round(potentials[0, -1], 6)}', f'PV {np.round(potentials[1, -1], 6)}', f'SOM {np.round(potentials[2, -1], 6)}', f'VIP {np.round(potentials[3, -1], 6)}'], loc='upper right')
         axes[0, 0].set_title("Area 3b")
 
         axes[1, 0].plot(potentials[30:].T)
@@ -138,6 +139,7 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
             axes[i, 2].set_title(f"Area S2 - Layer {i+1}")
 
         plt.tight_layout()
+        plt.savefig('all_areas_potentials.png', dpi=300)
         plt.show()
             
 
@@ -152,6 +154,7 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
         # Layer 2/3
         axs_flat[0].plot(steps[start_plot:], potentials[:4].T[start_plot:])
         axs_flat[0].set_title('L2/3')
+
         # Layer 4
         axs_flat[1].plot(steps[start_plot:], potentials[4:4+3].T[start_plot:])
         axs_flat[1].set_title('L4')
@@ -184,11 +187,10 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
 
     # area 3b
     figA3b, axsA3b = plt.subplots(1, 1, figsize=(5, 5))
-    axsA3b.plot(steps[start_plot:], rates[0, :3].T[start_plot:], linewidth=1)
-    axsA3b.legend(['E', 'PV', 'SOM'])
+    axsA3b.plot(steps[start_plot:], rates[0, :4].T[start_plot:], linewidth=1)
     figA3b.suptitle('Area 3b')
     plt.tight_layout() 
-    plt.legend(['E', 'PV', 'SOM'])
+    plt.legend([f'E {np.round(rates[0, 0].T[-1], 6)}', f'PV {np.round(rates[0, 1].T[-1], 6)}', f'SOM {np.round(rates[0, 2].T[-1], 6)}', f'VIP {np.round(rates[0, 3].T[-1], 6)}'])
 
     # plot results for the S1 column 
     figS1, axs = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
@@ -199,23 +201,25 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
     axs[0][0].plot(steps[start_plot:], rates[0, 4+4].T[start_plot:], linewidth=1)
     axs[0][0].plot(steps[start_plot:], rates[0, 7+4].T[start_plot:], linewidth=1)
     axs[0][0].plot(steps[start_plot:], rates[0, 10+4].T[start_plot:], linewidth=1)
-    
+    axs[0][0].legend([f'E1 {np.round(rates[0, 0+4].T[-1], 6)}', f'E2 {np.round(rates[0, 4+4].T[-1], 6)}', f'E3 {np.round(rates[0, 7+4].T[-1], 6)}', f'E4 {np.round(rates[0, 10+4].T[-1], 6)}'], loc='upper right')
+
     # PV
     axs[0][1].plot(steps[start_plot:], rates[0, 1+4].T[start_plot:], linewidth=1)
     axs[0][1].plot(steps[start_plot:], rates[0, 5+4].T[start_plot:], linewidth=1)
     axs[0][1].plot(steps[start_plot:], rates[0, 8+4].T[start_plot:], linewidth=1)
     axs[0][1].plot(steps[start_plot:], rates[0, 11+4].T[start_plot:], linewidth=1)
+    axs[0][1].legend([f'P1 {np.round(rates[0, 1+4].T[-1], 6)}', f'P2 {np.round(rates[0, 5+4].T[-1], 6)}', f'P3 {np.round(rates[0, 8+4].T[-1], 6)}', f'P4 {np.round(rates[0, 11+4].T[-1], 6)}'], loc='upper right')
 
     # SST
     axs[1][0].plot(steps[start_plot:], rates[0, 2+4].T[start_plot:], linewidth=1)
     axs[1][0].plot(steps[start_plot:], rates[0, 6+4].T[start_plot:], linewidth=1)
     axs[1][0].plot(steps[start_plot:], rates[0, 9+4].T[start_plot:], linewidth=1)
     axs[1][0].plot(steps[start_plot:], rates[0, 12+4].T[start_plot:], linewidth=1)
+    axs[1][0].legend([f'SOM1 {np.round(rates[0, 2+4].T[-1], 6)}', f'SOM2 {np.round(rates[0, 6+4].T[-1], 6)}', f'SOM3 {np.round(rates[0, 9+4].T[-1], 6)}', f'SOM4 {np.round(rates[0, 12+4].T[-1], 6)}'], loc='upper right')
 
     # VIP
-    axs[1][1].plot(steps[start_plot:], rates[0, 12+4].T[start_plot:], linewidth=1)
-    
-    axs[0][1].legend(['L2/3', 'L4', 'L5', 'L6'])
+    axs[1][1].plot(steps[start_plot:], rates[0, 3+4].T[start_plot:], linewidth=1)
+    axs[1][1].legend([f'VIP1 {np.round(rates[0, 3+4].T[-1], 6)}'])
 
     # Set titles for each subplot
     axs[0][0].set_title('E')
@@ -333,19 +337,20 @@ def main():
     
     coupling_strengths = [100] # , 150, 200, 250, 300]
     balance_EI = [0.5]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
-    g_thal = 0
-    bEI_thal = 0.5
+    g_thal = 200
+    bEI_thal = 0.5 # if g_thal is 0, this does not matter
     step_size = 1e-3
     cortex_type = 'somato'
+    area = 'ThalA3b'
     filedir = '/data/p_02989/Modelling/output/'
 
     # define input
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
-    simulation_dur = 1 
-    input_durations = [0.5]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [5] #[0, 50, 300, 500] #np.arange(0, 500, 100)
-    backgrndI_strengths = [5] #[0, 5, 10, 15, 20]
+    simulation_dur = 2 
+    input_durations = [1]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = [0] #[0, 50, 300, 500] #np.arange(0, 500, 100)
+    backgrndI_strengths = [0] #[0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
@@ -404,7 +409,7 @@ def main():
                         # 8. default: all
 
 
-                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time, area='ThalA1')
+                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time, area=area)
                         if save_params:
                             # safe connectivty parameter in yaml file 
                             model.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, coupling_thalE, coupling_thalI, thal_connect)
@@ -467,6 +472,12 @@ n_cells = potentialA1.shape[0]
 n_timepoints = potentialA1.shape[2]
 m_out_all = np.zeros((n_timepoints, n_cells))  # NumPy array, not list!
 
+potentialA3b = potential[0:4]
+n_cells_A3b = potentialA3b.shape[0]
+n_timepoints_A3b = potentialA3b.shape[2]
+m_out_all_A3b = np.zeros((n_timepoints_A3b, n_cells_A3b))  # NumPy array, not list!
+
+
 # %% 
 
 import parameters
@@ -475,9 +486,18 @@ par = parameters.Parameter()
 # get the parameter
 sigm = par.get_sigmoid()
 sigmA1 = sigm[4:4+13]
+sigmA3b = sigm[0:4]
 
 # %%
-# loop over the potentials
+# loop over the potentials and compute the rate
+for t in range(n_timepoints_A3b):
+    for i, target_pop in enumerate(potentialA3b):
+
+        #print(target_pop.shape)
+        m_out_all_A3b[t, i] = sigmA3b[i][2] / (1 + np.exp(sigmA3b[i][0]*(sigmA3b[i][1] - np.sum(target_pop[:, t]))))  
+
+cells_A3b = ['E', 'PV', 'SST', 'VIP']
+rates_df_A3b = pd.DataFrame(m_out_all_A3b, columns=cells_A3b)
 
 for t in range(n_timepoints):
     for i, target_pop in enumerate(potentialA1):
@@ -489,7 +509,17 @@ cells = ['E1', 'PV1', 'SST1', 'VIP', 'E2', 'PV2', 'SST2', 'E3', 'PV3', 'SST3', '
 rates_df = pd.DataFrame(m_out_all, columns=cells)
 
 # %%
-# plot rates
+# plot rates A3b
+
+figA3b, axsA3b = plt.subplots(1, 1, figsize=(5, 5))
+rates_df_A3b.plot(ax=axsA3b)
+#axsA3b.plot(steps[start_plot:], rates[0, :4].T[start_plot:], linewidth=1)
+figA3b.suptitle('Area 3b')
+#plt.legend([f'E {np.round(rates_df_A3b['E'].iloc[-1], 6)}', f'PV {np.round(rates_df_A3b['PV'].iloc[-1], 6)}', f'SOM {np.round(rates_df_A3b['SST'].iloc[-1], 6)}', f'VIP {np.round(rates_df_A3b['VIP'].iloc[-1], 6)}'])
+plt.tight_layout() 
+
+# %%
+# plot rates A1
 layers = [rates_df.columns[[0,4,7,10]],   # first 4 
           rates_df.columns[[1,5,8,11]],  # next 4
           rates_df.columns[[2,6,9,12]], # next 4
