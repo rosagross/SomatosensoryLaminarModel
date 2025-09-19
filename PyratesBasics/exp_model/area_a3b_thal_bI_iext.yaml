@@ -1,3 +1,12 @@
+connectivity_E3b:
+  base: OperatorTemplate
+  equations:
+  - m_inC = (g * bEI)*m_outC
+  variables:
+    m_inC: output
+    g: input
+    bEI: input
+    m_outC: input
 PRO_E3b:
   base: OperatorTemplate
   equations:
@@ -78,6 +87,7 @@ RPO_thalI:
 E3b:
   base: NodeTemplate
   operators:
+  - connectivity_E3b
   - PRO_E3b
   - RPO_E3b
   - RPO_PV3b
@@ -85,6 +95,15 @@ E3b:
   - RPO_VIP3b
   - RPO_thalE
   - RPO_thalI
+connectivity_PV3b:
+  base: OperatorTemplate
+  equations:
+  - m_inC = (g * (1-bEI))*m_outC
+  variables:
+    m_inC: output
+    g: input
+    bEI: input
+    m_outC: input
 PRO_PV3b:
   base: OperatorTemplate
   equations:
@@ -99,6 +118,7 @@ PRO_PV3b:
 PV3b:
   base: NodeTemplate
   operators:
+  - connectivity_PV3b
   - PRO_PV3b
   - RPO_E3b
   - RPO_PV3b
@@ -106,6 +126,15 @@ PV3b:
   - RPO_VIP3b
   - RPO_thalE
   - RPO_thalI
+connectivity_SST3b:
+  base: OperatorTemplate
+  equations:
+  - m_inC = (g * (1-bEI))*m_outC
+  variables:
+    m_inC: output
+    g: input
+    bEI: input
+    m_outC: input
 PRO_SST3b:
   base: OperatorTemplate
   equations:
@@ -120,6 +149,7 @@ PRO_SST3b:
 SST3b:
   base: NodeTemplate
   operators:
+  - connectivity_SST3b
   - PRO_SST3b
   - RPO_E3b
   - RPO_PV3b
@@ -127,6 +157,15 @@ SST3b:
   - RPO_VIP3b
   - RPO_thalE
   - RPO_thalI
+connectivity_VIP3b:
+  base: OperatorTemplate
+  equations:
+  - m_inC = (g * (1-bEI))*m_outC
+  variables:
+    m_inC: output
+    g: input
+    bEI: input
+    m_outC: input
 PRO_VIP3b:
   base: OperatorTemplate
   equations:
@@ -141,6 +180,7 @@ PRO_VIP3b:
 VIP3b:
   base: NodeTemplate
   operators:
+  - connectivity_VIP3b
   - PRO_VIP3b
   - RPO_E3b
   - RPO_PV3b
@@ -148,6 +188,15 @@ VIP3b:
   - RPO_VIP3b
   - RPO_thalE
   - RPO_thalI
+connectivity_thalE:
+  base: OperatorTemplate
+  equations:
+  - m_inC = (g_thal * bEI_thal)*m_outC
+  variables:
+    m_inC: output
+    g_thal: input
+    bEI_thal: input
+    m_outC: input
 PRO_thalE:
   base: OperatorTemplate
   equations:
@@ -182,6 +231,7 @@ InputOp:
 thalE:
   base: NodeTemplate
   operators:
+  - connectivity_thalE
   - PRO_thalE
   - RPO_E3b
   - RPO_PV3b
@@ -191,6 +241,15 @@ thalE:
   - RPO_thalI
   - RPO_Iext
   - InputOp
+connectivity_thalI:
+  base: OperatorTemplate
+  equations:
+  - m_inC = (g_thal * (1-bEI_thal) )*m_outC
+  variables:
+    m_inC: output
+    g_thal: input
+    bEI_thal: input
+    m_outC: input
 PRO_thalI:
   base: OperatorTemplate
   equations:
@@ -204,6 +263,7 @@ PRO_thalI:
 thalI:
   base: NodeTemplate
   operators:
+  - connectivity_thalI
   - PRO_thalI
   - RPO_E3b
   - RPO_PV3b
@@ -219,13 +279,57 @@ RPO_bI:
   variables:
     v_bI: output
     i: variable
-    bI: input(5)
+    bI: input(0)
     tau: 0.003
     H: 1.0
 BACKGROUND:
   base: NodeTemplate
   operators:
   - RPO_bI
+g_definition:
+  base: OperatorTemplate
+  equations:
+  - gC = g_input
+  variables:
+    gC: output
+    g_input: input(0.015508684863523574)
+G:
+  base: NodeTemplate
+  operators:
+  - g_definition
+g_thal_definition:
+  base: OperatorTemplate
+  equations:
+  - g_thalC = g_thal_input
+  variables:
+    g_thalC: output
+    g_thal_input: input(0.031017369727047148)
+G_THAL:
+  base: NodeTemplate
+  operators:
+  - g_thal_definition
+bEI_definition:
+  base: OperatorTemplate
+  equations:
+  - bEIC = bEI_input
+  variables:
+    bEIC: output
+    bEI_input: input(0.5)
+BEI:
+  base: NodeTemplate
+  operators:
+  - bEI_definition
+bEI_thal_definition:
+  base: OperatorTemplate
+  equations:
+  - bEI_thalC = bEI_thal_input
+  variables:
+    bEI_thalC: output
+    bEI_thal_input: input(0.5)
+BEI_THAL:
+  base: NodeTemplate
+  operators:
+  - bEI_thal_definition
 area_a3b_thal_bI_iext:
   base: CircuitTemplate
   circuits: {}
@@ -237,7 +341,27 @@ area_a3b_thal_bI_iext:
     thalE: thalE
     thalI: thalI
     BACKGROUND: BACKGROUND
+    G: G
+    G_THAL: G_THAL
+    BEI: BEI
+    BEI_THAL: BEI_THAL
   edges:
+  - - E3b/PRO_E3b/m_out
+    - E3b/connectivity_E3b/m_outC
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_inC
+    - E3b/RPO_E3b/m_in
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E3b/connectivity_E3b/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E3b/connectivity_E3b/bEI
+    - 
+    - weight: 1.0
   - - BACKGROUND/RPO_bI/v_bI
     - E3b/PRO_E3b/v_bIn
     - 
@@ -245,27 +369,43 @@ area_a3b_thal_bI_iext:
   - - E3b/PRO_E3b/m_out
     - E3b/RPO_E3b/m_in
     - 
-    - weight: 0.41577648256552063
+    - weight: 53.61853519164954
   - - PV3b/PRO_PV3b/m_out
     - E3b/RPO_PV3b/m_in
     - 
-    - weight: -0.07692825744633401
+    - weight: 9.920668080279233
   - - SST3b/PRO_SST3b/m_out
     - E3b/RPO_SST3b/m_in
     - 
-    - weight: -0.042967423518274296
+    - weight: 5.541078936916653
   - - VIP3b/PRO_VIP3b/m_out
     - E3b/RPO_VIP3b/m_in
     - 
-    - weight: -0.03069297973531845
+    - weight: 3.958166666666667
   - - thalE/PRO_thalE/m_out
     - E3b/RPO_thalE/m_in
     - 
-    - weight: 8.866560638957816
+    - weight: 571.71583
   - - thalI/PRO_thalI/m_out
     - E3b/RPO_thalI/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
+  - - PV3b/PRO_PV3b/m_out
+    - PV3b/connectivity_PV3b/m_outC
+    - 
+    - weight: 1.0
+  - - PV3b/connectivity_PV3b/m_inC
+    - PV3b/RPO_PV3b/m_in
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV3b/connectivity_PV3b/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV3b/connectivity_PV3b/bEI
+    - 
+    - weight: 1.0
   - - BACKGROUND/RPO_bI/v_bI
     - PV3b/PRO_PV3b/v_bIn
     - 
@@ -273,27 +413,43 @@ area_a3b_thal_bI_iext:
   - - E3b/PRO_E3b/m_out
     - PV3b/RPO_E3b/m_in
     - 
-    - weight: 0.9836640099177808
+    - weight: 126.85331071899701
   - - PV3b/PRO_PV3b/m_out
     - PV3b/RPO_PV3b/m_in
     - 
-    - weight: -0.057423147221959875
+    - weight: 7.405289065743945
   - - SST3b/PRO_SST3b/m_out
     - PV3b/RPO_SST3b/m_in
     - 
-    - weight: -0.04581682533827054
+    - weight: 5.908537795623369
   - - VIP3b/PRO_VIP3b/m_out
     - PV3b/RPO_VIP3b/m_in
     - 
-    - weight: -0.022561259305210916
+    - weight: 2.9094999999999995
   - - thalE/PRO_thalE/m_out
     - PV3b/RPO_thalE/m_in
     - 
-    - weight: 0.5536133684863523
+    - weight: 35.69699
   - - thalI/PRO_thalI/m_out
     - PV3b/RPO_thalI/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
+  - - SST3b/PRO_SST3b/m_out
+    - SST3b/connectivity_SST3b/m_outC
+    - 
+    - weight: 1.0
+  - - SST3b/connectivity_SST3b/m_inC
+    - SST3b/RPO_SST3b/m_in
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST3b/connectivity_SST3b/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST3b/connectivity_SST3b/bEI
+    - 
+    - weight: 1.0
   - - BACKGROUND/RPO_bI/v_bI
     - SST3b/PRO_SST3b/v_bIn
     - 
@@ -301,27 +457,43 @@ area_a3b_thal_bI_iext:
   - - E3b/PRO_E3b/m_out
     - SST3b/RPO_E3b/m_in
     - 
-    - weight: 0.2693726184907254
+    - weight: 34.73829288056395
   - - PV3b/PRO_PV3b/m_out
     - SST3b/RPO_PV3b/m_in
     - 
-    - weight: -0.06755514651394905
+    - weight: 8.711911694438868
   - - SST3b/PRO_SST3b/m_out
     - SST3b/RPO_SST3b/m_in
     - 
-    - weight: -0.008813018469413101
+    - weight: 1.1365268618155135
   - - VIP3b/PRO_VIP3b/m_out
     - SST3b/RPO_VIP3b/m_in
     - 
-    - weight: -0.05503981973932707
+    - weight: 7.097935153583618
   - - thalE/PRO_thalE/m_out
     - SST3b/RPO_thalE/m_in
     - 
-    - weight: 0.03647642679900745
+    - weight: 2.3520000000000003
   - - thalI/PRO_thalI/m_out
     - SST3b/RPO_thalI/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
+  - - VIP3b/PRO_VIP3b/m_out
+    - VIP3b/connectivity_VIP3b/m_outC
+    - 
+    - weight: 1.0
+  - - VIP3b/connectivity_VIP3b/m_inC
+    - VIP3b/RPO_VIP3b/m_in
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - VIP3b/connectivity_VIP3b/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - VIP3b/connectivity_VIP3b/bEI
+    - 
+    - weight: 1.0
   - - BACKGROUND/RPO_bI/v_bI
     - VIP3b/PRO_VIP3b/v_bIn
     - 
@@ -329,19 +501,19 @@ area_a3b_thal_bI_iext:
   - - E3b/PRO_E3b/m_out
     - VIP3b/RPO_E3b/m_in
     - 
-    - weight: 0.15709593089189283
+    - weight: 20.2590912478185
   - - PV3b/PRO_PV3b/m_out
     - VIP3b/RPO_PV3b/m_in
     - 
-    - weight: -0.03998864673040432
+    - weight: 5.156935882352942
   - - SST3b/PRO_SST3b/m_out
     - VIP3b/RPO_SST3b/m_in
     - 
-    - weight: -0.07046357735075671
+    - weight: 9.086982935153586
   - - VIP3b/PRO_VIP3b/m_out
     - VIP3b/RPO_VIP3b/m_in
     - 
-    - weight: -0.04152450372208437
+    - weight: 5.355
   - - thalE/PRO_thalE/m_out
     - VIP3b/RPO_thalE/m_in
     - 
@@ -349,7 +521,23 @@ area_a3b_thal_bI_iext:
   - - thalI/PRO_thalI/m_out
     - VIP3b/RPO_thalI/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
+  - - thalE/PRO_thalE/m_out
+    - thalE/connectivity_thalE/m_outC
+    - 
+    - weight: 1.0
+  - - thalE/connectivity_thalE/m_inC
+    - thalE/RPO_thalE/m_in
+    - 
+    - weight: 1.0
+  - - G_THAL/g_thal_definition/g_thalC
+    - thalE/connectivity_thalE/g_thal
+    - 
+    - weight: 1.0
+  - - BEI_THAL/bEI_thal_definition/bEI_thalC
+    - thalE/connectivity_thalE/bEI_thal
+    - 
+    - weight: 1.0
   - - E3b/PRO_E3b/m_out
     - thalE/RPO_E3b/m_in
     - 
@@ -357,15 +545,15 @@ area_a3b_thal_bI_iext:
   - - PV3b/PRO_PV3b/m_out
     - thalE/RPO_PV3b/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
   - - SST3b/PRO_SST3b/m_out
     - thalE/RPO_SST3b/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
   - - VIP3b/PRO_VIP3b/m_out
     - thalE/RPO_VIP3b/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
   - - thalE/PRO_thalE/m_out
     - thalE/RPO_thalE/m_in
     - 
@@ -373,7 +561,23 @@ area_a3b_thal_bI_iext:
   - - thalI/PRO_thalI/m_out
     - thalE/RPO_thalI/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
+  - - thalI/PRO_thalI/m_out
+    - thalI/connectivity_thalI/m_outC
+    - 
+    - weight: 1.0
+  - - thalI/connectivity_thalI/m_inC
+    - thalI/RPO_thalI/m_in
+    - 
+    - weight: 1.0
+  - - G_THAL/g_thal_definition/g_thalC
+    - thalI/connectivity_thalI/g_thal
+    - 
+    - weight: 1.0
+  - - BEI_THAL/bEI_thal_definition/bEI_thalC
+    - thalI/connectivity_thalI/bEI_thal
+    - 
+    - weight: 1.0
   - - E3b/PRO_E3b/m_out
     - thalI/RPO_E3b/m_in
     - 
@@ -381,15 +585,15 @@ area_a3b_thal_bI_iext:
   - - PV3b/PRO_PV3b/m_out
     - thalI/RPO_PV3b/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
   - - SST3b/PRO_SST3b/m_out
     - thalI/RPO_SST3b/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
   - - VIP3b/PRO_VIP3b/m_out
     - thalI/RPO_VIP3b/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0
   - - thalE/PRO_thalE/m_out
     - thalI/RPO_thalE/m_in
     - 
@@ -397,4 +601,4 @@ area_a3b_thal_bI_iext:
   - - thalI/PRO_thalI/m_out
     - thalI/RPO_thalI/m_in
     - 
-    - weight: -0.0
+    - weight: 0.0

@@ -71,7 +71,7 @@ params = [cells[c] + '/RPO_bI/bI' for c in range(N_cells-2)]
 """
 # %% PyCobi instance
 area_a3b_thal_bI_iext_auto = ODESystem.from_template(area_a3b_thal_bI_iext, auto_dir = "/data/u_mecozzi_software/miniforge3/envs/pyrates_project/auto-07p", init_cont=False)
-#pprint(area_a3b_thal_bI_iext_auto._var_map)
+pprint(area_a3b_thal_bI_iext_auto._var_map)
 cont_param = 'thalE/InputOp/A'
 # %% Setting up the simulation:
 # - time continuation starting at a steady state
