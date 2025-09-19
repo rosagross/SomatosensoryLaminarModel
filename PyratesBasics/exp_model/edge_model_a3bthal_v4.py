@@ -53,8 +53,8 @@ rpo_names=["RPO_"+cell for cell in cells]
 # no background input:
 pro = OperatorTemplate(
     name='PRO', path=None,
-    equations=["m_out = m_max / (1 + exp(r*(V_thr - v)))"],
-    variables={'m_out': 'output',
+    equations=["m_outC = m_max / (1 + exp(r*(V_thr - v)))"],
+    variables={'m_outC': 'output',
                'v': 'input',
                'r': 0.1,
                'V_thr': 35.0,
@@ -150,22 +150,6 @@ create_I_ext = [OperatorTemplate(
     description="External step input"
 )]
 """
-# %%
-# Node templates
-cells_ext = cells #+ ['BACKGROUND']
-nodes = [
-    NodeTemplate(
-        name=cells_ext[i],
-        path=None,
-        operators=(
-            ([pros[i]] + rpos #+ 
-            # (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
-            ) #if i < N_cells else [rpo_bI]
-        )
-    )
-    for i in range(N_cells) #+ 1)
-]
-
 # %% Weights - edges
 # 'raw' weights:
 g_thal = 200
@@ -173,10 +157,7 @@ g = 100
 connect_reverse_factor =  6448
 bEI_thal = 0.5
 bEI = 0.5
-gE = g * bEI /connect_reverse_factor
-gI = g * (1 - bEI) /connect_reverse_factor
-gEthal = g_thal * bEI_thal /connect_reverse_factor
-gIthal = g_thal * (1 - bEI_thal) /connect_reverse_factor
+
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
 W0, W_to_thal, W_from_thal, Wb, Wext = params.get_raw_connectivity(thal_connect)
 W0 = np.append(W0, W_to_thal, axis=0)
@@ -185,6 +166,81 @@ W = np.concatenate((W0, Wb, Wext), axis=1)
 rows_A3b_thal = np.r_[:4, 30, 31]   
 cols_A3b_thal = np.r_[:4, 30, 31]
 W_A3b = W[rows_A3b_thal[:, None], cols_A3b_thal]
+# %% 
+
+connectivity_names = ["connectivity_"+ cell for cell in cells]
+connectivityE = OperatorTemplate(name="connectivityE", 
+                           equations= "m_out = (g*bEI/connect_reverse_factor)*m_outC",
+                           variables={
+                            "m_out": "output", 
+                            "g": g,
+                            "bEI":bEI,
+                            #"connect_reverse_factor":"input",
+                            "m_outC":"input",
+                            "connect_reverse_factor": connect_reverse_factor
+                            }
+                            )
+connectivityI = OperatorTemplate(name="connectivityI", 
+                           equations= "m_out = (g*(1-bEI)/connect_reverse_factor)*m_outC",
+                           variables={
+                            "m_out": "output", 
+                            "g": -g,
+                            "bEI":bEI,
+                            "connect_reverse_factor":connect_reverse_factor,
+                            "m_outC":"input"
+                            }
+                            )
+connectivityE_thal = OperatorTemplate(name="connectivityE_thal", 
+                           equations= "m_out = (g_thal*bEI_thal/connect_reverse_factor_thal)*m_outC",
+                           variables={
+                            "m_out": "output", 
+                            "g_thal": g_thal,
+                            "bEI_thal":bEI_thal,
+                            "connect_reverse_factor_thal":connect_reverse_factor,
+                            "m_outC":"input"
+                            }
+                            )
+connectivityI_thal = OperatorTemplate(name="connectivityI_thal", 
+                           equations= "m_out = (g_thal*(1-bEI_thal)/connect_reverse_factor_thal)*m_outC",
+                           variables={
+                            "m_out": "output", 
+                            "g_thal": -g_thal,
+                            "bEI_thal":bEI_thal,
+                            "connect_reverse_factor_thal":connect_reverse_factor,
+                            "m_outC":"input"
+                            }
+                            )
+
+idx_I_A3b = np.array([1,2,3])
+idx_E_A3b = np.array([0])
+
+connectivity = []
+for i in range(N_cells):
+    if i in idx_E_A3b:  # excitatory population
+        connectivity.append(deepcopy(connectivityE).update_template(name=connectivity_names[i]))
+    elif i in idx_I_A3b:  # inhibitory population
+        connectivity.append(deepcopy(connectivityI).update_template(name=connectivity_names[i]))
+    elif i == N_cells - 2: # thalE
+        connectivity.append(deepcopy(connectivityE_thal).update_template(name=connectivity_names[i]))
+    else: # thalI
+        connectivity.append(deepcopy(connectivityI_thal).update_template(name=connectivity_names[i]))
+
+# %%
+# Node templates
+cells_ext = cells #+ ['BACKGROUND']
+nodes = [
+    NodeTemplate(
+        name=cells_ext[i],
+        path=None,
+        operators=(
+            ([pros[i]] + [connectivity[i]] + rpos #+ 
+            # (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
+            ) #if i < N_cells else [rpo_bI]
+        )
+    )
+    for i in range(N_cells) #+ 1)
+]
+
 
 # %%%
 """
@@ -202,14 +258,14 @@ W_from_thal[1,:] = W_from_thal[1,:] * -gIthal
 rows_A3b_thal = np.r_[:4, 30, 31]   
 cols_A3b_thal = np.r_[:4, 30, 31]
 
-W_A3b = W[rows_A3b_thal[:, None], cols_A3b_thal]
+W_A3b = W[rows_A3b_thal[:, None], colsm_inC = 1_A3b_thal]
 """
 # Define edges: 
 # - operator
 # - edge template
 
 # edge operator definition
-
+"""
 edge_op_names=["edge_op_"+cell for cell in cells]
 edge_op = OperatorTemplate(name="edge_op", 
                            equations="m_iin = g_comp*m_oout",
@@ -225,21 +281,20 @@ idx_E_A3b = np.array([0])
 g_cc = []
 for i in range(N_cells):
     if i in idx_E_A3b:  # excitatory population
-        g_cc.append(g)
+        g_cc.append(gE)
     elif i in idx_I_A3b:  # inhibitory population
-        g_cc.append(-g)
+        g_cc.append(-gI)
     elif i == N_cells - 2:
-        g_cc.append(g_thal)
+        g_cc.append(gEthal)
     else:
-        g_cc.append(-g_thal)
+        g_cc.append(-gIthal)
 
 # loop for the edge operators 
 edge_operators = [deepcopy(edge_op).update_template(name=edge_op_names[i], variables={"g_comp": g_cc[i]}) for i in range(N_cells)]
-
+"""
 # %%
-
+"""
 # edge template definition
-
 weight_edges_names=["weight_edge_"+cell for cell in cells]
 weight_edge = EdgeTemplate(name="weight_edge", operators=[edge_op])
 weight_edges = [deepcopy(weight_edge).update_template(name=weight_edges_names[i], operators=[edge_operators[i]]) for i in range(N_cells)]
@@ -247,12 +302,31 @@ weight_edges = [deepcopy(weight_edge).update_template(name=weight_edges_names[i]
 edges=[]
 # i : target 
 for i, cell_i in enumerate(cells):
+    edges.append((f'{cell_i}/{pro_names[i]}/m_out', f'{cell_i}/{connectivity_names[i]}/m_outC', None, {'weight': 1.0}))
+    edges.append((f'{cell_i}/{connectivity_names[i]}/m_inC', f'{cell_i}/{rpo_names[i]}/m_in', None, {'weight': 1.0}))
     #if cell_i not in ['thalE', 'thalI']:
         #edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{pro_names[i]}/v_bIn', None, {'weight': 1.0}))
     # j : source
     for j, cell_j in enumerate(cells):
         edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', weight_edges[j], {'weight': W_A3b[i,j]}))
-        #edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': W_A3b[i,j]}))
+        #edges.append((f'{cell_i}/{pro_names[j]}/m_in', f'{cell_i}/{rpo_names[j]}/m_out', None, {'weight': W_A3b[j,i]}))
+        #edges.append((f'{cell_i}/{rpo_names[j]}/m_in', f'{cell_j}/{pro_names[j]}/m_out', None, {'weight': W_A3b[j,i]}))
+"""
+edges=[]
+# i : target 
+for i, cell_i in enumerate(cells):
+    #edges.append((f'{cell_i}/{pro_names[i]}/m_out', f'{cell_i}/{connectivity_names[i]}/m_outC', None, {'weight': 1.0}))
+    for j, cell_j in enumerate(cells):
+        edges.append((f'{cell_j}/{connectivity_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': W_A3b[i,j]}))
+        #edges.append((f'{cell_j}/{connectivity_names[j]}/m_inC', f'{cell_i}/{rpo_names[i]}/m_in', None, {'weight': 1.0}))
+        
+    #if cell_i not in ['thalE', 'thalI']:
+        #edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{pro_names[i]}/v_bIn', None, {'weight': 1.0}))
+    # j : source
+    #for j, cell_j in enumerate(cells):
+        #edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', weight_edges[j], {'weight': W_A3b[i,j]}))
+        #edges.append((f'{cell_i}/{pro_names[j]}/m_in', f'{cell_i}/{rpo_names[j]}/m_out', None, {'weight': W_A3b[j,i]}))
+        #edges.append((f'{cell_i}/{rpo_names[j]}/m_in', f'{cell_j}/{pro_names[j]}/m_out', None, {'weight': W_A3b[j,i]}))
 
 # %%
 # Set up the Model Circuit 
