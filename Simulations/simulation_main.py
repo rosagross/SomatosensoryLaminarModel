@@ -85,9 +85,11 @@ def write_3D_csv(filename, data):
 def main(): 
 
     save_params = False
-    save_results = True
+    save_results = False
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
-    plot = True
+    plot_rates = True
+    plot_potentials = True
+    plot_all_potentials = True
     jax_mode = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
@@ -199,7 +201,7 @@ def main():
                             all_durations_saving.append(duration)
                             print('Saving duration (in s):', duration)
 
-                if plot:
+                if plot_rates:
                     all_rates = np.array(all_rates)
                     all_potentials = np.squeeze(np.array(all_potentials))
                     if len(coupling_strengths) == 1:
@@ -212,8 +214,10 @@ def main():
                         potential_sum = np.sum(potential, axis=1)
                         resolution_tstep = 1e-2
                         potential_sum_downsampled = potential_sum[:, ::int(1000*resolution_tstep)]
-                        #pf.plot_potentials(potential_sum, Iext, Ib, step_size, simulation_time, start_plot)
-                        #pf.plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot)
+                        if plot_potentials:
+                            pf.plot_potentials(potential_sum, Iext, Ib, step_size, simulation_time, start_plot)
+                        if plot_all_potentials:
+                            pf.plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot)
 
                     else: 
                         # used to plot with coupling strength on the x-axis and max/min rate on the y
