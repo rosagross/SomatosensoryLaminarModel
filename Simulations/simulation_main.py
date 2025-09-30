@@ -88,8 +88,8 @@ def main():
     save_results = False
     save_full_potentials = False # if True the potential matrix is 3D, otherwise 2D
     plot_rates = True
-    plot_potentials = True
-    plot_all_potentials = True
+    plot_potentials = False
+    plot_all_potentials = False
     jax_mode = False
 
     # set coupling strengths, step size and cortex type (visual or somato)
@@ -112,7 +112,7 @@ def main():
     input_onset = 1.001 # in sec
     simulation_dur = 2 
     input_durations = [1]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [50] #[0, 50, 300, 500] #np.arange(0, 500, 100)
+    input_strengths = [500000] #[0, 50, 300, 500] #np.arange(0, 500, 100)
     backgrndI_strengths = [0] #[0, 5, 10, 15, 20]
 
     # connections within the thalamus
@@ -158,6 +158,7 @@ def main():
                         print('gE', gE)
                         print('gI', gI)
                         thal_connect_scaled = thal_connect/connect_reverse_factor
+                        synapse_factor = 1  # the number of synapses per 
                         
                         # implement option to choose only one part of the cortical circuit 
                         # this can be done by putting the connectivity for those parts to zero
@@ -172,7 +173,7 @@ def main():
                         # 8. default: all
 
 
-                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, filedir, filename, step_size, simulation_time, area=area)
+                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, synapse_factor, filedir, filename, step_size, simulation_time, area=area)
                         if save_params:
                             # safe connectivty parameter in yaml file 
                             model.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, coupling_thalE, coupling_thalI, thal_connect)
