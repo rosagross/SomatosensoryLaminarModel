@@ -1,5 +1,5 @@
 NDIM = 76
-NPAR = 181
+NPAR = 152
 IPS = -2
 ILP = 0
 ICP = [14]

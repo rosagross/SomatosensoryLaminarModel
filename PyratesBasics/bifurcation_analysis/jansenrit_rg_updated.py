@@ -81,7 +81,7 @@ jrc.update_var(node_vars={'pc/rpo_i/v': -2.195986e-02})
 jrc.update_var(node_vars={'iin/rpo_e/v': 4.405607e-03 })
 
 # %% PyCobi model definition:
-jrc_auto = ODESystem.from_template(jrc, auto_dir="~/PycharmProjects/auto-07p", init_cont=False)
+jrc_auto = ODESystem.from_template(jrc, auto_dir="/data/u_mecozzi_software/miniforge3/envs/pyrates_project/auto-07p", init_cont=False)
 
 # %% Time continuation in PyCobi:
 #   - `DS` defines the initial step-size of the time continuation (in ms)

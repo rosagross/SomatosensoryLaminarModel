@@ -1,6 +1,6 @@
 # %%
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/model_definitions""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, CircuitTemplate
 from copy import deepcopy
 from parameters import Parameter
@@ -47,7 +47,6 @@ tau_a3b_thal = np.hstack((tau[0, :4], tau[0, -2:]))
 
 # %%
 # Operator template for the PRO
-
 pro_names = ["PRO_"+ cell for cell in cells]
 rpo_names=["RPO_"+cell for cell in cells]
 # no background input:
@@ -61,17 +60,17 @@ pro = OperatorTemplate(
                'm_max': 70.0},
     description="sigmoidal potential-to-rate operator")
 # background input:
-"""pro_bI = OperatorTemplate(
+pro_bI = OperatorTemplate(
     name='PRO_bI', path=None,
-    equations=["m_out = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))"],
-    variables={'m_out': 'output',
+    equations=["m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))"],
+    variables={'m_outC': 'output',
                'v': 'input',
                'v_bIn': 'input',
                'r': 0.1,
                'V_thr': 35.0,
                'm_max': 70.0},
-    description="sigmoidal potential-to-rate operator")"""
-
+    description="sigmoidal potential-to-rate operator")
+"""
 pros = [deepcopy(pro).update_template(name=pro_names[i],
                                       variables={'r': r[i],
                                                  'V_thr': v_thr[i],
@@ -88,7 +87,7 @@ pros = [
                                                  'm_max': m_max[i]})
     )
     for i in range(N_cells)
-]"""
+]
 
 # %% Operator template for the RPO
 rpo = OperatorTemplate(
@@ -105,7 +104,7 @@ rpo = OperatorTemplate(
 rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau_a3b_thal[i]}) for i in range(N_cells)]
 
 # rpo for the background input
-"""
+
 rpo_bI = OperatorTemplate(
     name='RPO_bI', path=None,
     equations=['d/dt * v_bI = i',
@@ -116,9 +115,8 @@ rpo_bI = OperatorTemplate(
                'tau': 0.003,
                'H': 1.0},
     description="excitatory rate-to-potential operator-background input")
-"""
+
 # %% Operator template for the external input --> only for thalE!
-"""
 rpo_Iext_thalE = [OperatorTemplate(
     name='RPO_Iext', path=None,
     equations=['d/dt * v = i',
@@ -141,16 +139,16 @@ create_I_ext = [OperatorTemplate(
         "t": "variable",
         "A": input_strength,
         "onset": input_onset/step_size,
-        "dur": input_duration/step_size
+        #"dur": input_duration/step_size
         # TO UNCOMMENT FOR PYCOBI:
-        #"A": float(input_strength),
-        #"onset": float(input_onset),
-        #"dur": float(input_duration)
+        "A": float(input_strength),
+        "onset": float(input_onset),
+        "dur": float(input_duration)
     },
     description="External step input"
 )]
-"""
-# %% Weights - edges
+
+# %% Weights 
 # 'raw' weights:
 g_thal = 200
 g = 100
@@ -166,26 +164,50 @@ W = np.concatenate((W0, Wb, Wext), axis=1)
 rows_A3b_thal = np.r_[:4, 30, 31]   
 cols_A3b_thal = np.r_[:4, 30, 31]
 W_A3b = W[rows_A3b_thal[:, None], cols_A3b_thal]
-# %% 
 
+# %% Nodes for the parameters
+g_definition = OperatorTemplate(
+    name="g_definition",
+    equations="gC = g_input",
+    variables={"gC": "output", "g_input": f"input({float(g)})"}
+)
+bEI_definition = OperatorTemplate(
+    name="bEI_definition",
+    equations="bEIC = bEI_input",
+    variables={"bEIC": "output", "bEI_input": f"input({float(bEI)})"}
+)
+g_thal_definition = OperatorTemplate(
+    name="g_thal_definition",
+    equations="g_thalC = g_thal_input",
+    variables={"g_thalC": "output", "g_thal_input": f"input({float(g_thal)})"}
+)
+bEI_thal_definition = OperatorTemplate(
+    name="bEI_thal_definition",
+    equations="bEI_thalC = bEI_thal_input",
+    variables={"bEI_thalC": "output", "bEI_thal_input": f"input({float(bEI_thal)})"}
+)
+# %% Connectivity operators
 connectivity_names = ["connectivity_"+ cell for cell in cells]
 connectivityE = OperatorTemplate(name="connectivityE", 
                            equations= "m_out = (g*bEI/connect_reverse_factor)*m_outC",
                            variables={
                             "m_out": "output", 
-                            "g": g,
-                            "bEI":bEI,
-                            #"connect_reverse_factor":"input",
+                            #"g": g,
+                            #"bEI":bEI,
+                            "g": "input",
+                            "bEI": "input",
                             "m_outC":"input",
                             "connect_reverse_factor": connect_reverse_factor
                             }
                             )
 connectivityI = OperatorTemplate(name="connectivityI", 
-                           equations= "m_out = (g*(1-bEI)/connect_reverse_factor)*m_outC",
+                           equations= "m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC",
                            variables={
                             "m_out": "output", 
-                            "g": -g,
-                            "bEI":bEI,
+                            #"g": -g,
+                            #"bEI":bEI,
+                            "g": "input",
+                            "bEI": "input",
                             "connect_reverse_factor":connect_reverse_factor,
                             "m_outC":"input"
                             }
@@ -194,18 +216,22 @@ connectivityE_thal = OperatorTemplate(name="connectivityE_thal",
                            equations= "m_out = (g_thal*bEI_thal/connect_reverse_factor_thal)*m_outC",
                            variables={
                             "m_out": "output", 
-                            "g_thal": g_thal,
-                            "bEI_thal":bEI_thal,
+                            #"g_thal": g_thal,
+                            #"bEI_thal":bEI_thal,
+                            "g_thal": "input",
+                            "bEI_thal": "input",
                             "connect_reverse_factor_thal":connect_reverse_factor,
                             "m_outC":"input"
                             }
                             )
 connectivityI_thal = OperatorTemplate(name="connectivityI_thal", 
-                           equations= "m_out = (g_thal*(1-bEI_thal)/connect_reverse_factor_thal)*m_outC",
+                           equations= "m_out = ((-g_thal)*(1-bEI_thal)/connect_reverse_factor_thal)*m_outC",
                            variables={
                             "m_out": "output", 
-                            "g_thal": -g_thal,
-                            "bEI_thal":bEI_thal,
+                            #"g_thal": -g_thal,
+                            #"bEI_thal":bEI_thal,
+                            "g_thal": "input",
+                            "bEI_thal": "input",
                             "connect_reverse_factor_thal":connect_reverse_factor,
                             "m_outC":"input"
                             }
@@ -227,107 +253,41 @@ for i in range(N_cells):
 
 # %%
 # Node templates
-cells_ext = cells #+ ['BACKGROUND']
+cells_ext = cells + ['BACKGROUND'] + ['G'] + ['G_THAL'] + ['BEI'] + ['BEI_THAL'] 
 nodes = [
     NodeTemplate(
         name=cells_ext[i],
         path=None,
         operators=(
-            ([pros[i]] + [connectivity[i]] + rpos #+ 
-            # (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
-            ) #if i < N_cells else [rpo_bI]
+            ([pros[i]] + [connectivity[i]] + rpos + 
+             (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
+            ) if i < N_cells 
+            #else [rpo_bI] if i == N_cells
+            else [g_definition] if i == N_cells + 1 # G
+            else [g_thal_definition] if i == N_cells + 2 # G_THAL
+            else [bEI_definition] if i == N_cells + 3 # BEI
+            else [bEI_thal_definition] if i == N_cells + 4 # BEI_THAL
+            else [rpo_bI] # operator for the background input
         )
     )
-    for i in range(N_cells) #+ 1)
+    for i in range(len(cells_ext))
 ]
 
-
-# %%%
-"""
-W0[:,idx_I_A3b] = W0[:,idx_I_A3b] * -gI # negative weight for inhibitory connections
-W0[:,idx_E_A3b] = W0[:,idx_E_A3b] * gE
-W_to_thal[:,idx_I] = W_to_thal[:,idx_I] * -gIthal
-W_to_thal[:,idx_E] = W_to_thal[:,idx_E] * gEthal
-W_from_thal[0,:] = W_from_thal[0,:] * gEthal
-# weight the inhibitory popultaion (from the reticular nucleus in the thalamus) as negative
-W_from_thal[1,:] = W_from_thal[1,:] * -gIthal
-
-# selecting the region: 
-# in python the results include the start index but excludes the end index
-
-rows_A3b_thal = np.r_[:4, 30, 31]   
-cols_A3b_thal = np.r_[:4, 30, 31]
-
-W_A3b = W[rows_A3b_thal[:, None], colsm_inC = 1_A3b_thal]
-"""
-# Define edges: 
-# - operator
-# - edge template
-
-# edge operator definition
-"""
-edge_op_names=["edge_op_"+cell for cell in cells]
-edge_op = OperatorTemplate(name="edge_op", 
-                           equations="m_iin = g_comp*m_oout",
-                           variables={
-                            "m_iin": "output", 
-                            "m_oout": "input",
-                            "g_comp": 1.0 # constant that varies according to the population
-                            }
-                            )
-idx_I_A3b = np.array([1,2,3])
-idx_E_A3b = np.array([0])
-# vector for the g_comp:
-g_cc = []
-for i in range(N_cells):
-    if i in idx_E_A3b:  # excitatory population
-        g_cc.append(gE)
-    elif i in idx_I_A3b:  # inhibitory population
-        g_cc.append(-gI)
-    elif i == N_cells - 2:
-        g_cc.append(gEthal)
+# %% 
+# Edges
+edges=[]
+# i : target 
+for i, cell_i in enumerate(cells):
+    if cell_i not in ['thalE', 'thalI']:
+        edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{pro_names[i]}/v_bIn', None, {'weight': 1.0}))
+        edges.append(('G/g_definition/gC', f'{cell_i}/{connectivity_names[i]}/g', None, {'weight': 1.0})) # G
+        edges.append(('BEI/bEI_definition/bEIC', f'{cell_i}/{connectivity_names[i]}/bEI', None, {'weight': 1.0})) # BEI
     else:
-        g_cc.append(-gIthal)
-
-# loop for the edge operators 
-edge_operators = [deepcopy(edge_op).update_template(name=edge_op_names[i], variables={"g_comp": g_cc[i]}) for i in range(N_cells)]
-"""
-# %%
-"""
-# edge template definition
-weight_edges_names=["weight_edge_"+cell for cell in cells]
-weight_edge = EdgeTemplate(name="weight_edge", operators=[edge_op])
-weight_edges = [deepcopy(weight_edge).update_template(name=weight_edges_names[i], operators=[edge_operators[i]]) for i in range(N_cells)]
-
-edges=[]
-# i : target 
-for i, cell_i in enumerate(cells):
-    edges.append((f'{cell_i}/{pro_names[i]}/m_out', f'{cell_i}/{connectivity_names[i]}/m_outC', None, {'weight': 1.0}))
-    edges.append((f'{cell_i}/{connectivity_names[i]}/m_inC', f'{cell_i}/{rpo_names[i]}/m_in', None, {'weight': 1.0}))
-    #if cell_i not in ['thalE', 'thalI']:
-        #edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{pro_names[i]}/v_bIn', None, {'weight': 1.0}))
-    # j : source
-    for j, cell_j in enumerate(cells):
-        edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', weight_edges[j], {'weight': W_A3b[i,j]}))
-        #edges.append((f'{cell_i}/{pro_names[j]}/m_in', f'{cell_i}/{rpo_names[j]}/m_out', None, {'weight': W_A3b[j,i]}))
-        #edges.append((f'{cell_i}/{rpo_names[j]}/m_in', f'{cell_j}/{pro_names[j]}/m_out', None, {'weight': W_A3b[j,i]}))
-"""
-edges=[]
-# i : target 
-for i, cell_i in enumerate(cells):
-    #edges.append((f'{cell_i}/{pro_names[i]}/m_out', f'{cell_i}/{connectivity_names[i]}/m_outC', None, {'weight': 1.0}))
+        edges.append(('G_THAL/g_thal_definition/g_thalC', f'{cell_i}/{connectivity_names[i]}/g_thal', None, {'weight': 1.0})) # G_THAL
+        edges.append(('BEI_THAL/bEI_thal_definition/bEI_thalC', f'{cell_i}/{connectivity_names[i]}/bEI_thal', None, {'weight': 1.0})) # BEI_THAL
     for j, cell_j in enumerate(cells):
         edges.append((f'{cell_j}/{connectivity_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': W_A3b[i,j]}))
-        #edges.append((f'{cell_j}/{connectivity_names[j]}/m_inC', f'{cell_i}/{rpo_names[i]}/m_in', None, {'weight': 1.0}))
-        
-    #if cell_i not in ['thalE', 'thalI']:
-        #edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{pro_names[i]}/v_bIn', None, {'weight': 1.0}))
-    # j : source
-    #for j, cell_j in enumerate(cells):
-        #edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', weight_edges[j], {'weight': W_A3b[i,j]}))
-        #edges.append((f'{cell_i}/{pro_names[j]}/m_in', f'{cell_i}/{rpo_names[j]}/m_out', None, {'weight': W_A3b[j,i]}))
-        #edges.append((f'{cell_i}/{rpo_names[j]}/m_in', f'{cell_j}/{pro_names[j]}/m_out', None, {'weight': W_A3b[j,i]}))
-
+    
 # %%
 # Set up the Model Circuit 
 area_a3b_thal_bI_iext = CircuitTemplate(
@@ -337,11 +297,11 @@ area_a3b_thal_bI_iext = CircuitTemplate(
     path = None)
 
 # %%
-#circuit_to_yaml(area_a3b_thal_bI_iext, "area_a3b_thal_bI_iext.yaml")
+circuit_to_yaml(area_a3b_thal_bI_iext, "area_a3b_thal_bI_iext.yaml")
 
 # %%
 # Run the simulation 
-rpo_names_extended = rpo_names #+ ['RPO_Iext']
+rpo_names_extended = rpo_names + ['RPO_Iext']
 outputs = {}
 b_inputs = []
 for i, target_cell in enumerate(cells):
@@ -355,7 +315,7 @@ for i, target_cell in enumerate(cells):
     # Include rpo_names_bI only if i in range(N_cells-2)
     #if i in range(N_cells-2):
         #print(f'{target_cell}/RPO_bI/v')
-#outputs['V_background/RPO_bI'] = 'BACKGROUND/RPO_bI/v_bI'
+outputs['V_background/RPO_bI'] = 'BACKGROUND/RPO_bI/v_bI'
 
 results = area_a3b_thal_bI_iext.run(simulation_time=simulation_time,
                   step_size=step_size,
@@ -379,8 +339,8 @@ for i, cell in enumerate(cells):
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names[:N_cells]]
 
     # include rpo_name only if i in range(N_cells-2)
-    #if i in range(N_cells-2):
-        #potential_keys += [f'V_background/RPO_bI']
+    if i in range(N_cells-2):
+        potential_keys += [f'V_background/RPO_bI']
 
     # include rpo_names_extended[:N_cells+1] only if i == 13
     
