@@ -59,7 +59,8 @@ gIthal = g_thal * (1 - bEI_thal)
 thal_connect = [0, 0, 0, 0] 
 gE, gI = [1/6448, 1/6448]
 area = 'all'
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area=area)
+synapse_factor = 1
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, synapse_factor=synapse_factor, area=area)
 df_W = pd.DataFrame(W, index=all_pops[:-2], columns=all_pops)
 
 # %% Plot Synaptic strengths

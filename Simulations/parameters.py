@@ -325,7 +325,7 @@ class Parameter():
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
 
-    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, area='all'):
+    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, synapse_factor, area='all'):
 
         W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(thal_connect)
 
@@ -355,8 +355,9 @@ class Parameter():
         W0 = np.append(W0, W_to_thal, axis=0)
         W0 = np.append(W0, W_from_thal.T, axis=1)
         W = np.concatenate((W0, Wb, Wext), axis=1)
-        #print('\nW matrix shape', W.shape) 
-        #print('W matrix\n', W[:,-4:]) 
+
+        # apply synaptic scaling factor to all connections
+        W = W * synapse_factor
 
         # based on what area was chosen, set the respective connectivity values to 0 
         if area=='ThalA3b':
