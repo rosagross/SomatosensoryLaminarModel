@@ -17,21 +17,17 @@ subroutine vector_field(t,y,dy,tau,H,tau_v1,H_v1,tau_v2,H_v2,tau_v3,&
      & H_v35,tau_v36,H_v36,tau_v37,bI,H_v37,V_thr,r,m_max,V_thr_v1,&
      & v_v12,r_v1,m_max_v1,V_thr_v2,v_v19,r_v2,m_max_v2,V_thr_v3,v_v26,&
      & r_v3,m_max_v3,onset,dur,A,V_thr_v4,r_v4,m_max_v4,V_thr_v5,r_v5,&
-     & m_max_v5,connect_reverse_factor,bEI,g,m_oout,m_oout_v1,&
-     & m_oout_v2,m_oout_v3,m_oout_v4,m_oout_v5,m_oout_v6,m_oout_v7,&
-     & m_oout_v8,m_oout_v9,m_oout_v10,m_oout_v11,m_oout_v12,m_oout_v13,&
-     & m_oout_v14,m_oout_v15,m_oout_v16,m_oout_v17,m_oout_v18,&
-     & m_oout_v19,m_oout_v20,m_oout_v21,m_oout_v22,m_oout_v23,&
-     & m_oout_v24,m_oout_v25,m_oout_v26,m_oout_v27,m_oout_v28,&
-     & m_oout_v29,m_oout_v30,m_oout_v31,m_oout_v32,m_oout_v33,&
-     & m_oout_v34,m_oout_v35,weight,weight_v1,weight_v2,weight_v3,&
-     & weight_v4,weight_v5,weight_v6,weight_v7,weight_v8,weight_v9,&
-     & weight_v10,weight_v11,weight_v12,weight_v13,weight_v14,&
-     & weight_v15,weight_v16,weight_v17,weight_v18,weight_v19,&
-     & weight_v20,weight_v21,weight_v22,weight_v23,weight_v24,&
-     & weight_v25,weight_v26,weight_v27,weight_v28,weight_v29,&
+     & m_max_v5,g_input,g_thal_input,bEI_input,bEI_thal_input,&
+     & connect_reverse_factor,weight_v6,connect_reverse_factor_v1,&
+     & weight_v12,weight_v13,connect_reverse_factor_v2,weight_v18,&
+     & weight_v19,weight_v20,connect_reverse_factor_v3,weight_v24,&
+     & weight_v25,weight_v26,weight_v27,connect_reverse_factor_thal,&
      & weight_v30,weight_v31,weight_v32,weight_v33,weight_v34,&
-     & weight_v35)
+     & connect_reverse_factor_thal_v1,weight,weight_v1,weight_v2,&
+     & weight_v3,weight_v4,weight_v5,weight_v7,weight_v8,weight_v9,&
+     & weight_v10,weight_v11,weight_v14,weight_v15,weight_v16,&
+     & weight_v17,weight_v21,weight_v22,weight_v23,weight_v28,&
+     & weight_v29,weight_v35)
 
 implicit none
 
@@ -114,124 +110,73 @@ double precision :: i_v36
 double precision :: v_bI
 double precision :: i_v37
 double precision :: v_bIn
-double precision :: m_out
+double precision :: m_outC
 double precision :: v_bIn_v1
-double precision :: m_out_v1
+double precision :: m_outC_v1
 double precision :: v_bIn_v2
-double precision :: m_out_v2
+double precision :: m_outC_v2
 double precision :: v_bIn_v3
-double precision :: m_out_v3
+double precision :: m_outC_v3
 double precision :: Iext
+double precision :: m_outC_v4
+double precision :: m_outC_v5
+double precision :: gC
+double precision :: g_thalC
+double precision :: bEIC
+double precision :: bEI_thalC
+double precision :: g
+double precision :: bEI
+double precision :: m_out
+double precision :: g_v1
+double precision :: bEI_v1
+double precision :: m_in_v6
+double precision :: m_out_v1
+double precision :: g_v2
+double precision :: bEI_v2
+double precision :: m_in_v12
+double precision :: m_in_v13
+double precision :: m_out_v2
+double precision :: g_v3
+double precision :: bEI_v3
+double precision :: m_in_v18
+double precision :: m_in_v19
+double precision :: m_in_v20
+double precision :: m_out_v3
+double precision :: g_thal
+double precision :: bEI_thal
+double precision :: m_in_v24
+double precision :: m_in_v25
+double precision :: m_in_v26
+double precision :: m_in_v27
 double precision :: m_out_v4
+double precision :: g_thal_v1
+double precision :: bEI_thal_v1
+double precision :: m_in_v30
+double precision :: m_in_v31
+double precision :: m_in_v32
+double precision :: m_in_v33
+double precision :: m_in_v34
 double precision :: m_out_v5
-double precision :: g_cc
-double precision :: g_cc_v1
-double precision :: m_iin
-double precision :: g_cc_v2
-double precision :: m_iin_v1
-double precision :: g_cc_v3
-double precision :: m_iin_v2
-double precision :: g_cc_v4
-double precision :: m_iin_v3
-double precision :: g_cc_v5
-double precision :: m_iin_v4
-double precision :: g_cc_v6
-double precision :: m_iin_v5
-double precision :: g_cc_v7
-double precision :: m_iin_v6
-double precision :: g_cc_v8
-double precision :: m_iin_v7
-double precision :: g_cc_v9
-double precision :: m_iin_v8
-double precision :: g_cc_v10
-double precision :: m_iin_v9
-double precision :: g_cc_v11
-double precision :: m_iin_v10
-double precision :: g_cc_v12
-double precision :: m_iin_v11
-double precision :: g_cc_v13
-double precision :: m_iin_v12
-double precision :: g_cc_v14
-double precision :: m_iin_v13
-double precision :: g_cc_v15
-double precision :: m_iin_v14
-double precision :: g_cc_v16
-double precision :: m_iin_v15
-double precision :: g_cc_v17
-double precision :: m_iin_v16
-double precision :: g_cc_v18
-double precision :: m_iin_v17
-double precision :: g_cc_v19
-double precision :: m_iin_v18
-double precision :: g_cc_v20
-double precision :: m_iin_v19
-double precision :: g_cc_v21
-double precision :: m_iin_v20
-double precision :: g_cc_v22
-double precision :: m_iin_v21
-double precision :: g_cc_v23
-double precision :: m_iin_v22
-double precision :: g_cc_v24
-double precision :: m_iin_v23
-double precision :: g_cc_v25
-double precision :: m_iin_v24
-double precision :: g_cc_v26
-double precision :: m_iin_v25
-double precision :: g_cc_v27
-double precision :: m_iin_v26
-double precision :: g_cc_v28
-double precision :: m_iin_v27
-double precision :: g_cc_v29
-double precision :: m_iin_v28
-double precision :: g_cc_v30
-double precision :: m_iin_v29
-double precision :: g_cc_v31
-double precision :: m_iin_v30
-double precision :: g_cc_v32
-double precision :: m_iin_v31
-double precision :: g_cc_v33
-double precision :: m_iin_v32
-double precision :: g_cc_v34
-double precision :: m_iin_v33
-double precision :: g_cc_v35
-double precision :: m_iin_v34
-double precision :: g_cc_v36
-double precision :: m_iin_v35
 double precision :: m_in
 double precision :: m_in_v1
 double precision :: m_in_v2
 double precision :: m_in_v3
 double precision :: m_in_v4
 double precision :: m_in_v5
-double precision :: m_in_v6
 double precision :: m_in_v7
 double precision :: m_in_v8
 double precision :: m_in_v9
 double precision :: m_in_v10
 double precision :: m_in_v11
-double precision :: m_in_v12
-double precision :: m_in_v13
 double precision :: m_in_v14
 double precision :: m_in_v15
 double precision :: m_in_v16
 double precision :: m_in_v17
-double precision :: m_in_v18
-double precision :: m_in_v19
-double precision :: m_in_v20
 double precision :: m_in_v21
 double precision :: m_in_v22
 double precision :: m_in_v23
-double precision :: m_in_v24
-double precision :: m_in_v25
-double precision :: m_in_v26
-double precision :: m_in_v27
 double precision :: m_in_v28
 double precision :: m_in_v29
-double precision :: m_in_v30
-double precision :: m_in_v31
-double precision :: m_in_v32
-double precision :: m_in_v33
-double precision :: m_in_v34
 double precision :: m_in_v35
 double precision, intent(inout) :: dy(76)
 double precision, intent(in) :: tau
@@ -335,80 +280,51 @@ double precision, intent(in) :: m_max_v4
 double precision, intent(in) :: V_thr_v5
 double precision, intent(in) :: r_v5
 double precision, intent(in) :: m_max_v5
+double precision, intent(in) :: g_input
+double precision, intent(in) :: g_thal_input
+double precision, intent(in) :: bEI_input
+double precision, intent(in) :: bEI_thal_input
 integer, intent(in) :: connect_reverse_factor(1)
-double precision, intent(in) :: bEI
-integer, intent(in) :: g(1)
-double precision, intent(in) :: m_oout
-double precision, intent(in) :: m_oout_v1
-double precision, intent(in) :: m_oout_v2
-double precision, intent(in) :: m_oout_v3
-double precision, intent(in) :: m_oout_v4
-double precision, intent(in) :: m_oout_v5
-double precision, intent(in) :: m_oout_v6
-double precision, intent(in) :: m_oout_v7
-double precision, intent(in) :: m_oout_v8
-double precision, intent(in) :: m_oout_v9
-double precision, intent(in) :: m_oout_v10
-double precision, intent(in) :: m_oout_v11
-double precision, intent(in) :: m_oout_v12
-double precision, intent(in) :: m_oout_v13
-double precision, intent(in) :: m_oout_v14
-double precision, intent(in) :: m_oout_v15
-double precision, intent(in) :: m_oout_v16
-double precision, intent(in) :: m_oout_v17
-double precision, intent(in) :: m_oout_v18
-double precision, intent(in) :: m_oout_v19
-double precision, intent(in) :: m_oout_v20
-double precision, intent(in) :: m_oout_v21
-double precision, intent(in) :: m_oout_v22
-double precision, intent(in) :: m_oout_v23
-double precision, intent(in) :: m_oout_v24
-double precision, intent(in) :: m_oout_v25
-double precision, intent(in) :: m_oout_v26
-double precision, intent(in) :: m_oout_v27
-double precision, intent(in) :: m_oout_v28
-double precision, intent(in) :: m_oout_v29
-double precision, intent(in) :: m_oout_v30
-double precision, intent(in) :: m_oout_v31
-double precision, intent(in) :: m_oout_v32
-double precision, intent(in) :: m_oout_v33
-double precision, intent(in) :: m_oout_v34
-double precision, intent(in) :: m_oout_v35
+double precision, intent(in) :: weight_v6
+integer, intent(in) :: connect_reverse_factor_v1(1)
+double precision, intent(in) :: weight_v12
+double precision, intent(in) :: weight_v13
+integer, intent(in) :: connect_reverse_factor_v2(1)
+double precision, intent(in) :: weight_v18
+double precision, intent(in) :: weight_v19
+double precision, intent(in) :: weight_v20
+integer, intent(in) :: connect_reverse_factor_v3(1)
+double precision, intent(in) :: weight_v24
+double precision, intent(in) :: weight_v25
+double precision, intent(in) :: weight_v26
+double precision, intent(in) :: weight_v27
+integer, intent(in) :: connect_reverse_factor_thal(1)
+double precision, intent(in) :: weight_v30
+double precision, intent(in) :: weight_v31
+double precision, intent(in) :: weight_v32
+double precision, intent(in) :: weight_v33
+double precision, intent(in) :: weight_v34
+integer, intent(in) :: connect_reverse_factor_thal_v1(1)
 double precision, intent(in) :: weight
 double precision, intent(in) :: weight_v1
 double precision, intent(in) :: weight_v2
 double precision, intent(in) :: weight_v3
 double precision, intent(in) :: weight_v4
 double precision, intent(in) :: weight_v5
-double precision, intent(in) :: weight_v6
 double precision, intent(in) :: weight_v7
 double precision, intent(in) :: weight_v8
 double precision, intent(in) :: weight_v9
 double precision, intent(in) :: weight_v10
 double precision, intent(in) :: weight_v11
-double precision, intent(in) :: weight_v12
-double precision, intent(in) :: weight_v13
 double precision, intent(in) :: weight_v14
 double precision, intent(in) :: weight_v15
 double precision, intent(in) :: weight_v16
 double precision, intent(in) :: weight_v17
-double precision, intent(in) :: weight_v18
-double precision, intent(in) :: weight_v19
-double precision, intent(in) :: weight_v20
 double precision, intent(in) :: weight_v21
 double precision, intent(in) :: weight_v22
 double precision, intent(in) :: weight_v23
-double precision, intent(in) :: weight_v24
-double precision, intent(in) :: weight_v25
-double precision, intent(in) :: weight_v26
-double precision, intent(in) :: weight_v27
 double precision, intent(in) :: weight_v28
 double precision, intent(in) :: weight_v29
-double precision, intent(in) :: weight_v30
-double precision, intent(in) :: weight_v31
-double precision, intent(in) :: weight_v32
-double precision, intent(in) :: weight_v33
-double precision, intent(in) :: weight_v34
 double precision, intent(in) :: weight_v35
 
 
@@ -489,132 +405,82 @@ i_v36 = y(74)
 v_bI = y(75)
 i_v37 = y(76)
 v_bIn = v_bI
-m_out = m_max/(exp(r*(V_thr &
+m_outC = m_max/(exp(r*(V_thr &
      & - 2*v - v_v1 - v_v2 - v_v3 - v_v4 - v_v5)) + 1)
 v_bIn_v1 = v_bI
-m_out_v1 = m_max_v1/(exp(r_v1*(V_thr_v1 &
+m_outC_v1 = m_max_v1/(exp(r_v1*(V_thr_v1 &
      & - v_v10 - v_v11 - v_v12 - v_v6 - v_v7 - v_v8 - v_v9)) + 1)
 v_bIn_v2 = v_bI
-m_out_v2 = m_max_v2/(exp(r_v2*(V_thr_v2 &
+m_outC_v2 = m_max_v2/(exp(r_v2*(V_thr_v2 &
      & - v_v13 - v_v14 - v_v15 - v_v16 - v_v17 - v_v18 - v_v19)) + 1)
 v_bIn_v3 = v_bI
-m_out_v3 = m_max_v3/(exp(r_v3*(V_thr_v3 &
+m_outC_v3 = m_max_v3/(exp(r_v3*(V_thr_v3 &
      & - v_v20 - v_v21 - v_v22 - v_v23 - v_v24 - v_v25 - v_v26)) + 1)
 Iext = A*(fsign_1(-onset + t) + 1)&
      & /2 - A*(fsign_1(-dur - onset + t) + 1)/2
-m_out_v4 = m_max_v4/(exp(r_v4*(V_thr_v4 &
+m_outC_v4 = m_max_v4/(exp(r_v4*(V_thr_v4 &
      & - v_v27 - v_v28 - v_v29 - v_v30 - v_v31 - v_v32 - v_v33)) + 1)
-m_out_v5 = m_max_v5/(exp(r_v5*(V_thr_v5 &
+m_outC_v5 = m_max_v5/(exp(r_v5*(V_thr_v5 &
      & - v_v34 - v_v35 - v_v36 - v_v37 - v_v38 - v_v39)) + 1)
-g_cc = bEI*g/connect_reverse_factor
-g_cc_v1 = m_out
-m_iin = g_cc_v1*m_oout
-g_cc_v2 = m_out_v1
-m_iin_v1 = g_cc_v2*m_oout_v1
-g_cc_v3 = m_out_v2
-m_iin_v2 = g_cc_v3*m_oout_v2
-g_cc_v4 = m_out_v3
-m_iin_v3 = g_cc_v4*m_oout_v3
-g_cc_v5 = m_out_v4
-m_iin_v4 = g_cc_v5*m_oout_v4
-g_cc_v6 = m_out_v5
-m_iin_v5 = g_cc_v6*m_oout_v5
-g_cc_v7 = m_out
-m_iin_v6 = g_cc_v7*m_oout_v6
-g_cc_v8 = m_out_v1
-m_iin_v7 = g_cc_v8*m_oout_v7
-g_cc_v9 = m_out_v2
-m_iin_v8 = g_cc_v9*m_oout_v8
-g_cc_v10 = m_out_v3
-m_iin_v9 = g_cc_v10*m_oout_v9
-g_cc_v11 = m_out_v4
-m_iin_v10 = g_cc_v11*m_oout_v10
-g_cc_v12 = m_out_v5
-m_iin_v11 = g_cc_v12*m_oout_v11
-g_cc_v13 = m_out
-m_iin_v12 = g_cc_v13*m_oout_v12
-g_cc_v14 = m_out_v1
-m_iin_v13 = g_cc_v14*m_oout_v13
-g_cc_v15 = m_out_v2
-m_iin_v14 = g_cc_v15*m_oout_v14
-g_cc_v16 = m_out_v3
-m_iin_v15 = g_cc_v16*m_oout_v15
-g_cc_v17 = m_out_v4
-m_iin_v16 = g_cc_v17*m_oout_v16
-g_cc_v18 = m_out_v5
-m_iin_v17 = g_cc_v18*m_oout_v17
-g_cc_v19 = m_out
-m_iin_v18 = g_cc_v19*m_oout_v18
-g_cc_v20 = m_out_v1
-m_iin_v19 = g_cc_v20*m_oout_v19
-g_cc_v21 = m_out_v2
-m_iin_v20 = g_cc_v21*m_oout_v20
-g_cc_v22 = m_out_v3
-m_iin_v21 = g_cc_v22*m_oout_v21
-g_cc_v23 = m_out_v4
-m_iin_v22 = g_cc_v23*m_oout_v22
-g_cc_v24 = m_out_v5
-m_iin_v23 = g_cc_v24*m_oout_v23
-g_cc_v25 = m_out
-m_iin_v24 = g_cc_v25*m_oout_v24
-g_cc_v26 = m_out_v1
-m_iin_v25 = g_cc_v26*m_oout_v25
-g_cc_v27 = m_out_v2
-m_iin_v26 = g_cc_v27*m_oout_v26
-g_cc_v28 = m_out_v3
-m_iin_v27 = g_cc_v28*m_oout_v27
-g_cc_v29 = m_out_v4
-m_iin_v28 = g_cc_v29*m_oout_v28
-g_cc_v30 = m_out_v5
-m_iin_v29 = g_cc_v30*m_oout_v29
-g_cc_v31 = m_out
-m_iin_v30 = g_cc_v31*m_oout_v30
-g_cc_v32 = m_out_v1
-m_iin_v31 = g_cc_v32*m_oout_v31
-g_cc_v33 = m_out_v2
-m_iin_v32 = g_cc_v33*m_oout_v32
-g_cc_v34 = m_out_v3
-m_iin_v33 = g_cc_v34*m_oout_v33
-g_cc_v35 = m_out_v4
-m_iin_v34 = g_cc_v35*m_oout_v34
-g_cc_v36 = m_out_v5
-m_iin_v35 = g_cc_v36*m_oout_v35
-m_in = m_iin*weight
-m_in_v1 = m_iin_v1*weight_v1
-m_in_v2 = m_iin_v2*weight_v2
-m_in_v3 = m_iin_v3*weight_v3
-m_in_v4 = m_iin_v4*weight_v4
-m_in_v5 = m_iin_v5*weight_v5
-m_in_v6 = m_iin_v6*weight_v6
-m_in_v7 = m_iin_v7*weight_v7
-m_in_v8 = m_iin_v8*weight_v8
-m_in_v9 = m_iin_v9*weight_v9
-m_in_v10 = m_iin_v10*weight_v10
-m_in_v11 = m_iin_v11*weight_v11
-m_in_v12 = m_iin_v12*weight_v12
-m_in_v13 = m_iin_v13*weight_v13
-m_in_v14 = m_iin_v14*weight_v14
-m_in_v15 = m_iin_v15*weight_v15
-m_in_v16 = m_iin_v16*weight_v16
-m_in_v17 = m_iin_v17*weight_v17
-m_in_v18 = m_iin_v18*weight_v18
-m_in_v19 = m_iin_v19*weight_v19
-m_in_v20 = m_iin_v20*weight_v20
-m_in_v21 = m_iin_v21*weight_v21
-m_in_v22 = m_iin_v22*weight_v22
-m_in_v23 = m_iin_v23*weight_v23
-m_in_v24 = m_iin_v24*weight_v24
-m_in_v25 = m_iin_v25*weight_v25
-m_in_v26 = m_iin_v26*weight_v26
-m_in_v27 = m_iin_v27*weight_v27
-m_in_v28 = m_iin_v28*weight_v28
-m_in_v29 = m_iin_v29*weight_v29
-m_in_v30 = m_iin_v30*weight_v30
-m_in_v31 = m_iin_v31*weight_v31
-m_in_v32 = m_iin_v32*weight_v32
-m_in_v33 = m_iin_v33*weight_v33
-m_in_v34 = m_iin_v34*weight_v34
-m_in_v35 = m_iin_v35*weight_v35
+gC = g_input
+g_thalC = g_thal_input
+bEIC = bEI_input
+bEI_thalC = bEI_thal_input
+g = gC
+bEI = bEIC
+m_out = bEI*g*m_outC/connect_reverse_factor
+g_v1 = gC
+bEI_v1 = bEIC
+m_in_v6 = m_out*weight_v6
+m_out_v1 = -g_v1*m_outC_v1*(1 - bEI_v1)/connect_reverse_factor_v1
+g_v2 = gC
+bEI_v2 = bEIC
+m_in_v12 = m_out*weight_v12
+m_in_v13 = m_out_v1*weight_v13
+m_out_v2 = -g_v2*m_outC_v2*(1 - bEI_v2)/connect_reverse_factor_v2
+g_v3 = gC
+bEI_v3 = bEIC
+m_in_v18 = m_out*weight_v18
+m_in_v19 = m_out_v1*weight_v19
+m_in_v20 = m_out_v2*weight_v20
+m_out_v3 = -g_v3*m_outC_v3*(1 - bEI_v3)/connect_reverse_factor_v3
+g_thal = g_thalC
+bEI_thal = bEI_thalC
+m_in_v24 = m_out*weight_v24
+m_in_v25 = m_out_v1*weight_v25
+m_in_v26 = m_out_v2*weight_v26
+m_in_v27 = m_out_v3*weight_v27
+m_out_v4 = bEI_thal*g_thal*m_outC_v4/connect_reverse_factor_thal
+g_thal_v1 = g_thalC
+bEI_thal_v1 = bEI_thalC
+m_in_v30 = m_out*weight_v30
+m_in_v31 = m_out_v1*weight_v31
+m_in_v32 = m_out_v2*weight_v32
+m_in_v33 = m_out_v3*weight_v33
+m_in_v34 = m_out_v4*weight_v34
+m_out_v5 = -g_thal_v1*m_outC_v5*(1 - bEI_thal_v1)&
+     & /connect_reverse_factor_thal_v1
+m_in = m_out*weight
+m_in_v1 = m_out_v1*weight_v1
+m_in_v2 = m_out_v2*weight_v2
+m_in_v3 = m_out_v3*weight_v3
+m_in_v4 = m_out_v4*weight_v4
+m_in_v5 = m_out_v5*weight_v5
+m_in_v7 = m_out_v1*weight_v7
+m_in_v8 = m_out_v2*weight_v8
+m_in_v9 = m_out_v3*weight_v9
+m_in_v10 = m_out_v4*weight_v10
+m_in_v11 = m_out_v5*weight_v11
+m_in_v14 = m_out_v2*weight_v14
+m_in_v15 = m_out_v3*weight_v15
+m_in_v16 = m_out_v4*weight_v16
+m_in_v17 = m_out_v5*weight_v17
+m_in_v21 = m_out_v3*weight_v21
+m_in_v22 = m_out_v4*weight_v22
+m_in_v23 = m_out_v5*weight_v23
+m_in_v28 = m_out_v4*weight_v28
+m_in_v29 = m_out_v5*weight_v29
+m_in_v35 = m_out_v5*weight_v35
 
 dy(1) = i
 dy(2) = H*m_in/tau - 2*i/tau - v/tau**2
@@ -749,12 +615,7 @@ call vector_field(args(14), y, dy, args(1), args(2), args(3), args(4), &
      & args(134), args(135), args(136), args(137), args(138), args(139)&
      & , args(140), args(141), args(142), args(143), args(144), &
      & args(145), args(146), args(147), args(148), args(149), args(150)&
-     & , args(151), args(152), args(153), args(154), args(155), &
-     & args(156), args(157), args(158), args(159), args(160), args(161)&
-     & , args(162), args(163), args(164), args(165), args(166), &
-     & args(167), args(168), args(169), args(170), args(171), args(172)&
-     & , args(173), args(174), args(175), args(176), args(177), &
-     & args(178), args(179), args(180), args(181))
+     & , args(151), args(152))
 
 end subroutine func
 
@@ -867,81 +728,52 @@ args(103) = 30.0  ! m_max_v4
 args(104) = 40.0  ! V_thr_v5
 args(105) = 0.1  ! r_v5
 args(106) = 30.0  ! m_max_v5
-args(107) = [6448]  ! connect_reverse_factor
-args(108) = 0.5  ! bEI
-args(109) = [100]  ! g
-args(110) = 0.0  ! m_oout
-args(111) = 0.0  ! m_oout_v1
-args(112) = 0.0  ! m_oout_v2
-args(113) = 0.0  ! m_oout_v3
-args(114) = 0.0  ! m_oout_v4
-args(115) = 0.0  ! m_oout_v5
-args(116) = 0.0  ! m_oout_v6
-args(117) = 0.0  ! m_oout_v7
-args(118) = 0.0  ! m_oout_v8
-args(119) = 0.0  ! m_oout_v9
-args(120) = 0.0  ! m_oout_v10
-args(121) = 0.0  ! m_oout_v11
-args(122) = 0.0  ! m_oout_v12
-args(123) = 0.0  ! m_oout_v13
-args(124) = 0.0  ! m_oout_v14
-args(125) = 0.0  ! m_oout_v15
-args(126) = 0.0  ! m_oout_v16
-args(127) = 0.0  ! m_oout_v17
-args(128) = 0.0  ! m_oout_v18
-args(129) = 0.0  ! m_oout_v19
-args(130) = 0.0  ! m_oout_v20
-args(131) = 0.0  ! m_oout_v21
-args(132) = 0.0  ! m_oout_v22
-args(133) = 0.0  ! m_oout_v23
-args(134) = 0.0  ! m_oout_v24
-args(135) = 0.0  ! m_oout_v25
-args(136) = 0.0  ! m_oout_v26
-args(137) = 0.0  ! m_oout_v27
-args(138) = 0.0  ! m_oout_v28
-args(139) = 0.0  ! m_oout_v29
-args(140) = 0.0  ! m_oout_v30
-args(141) = 0.0  ! m_oout_v31
-args(142) = 0.0  ! m_oout_v32
-args(143) = 0.0  ! m_oout_v33
-args(144) = 0.0  ! m_oout_v34
-args(145) = 0.0  ! m_oout_v35
-args(146) = 53.61853519164954  ! weight
-args(147) = 9.920668080279233  ! weight_v1
-args(148) = 5.541078936916653  ! weight_v2
-args(149) = 3.958166666666667  ! weight_v3
-args(150) = 571.71583  ! weight_v4
-args(151) = 0.0  ! weight_v5
-args(152) = 126.85331071899701  ! weight_v6
-args(153) = 7.405289065743945  ! weight_v7
-args(154) = 5.908537795623369  ! weight_v8
-args(155) = 2.9094999999999995  ! weight_v9
-args(156) = 35.69699  ! weight_v10
-args(157) = 0.0  ! weight_v11
-args(158) = 34.73829288056395  ! weight_v12
-args(159) = 8.711911694438868  ! weight_v13
-args(160) = 1.1365268618155135  ! weight_v14
-args(161) = 7.097935153583618  ! weight_v15
-args(162) = 2.3520000000000003  ! weight_v16
-args(163) = 0.0  ! weight_v17
-args(164) = 20.2590912478185  ! weight_v18
-args(165) = 5.156935882352942  ! weight_v19
-args(166) = 9.086982935153586  ! weight_v20
-args(167) = 5.355  ! weight_v21
-args(168) = 0.0  ! weight_v22
-args(169) = 0.0  ! weight_v23
-args(170) = 0.0  ! weight_v24
-args(171) = 0.0  ! weight_v25
-args(172) = 0.0  ! weight_v26
-args(173) = 0.0  ! weight_v27
-args(174) = 0.0  ! weight_v28
-args(175) = 0.0  ! weight_v29
-args(176) = 0.0  ! weight_v30
-args(177) = 0.0  ! weight_v31
-args(178) = 0.0  ! weight_v32
-args(179) = 0.0  ! weight_v33
-args(180) = 0.0  ! weight_v34
-args(181) = 0.0  ! weight_v35
+args(107) = 100.0  ! g_input
+args(108) = 200.0  ! g_thal_input
+args(109) = 0.5  ! bEI_input
+args(110) = 0.5  ! bEI_thal_input
+args(111) = [6448]  ! connect_reverse_factor
+args(112) = 126.85331071899701  ! weight_v6
+args(113) = [6448]  ! connect_reverse_factor_v1
+args(114) = 34.73829288056395  ! weight_v12
+args(115) = 8.711911694438868  ! weight_v13
+args(116) = [6448]  ! connect_reverse_factor_v2
+args(117) = 20.2590912478185  ! weight_v18
+args(118) = 5.156935882352942  ! weight_v19
+args(119) = 9.086982935153586  ! weight_v20
+args(120) = [6448]  ! connect_reverse_factor_v3
+args(121) = 0.0  ! weight_v24
+args(122) = 0.0  ! weight_v25
+args(123) = 0.0  ! weight_v26
+args(124) = 0.0  ! weight_v27
+args(125) = [6448]  ! connect_reverse_factor_thal
+args(126) = 0.0  ! weight_v30
+args(127) = 0.0  ! weight_v31
+args(128) = 0.0  ! weight_v32
+args(129) = 0.0  ! weight_v33
+args(130) = 0.0  ! weight_v34
+args(131) = [6448]  ! connect_reverse_factor_thal_v1
+args(132) = 53.61853519164954  ! weight
+args(133) = 9.920668080279233  ! weight_v1
+args(134) = 5.541078936916653  ! weight_v2
+args(135) = 3.958166666666667  ! weight_v3
+args(136) = 571.71583  ! weight_v4
+args(137) = 0.0  ! weight_v5
+args(138) = 7.405289065743945  ! weight_v7
+args(139) = 5.908537795623369  ! weight_v8
+args(140) = 2.9094999999999995  ! weight_v9
+args(141) = 35.69699  ! weight_v10
+args(142) = 0.0  ! weight_v11
+args(143) = 1.1365268618155135  ! weight_v14
+args(144) = 7.097935153583618  ! weight_v15
+args(145) = 2.3520000000000003  ! weight_v16
+args(146) = 0.0  ! weight_v17
+args(147) = 5.355  ! weight_v21
+args(148) = 0.0  ! weight_v22
+args(149) = 0.0  ! weight_v23
+args(150) = 0.0  ! weight_v28
+args(151) = 0.0  ! weight_v29
+args(152) = 0.0  ! weight_v35
 y(1) = 0.0  ! v
 y(2) = 0.0  ! i
 y(3) = 0.0  ! v_v1
