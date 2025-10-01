@@ -94,16 +94,15 @@ def main():
 
     # set coupling strengths, step size and cortex type (visual or somato)
     # connectivity reverse factor is the absolute cell count divided by  
-    connect_reverse_factor =  6448 # TODO: adapt this factor also to S2 cell populations!
+    connect_reverse_factor = 1 #6448 # TODO: adapt this factor also to S2 cell populations!
     # to simulate:
     # thalamus I to E inhibition 
     
-    coupling_strengths = [100] # , 150, 200, 250, 300]
-    balance_EI = [0.5]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
-    g_thal = 100
+    coupling_strengths = [50] # , 150, 200, 250, 300]
+    balance_EI = [0.7]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
+    g_thal = 2
     bEI_thal = 0.5 # if g_thal is 0, this does not matter
     step_size = 1e-3
-    cortex_type = 'somato'
     area = 'all'
     filedir = '/data/p_02989/Modelling/output/'
 
@@ -112,12 +111,14 @@ def main():
     input_onset = 1.001 # in sec
     simulation_dur = 2 
     input_durations = [1]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [500000] #[0, 50, 300, 500] #np.arange(0, 500, 100)
+    input_strengths = [50] #[0, 50, 300, 500] #np.arange(0, 500, 100)
     backgrndI_strengths = [0] #[0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
     thal_connect = np.array([0, 0, 0, 0]) 
+    extI_cellcounts = 1000
+    bI_cellcounts = 1000
 
     for d in input_durations:
         simulation_time = int(input_onset) + simulation_dur
@@ -158,7 +159,6 @@ def main():
                         print('gE', gE)
                         print('gI', gI)
                         thal_connect_scaled = thal_connect/connect_reverse_factor
-                        synapse_factor = 1  # the number of synapses per 
                         
                         # implement option to choose only one part of the cortical circuit 
                         # this can be done by putting the connectivity for those parts to zero
@@ -173,7 +173,7 @@ def main():
                         # 8. default: all
 
 
-                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, synapse_factor, filedir, filename, step_size, simulation_time, area=area)
+                        model = JR_Model(Iext, Ib, gE, gI, coupling_thalE, coupling_thalI, thal_connect_scaled, extI_cellcounts, bI_cellcounts, step_size, simulation_time, area=area)
                         if save_params:
                             # safe connectivty parameter in yaml file 
                             model.p.save_to_yaml(os.path.join(filedir, 'params'+filename), gE, gI, coupling_thalE, coupling_thalI, thal_connect)
