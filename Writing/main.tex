@@ -1,0 +1,76 @@
+\documentclass[a4paper,12pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath, amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{geometry}
+\usepackage{makecell}
+
+\geometry{margin=1in}
+
+\title{Computational Modelling of Somatosensory Laminar Circuits}
+\author{Rosa Großmann}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Changed stuff
+\end{abstract}
+
+\section{Introduction}
+Briefly introduce the biological background and motivation for the modelling project.
+
+\section{Methods}
+\subsection{Model Description}
+\subsection{Connectivity Matrix}
+The connectivity value that weights the connection between two population depends on three factors:
+Connection probability: what is the probability that a neuron from population A connects to a neuron in population B. 
+The probablity is computed by conducting pairwise bernoulli trials. Example: we look at layer 4 and pick one PV cell and check if it connects to 
+each of the SOM cells. 
+Multapses (multiple synapses between the same pair of neurons) are lumped together.
+Synaptic strength: what is the post-synaptic potential (PSP) change induced by a single pre-synaptic spike. 
+The synaptic strength also reflects increased potential due to multapses (since a stronger PSP would arise).
+Cell count: how many neurons are in population A.
+The thalamus cell counts are computed using the summarized cell count of one column (Area 1)
+The paper by \cite{Jiang2023} provides synaptic strength values, which are given as post-synaptic potential changes in mV (see Table 3 on page 6 of the preprint).
+ 
+
+The connectivity value is then calculated as:
+\begin{equation}
+\text{Connectivity Value} = \text{Synaptic Strength} \times \text{
+Connection Probability} \times \text{Cell Count}
+\end{equation}
+
+Table \ref{tab:connectivity} summarizes the sources of the values used for each factor that build the connectivity matrix.
+\begin{table}[h!]
+\centering
+\caption{Sources of values for the connectivity matrix.}
+\begin{tabular}{lcccc}
+\hline
+ & Synaptic strength & Connection probablity & Cell count \\
+\hline
+Area 1 & Jiang et al. 2023 & Jiang et al. 2023 & Jiang et al. 2023 \\
+Area 3b & collapsed Area 1 & collapsed Area 1 & Jiang et al. 2023 (collapsed) \\
+S2 & same as Area 1 & same as Area 1 & adapted from Area 1 \\
+Thalamus 4 & Jiang et al. 2023 & \makecell{Jiang et al. 2023 \\ partly assumed by \\the authors} & ? \\
+\hline
+\end{tabular}
+\label{tab:connectivity}
+\end{table}
+
+\section{Results}
+Present the main findings, including figures and tables.
+
+\section{Discussion}
+Interpret the results and discuss their implications.
+
+\section{Conclusion}
+Summarize the main outcomes and future directions.
+
+\bibliographystyle{plain}
+\bibliography{references}
+
+\end{document}
