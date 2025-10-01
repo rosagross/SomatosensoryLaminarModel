@@ -51,16 +51,17 @@ df_P = pd.DataFrame(P, index=population_names[4:], columns=population_names[4:])
 C = params.get_cellcounts()
 df_C = pd.DataFrame(C, index=population_names[4:])
 # Total Connectivity
-g_thal = 100
+g_thal = 1
 connect_reverse_factor =  6448
 bEI_thal = 0.5
-gEthal = g_thal * bEI_thal 
-gIthal = g_thal * (1 - bEI_thal) 
+gEthal = 1 # g_thal * bEI_thal 
+gIthal = 1 # g_thal * (1 - bEI_thal) 
 thal_connect = [0, 0, 0, 0] 
-gE, gI = [1/6448, 1/6448]
+gE, gI = [1, 1] # [1/6448, 1/6448]
 area = 'all'
-synapse_factor = 1
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, synapse_factor=synapse_factor, area=area)
+extI_cellcounts = 1
+bI_cellcounts = 1   
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, extI_cellcounts, bI_cellcounts, area=area)
 df_W = pd.DataFrame(W, index=all_pops[:-2], columns=all_pops)
 
 # %% Plot Synaptic strengths
