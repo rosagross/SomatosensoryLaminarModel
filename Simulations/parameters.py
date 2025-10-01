@@ -292,7 +292,8 @@ class Parameter():
         W_to_thal = np.multiply(PS_to_thal, C_all)
         # thalamus input to S1 connectivity  
         PS_from_thal_S1 = np.multiply(P_thalToS1, S_thalToS1)
-        W_from_thal_S1 = np.multiply(PS_from_thal_S1, C[:int(len(C)/2)])
+        cell_count_thal = 230 # based on Jiang et al. 2023
+        W_from_thal_S1 = np.multiply(PS_from_thal_S1, cell_count_thal)
 
         # now that we have the connectivity from- and to thalamus and S1/S2,
         # we can collapse it to get input array to area 3b 
