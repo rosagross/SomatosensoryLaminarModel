@@ -8,6 +8,7 @@ def figure_style():
     Set style for plotting figures.
     Modified from Guido Meijer (@guidomeijer in 2024)
     """
+    
     sns.set_theme(style="ticks", context="paper",
             font="Arial",
             rc={"font.size": 12,
@@ -28,8 +29,8 @@ def figure_style():
                 "ytick.minor.size": 2,
                 "xtick.minor.width": 0.5,
                 "ytick.minor.width": 0.5,
-                'legend.fontsize': 12,
-                'legend.title_fontsize': 12,
+                'legend.fontsize': 8,
+                'legend.title_fontsize': 8,
                 'legend.frameon': False,
                  })
     
