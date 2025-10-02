@@ -170,21 +170,21 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
     plt.show()
 
 def plot_axis(axs, steps, start_plot, rates, idx_rates):
-    axs.plot(steps[start_plot:], rates[0, idx_rates].T[start_plot:], linewidth=1)
+    axs.plot(steps[start_plot:], rates[idx_rates].T[start_plot:], linewidth=1)
 
 def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels):
     """ Plot population rates for given labels and indices."""
     legend_list = []
     for i, idx in enumerate(idxs_pop):
         plot_axis(axs_op, steps, start_plot, rates, idx)
-        legend_list.append(f'{labels[i]} {np.round(rates[0, idx].T[-1], 6)}')
+        legend_list.append(f'{labels[i]} {np.round(rates[idx].T[-1], 6)}')
 
     axs_op.legend(legend_list, loc='upper right')
 
 
-def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, gE, gI):
+def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g, area):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
-    fig, axs = plt.subplots(4, 3, figsize=(15, 15), sharex=True)  # Set figure size
+    fig, axs = plt.subplots(4, 3, figsize=(15, 15))  # Set figure size
     figure_style()
 
     # external input 
@@ -195,15 +195,15 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, gE, gI
     axs_extI.set_ylabel('Hz')
     # thalamus
     axs_thal = axs[1][0]
-    axs_thal.plot(steps[start_plot:], rates[0, -2:-1].T[start_plot:], color='purple')
-    axs_thal.plot(steps[start_plot:], rates[0, -1:].T[start_plot:], color='grey')
+    axs_thal.plot(steps[start_plot:], rates[-2:-1].T[start_plot:], color='purple')
+    axs_thal.plot(steps[start_plot:], rates[-1:].T[start_plot:], color='grey')
     axs_thal.legend(['Thalamus E', 'Thalamus I'])
     axs_thal.set_ylabel('Hz')
 
     # area 3b
     axsA3b = axs[2][0]
-    axsA3b.plot(steps[start_plot:], rates[0, :4].T[start_plot:], linewidth=1)
-    axsA3b.legend([f'E {np.round(rates[0, 0].T[-1], 6)}', f'PV {np.round(rates[0, 1].T[-1], 6)}', f'SOM {np.round(rates[0, 2].T[-1], 6)}', f'VIP {np.round(rates[0, 3].T[-1], 6)}'])
+    axsA3b.plot(steps[start_plot:], rates[:4].T[start_plot:], linewidth=1)
+    axsA3b.legend([f'E {np.round(rates[0].T[-1], 6)}', f'PV {np.round(rates[1].T[-1], 6)}', f'SOM {np.round(rates[2].T[-1], 6)}', f'VIP {np.round(rates[3].T[-1], 6)}'])
     axsA3b.set_ylabel('Hz')
 
     # plot results for the S1 column 
@@ -218,8 +218,8 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, gE, gI
         else:
             # VIP
             axsVIPS1 = axs[i][1]
-            axsVIPS1.plot(steps[start_plot:], rates[0, 3+4].T[start_plot:], linewidth=1)
-            axsVIPS1.legend([f'VIP1 {np.round(rates[0, 3+4].T[-1], 6)}'])
+            axsVIPS1.plot(steps[start_plot:], rates[3+4].T[start_plot:], linewidth=1)
+            axsVIPS1.legend([f'VIP1 {np.round(rates[3+4].T[-1], 6)}'])
 
         # plot results S2
         nr_pops = 13 # number of pops in S1
@@ -229,8 +229,8 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, gE, gI
         else:
             # VIP
             axsVIPS2 = axs[i][2]
-            axsVIPS2.plot(steps[start_plot:], rates[0, 3+nr_pops].T[start_plot:], linewidth=1)
-            axsVIPS2.legend([f'VIP1 {np.round(rates[0, 3+nr_pops].T[-1], 6)}'])
+            axsVIPS2.plot(steps[start_plot:], rates[3+nr_pops].T[start_plot:], linewidth=1)
+            axsVIPS2.legend([f'VIP1 {np.round(rates[3+nr_pops].T[-1], 6)}'])
     
     # Hide extra figure cell in col 0
     axs[3, 0].axis("off")
@@ -248,11 +248,15 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, gE, gI
     axs[0][1].set_title('Area 1 (S1)')
     axs[0][2].set_title('Area S2')
 
-    annotate_fig(f'gE={np.round(gE, 4)}, gI={np.round(gI, 4)}')
+    annotate_fig(f'bEI={np.round(bEI, 4)}, g={np.round(g, 4)}, area={area}')
     sns.despine(trim=True)
     plt.tight_layout() 
     plt.legend()
-    plt.show()
+    figdir = os.path.join('Figures', 'single_simulations')
+    if not os.path.exists(figdir):
+        os.makedirs(figdir)
+
+    plt.savefig(os.path.join(figdir, f'population_rates_bEI-{bEI}_g-{g}_area-{area}.pdf'), dpi=300)
 
 def annotate_fig(dataname):
     """ Write on the figure with which data it was generated, the date and the script name."""
