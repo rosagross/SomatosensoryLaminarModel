@@ -98,8 +98,8 @@ def main():
     # to simulate:
     # thalamus I to E inhibition 
     
-    coupling_strengths = [50] # , 150, 200, 250, 300]
-    balance_EI = [0.7]  #[0.9 , 0.7, 0.5, 0.3, 0.1]
+    coupling_strengths = [20, 40, 60, 80, 100] # , 150, 200, 250, 300]
+    balance_EI = [0.9, 0.7, 0.5, 0.3, 0.1]
     g_thal = 2
     bEI_thal = 0.5 # if g_thal is 0, this does not matter
     step_size = 1e-3
@@ -110,9 +110,9 @@ def main():
     input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001 # in sec
     simulation_dur = 2 
-    input_durations = [1]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-    input_strengths = [50] #[0, 50, 300, 500] #np.arange(0, 500, 100)
-    backgrndI_strengths = [0] #[0, 5, 10, 15, 20]
+    input_durations = [0.5, 1, 1.5]  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+    input_strengths = [0, 50, 100, 150] #np.arange(0, 500, 100)
+    backgrndI_strengths = [0, 5, 10, 15, 20]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII 
@@ -202,27 +202,22 @@ def main():
                             all_durations_saving.append(duration)
                             print('Saving duration (in s):', duration)
 
-                if plot_rates:
-                    all_rates = np.array(all_rates)
-                    all_potentials = np.squeeze(np.array(all_potentials))
-                    if len(coupling_strengths) == 1:
-                        # when to start plotting (in ms)
-                        start_plot = 0
-                        # plot only one coupling strength value with time on the x-axis
-                        pf.plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot, gE, gI)
+                        if plot_rates:
+                            start_plot = 0
+                            pf.plot_results(rate, Iext, Ib, step_size, simulation_time, start_plot, bEI, g, area)
                         
-                        # plot the potentials (this only works for a single simulation)
-                        potential_sum = np.sum(potential, axis=1)
-                        resolution_tstep = 1e-2
-                        potential_sum_downsampled = potential_sum[:, ::int(1000*resolution_tstep)]
                         if plot_potentials:
+                            potential_sum = np.sum(potential, axis=1)
+                            resolution_tstep = 1e-2
+                            potential_sum_downsampled = potential_sum[:, ::int(1000*resolution_tstep)]
                             pf.plot_potentials(potential_sum, Iext, Ib, step_size, simulation_time, start_plot)
-                        if plot_all_potentials:
-                            pf.plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot)
 
-                    else: 
-                        # used to plot with coupling strength on the x-axis and max/min rate on the y
-                        pf.plot_minmax(all_rates, coupling_strengths)
+                        if plot_all_potentials:
+                            pf.plot_all_potentials(potential, Iext, Ib, step_size, simulation_time, start_plot)
+
+                #if (len(coupling_strengths) > 1):
+                #    # used to plot with coupling strength on the x-axis and max/min rate on the y
+                #    pf.plot_minmax(all_rates, coupling_strengths)
  
     print('Mean Simulation duration: ', np.mean(all_durations))
     print('Mean Saving duration: ', np.mean(all_durations_saving))
