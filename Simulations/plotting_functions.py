@@ -1,9 +1,9 @@
+import os
+import datetime
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-sns.set(style='whitegrid')
 from plotting_style import figure_style
-figure_style()
 
 def plot_minmax(rates, coupling_strengths_Es):
     minRate = np.min(rates[:,:,-100:],axis=2)
@@ -170,94 +170,97 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
     plt.show()
 
 def plot_axis(axs, steps, start_plot, rates, idx_rates):
-    axs.plot(steps[start_plot:], rates[0, idx_rates].T[start_plot:], linewidth=1)
+    axs.plot(steps[start_plot:], rates[idx_rates].T[start_plot:], linewidth=1)
 
-def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot):
+def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels):
+    """ Plot population rates for given labels and indices."""
+    legend_list = []
+    for i, idx in enumerate(idxs_pop):
+        plot_axis(axs_op, steps, start_plot, rates, idx)
+        legend_list.append(f'{labels[i]} {np.round(rates[idx].T[-1], 6)}')
+
+    axs_op.legend(legend_list, loc='upper right')
+
+
+def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g, area):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
-    fig, axs = plt.subplots(1, 2, figsize=(8, 2))  # Set figure size
+    fig, axs = plt.subplots(4, 3, figsize=(15, 15))  # Set figure size
+    figure_style()
 
+    # external input 
+    axs_extI = axs[0][0]
+    axs_extI.plot(steps[start_plot:], Iext[start_plot:], label='Iext rate')
+    axs_extI.plot(steps[start_plot:], Ib[start_plot:], label='Ib rate')
+    axs_extI.legend(title='')
+    axs_extI.set_ylabel('Hz')
     # thalamus
-    axs[0].plot(steps[start_plot:], Iext[start_plot:], label='Iext rate')
-    axs[0].plot(steps[start_plot:], Ib[start_plot:], label='Ib rate')
-    axs[0].legend(title='')
-    axs[0].set_ylabel('Hz')
-    axs[1].plot(steps[start_plot:], rates[0, -2:-1].T[start_plot:], color='purple')
-    axs[1].plot(steps[start_plot:], rates[0, -1:].T[start_plot:], color='grey')
-    axs[1].legend(['Thalamus E', 'Thalamus I'])
-    axs[1].set_ylabel('Hz')
-
-    plt.tight_layout() 
+    axs_thal = axs[1][0]
+    axs_thal.plot(steps[start_plot:], rates[-2:-1].T[start_plot:], color='purple')
+    axs_thal.plot(steps[start_plot:], rates[-1:].T[start_plot:], color='grey')
+    axs_thal.legend(['Thalamus E', 'Thalamus I'])
+    axs_thal.set_ylabel('Hz')
 
     # area 3b
-    figA3b, axsA3b = plt.subplots(1, 1, figsize=(5, 5))
-    axsA3b.plot(steps[start_plot:], rates[0, :4].T[start_plot:], linewidth=1)
-    figA3b.suptitle('Area 3b')
-    plt.tight_layout() 
-    plt.legend([f'E {np.round(rates[0, 0].T[-1], 6)}', f'PV {np.round(rates[0, 1].T[-1], 6)}', f'SOM {np.round(rates[0, 2].T[-1], 6)}', f'VIP {np.round(rates[0, 3].T[-1], 6)}'])
+    axsA3b = axs[2][0]
+    axsA3b.plot(steps[start_plot:], rates[:4].T[start_plot:], linewidth=1)
+    axsA3b.legend([f'E {np.round(rates[0].T[-1], 6)}', f'PV {np.round(rates[1].T[-1], 6)}', f'SOM {np.round(rates[2].T[-1], 6)}', f'VIP {np.round(rates[3].T[-1], 6)}'])
+    axsA3b.set_ylabel('Hz')
 
     # plot results for the S1 column 
-    figS1, axs = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
-   
-    # Plot settings for all subplots
-    # E
-    idxs_E = [0+4, 4+4, 7+4, 10+4]
-    for idxE in idxs_E:
-        plot_axis(axs[0][0], steps, start_plot, rates, idxE)
-
-    axs[0][0].legend([f'E1 {np.round(rates[0, 0+4].T[-1], 6)}', f'E2 {np.round(rates[0, 4+4].T[-1], 6)}', f'E3 {np.round(rates[0, 7+4].T[-1], 6)}', f'E4 {np.round(rates[0, 10+4].T[-1], 6)}'], loc='upper right')
-
-    # PV
-    axs[0][1].plot(steps[start_plot:], rates[0, 1+4].T[start_plot:], linewidth=1)
-    axs[0][1].plot(steps[start_plot:], rates[0, 5+4].T[start_plot:], linewidth=1)
-    axs[0][1].plot(steps[start_plot:], rates[0, 8+4].T[start_plot:], linewidth=1)
-    axs[0][1].plot(steps[start_plot:], rates[0, 11+4].T[start_plot:], linewidth=1)
-    axs[0][1].legend([f'P1 {np.round(rates[0, 1+4].T[-1], 6)}', f'P2 {np.round(rates[0, 5+4].T[-1], 6)}', f'P3 {np.round(rates[0, 8+4].T[-1], 6)}', f'P4 {np.round(rates[0, 11+4].T[-1], 6)}'], loc='upper right')
-
-    # SST
-    axs[1][0].plot(steps[start_plot:], rates[0, 2+4].T[start_plot:], linewidth=1)
-    axs[1][0].plot(steps[start_plot:], rates[0, 6+4].T[start_plot:], linewidth=1)
-    axs[1][0].plot(steps[start_plot:], rates[0, 9+4].T[start_plot:], linewidth=1)
-    axs[1][0].plot(steps[start_plot:], rates[0, 12+4].T[start_plot:], linewidth=1)
-    axs[1][0].legend([f'SOM1 {np.round(rates[0, 2+4].T[-1], 6)}', f'SOM2 {np.round(rates[0, 6+4].T[-1], 6)}', f'SOM3 {np.round(rates[0, 9+4].T[-1], 6)}', f'SOM4 {np.round(rates[0, 12+4].T[-1], 6)}'], loc='upper right')
-
-    # VIP
-    axs[1][1].plot(steps[start_plot:], rates[0, 3+4].T[start_plot:], linewidth=1)
-    axs[1][1].legend([f'VIP1 {np.round(rates[0, 3+4].T[-1], 6)}'])
-
-    # Set titles for each subplot
-    axs[0][0].set_title('E')
-    axs[0][1].set_title('PV')
-    axs[1][0].set_title('SOM')
-    axs[1][1].set_title('VIP')
-    axs[1][1].set_xlabel('time (s)')
-    figS1.suptitle('S1')
-
-    #sns.despine(trim=True, bottom=True)
-    plt.tight_layout() 
-    plt.legend()
+    idxs_E = np.array([0+4, 4+4, 7+4, 10+4]) # indices of E populations in S1
+    labels_pops = [['E1', 'E2', 'E3', 'E4'], ['PV1', 'PV2', 'PV3', 'PV4'], ['SST1', 'SST2', 'SST3', 'SST4'], ['VIP1']]
     
-    # plot results S2
-    figS2, axsS2 = plt.subplots(2, 2, figsize=(8, 5))  # Set figure size
-   
-    # Plot settings for all subplots
-    for i, ax in enumerate(axsS2.flatten(), start=1):
-        if i == 4:
-            ax.plot(steps[start_plot:], rates[0, 25].T[start_plot:], linewidth=1)
+    # loop over populations for S1 and S2
+    for i, labels in enumerate(labels_pops):
+        if i<3:
+            axs_pop = axs[i][1]
+            plot_population_rates(axs_pop, idxs_E+i, rates, steps, start_plot, labels)
         else:
-            ax.plot(steps[start_plot:], rates[0, (i-1)*4+17:i*4+17].T[start_plot:], linewidth=1)
-        ax.grid(True)
-        ax.set_ylabel('Hz')
-    
-    axsS2[1][1].legend(['L2/3', 'L4', 'L5', 'L6'])
+            # VIP
+            axsVIPS1 = axs[i][1]
+            axsVIPS1.plot(steps[start_plot:], rates[3+4].T[start_plot:], linewidth=1)
+            axsVIPS1.legend([f'VIP1 {np.round(rates[3+4].T[-1], 6)}'])
 
-    # Set titles for each subplot
-    axsS2[0][0].set_title('E')
-    axsS2[0][1].set_title('PV')
-    axsS2[1][0].set_title('SOM')
-    axsS2[1][1].set_title('VIP')
-    axsS2[1][1].set_xlabel('time (s)')
-    figS2.suptitle('S2')
+        # plot results S2
+        nr_pops = 13 # number of pops in S1
+        if i<3:
+            axs_pop = axs[i][2]
+            plot_population_rates(axs_pop, idxs_E+i+nr_pops, rates, steps, start_plot, labels)
+        else:
+            # VIP
+            axsVIPS2 = axs[i][2]
+            axsVIPS2.plot(steps[start_plot:], rates[3+nr_pops].T[start_plot:], linewidth=1)
+            axsVIPS2.legend([f'VIP1 {np.round(rates[3+nr_pops].T[-1], 6)}'])
+    
+    # Hide extra figure cell in col 0
+    axs[3, 0].axis("off")
+    
+    # set x-axis label for bottom row
+    for ax in axs[3, :]:
+        ax.set_xlabel('Time (ms)')
+    axs[2, 0].set_xlabel('Time (ms)')
+
+    # set titles for each subplot
+    fig.suptitle('Population Rates')
+    axs[0][0].set_title('External input')
+    axs[1][0].set_title('Thalamus')
+    axs[2][0].set_title('Area 3b')
+    axs[0][1].set_title('Area 1 (S1)')
+    axs[0][2].set_title('Area S2')
+
+    annotate_fig(f'bEI={np.round(bEI, 4)}, g={np.round(g, 4)}, area={area}')
+    sns.despine(trim=True)
     plt.tight_layout() 
     plt.legend()
-    plt.show()
+    figdir = os.path.join('Figures', 'single_simulations')
+    if not os.path.exists(figdir):
+        os.makedirs(figdir)
+
+    plt.savefig(os.path.join(figdir, f'population_rates_bEI-{bEI}_g-{g}_area-{area}.pdf'), dpi=300)
+
+def annotate_fig(dataname):
+    """ Write on the figure with which data it was generated, the date and the script name."""
+    plt.annotate(dataname, xy=(-2, 0.3), xycoords='axes fraction', fontsize=8, ha='center')
+    plt.annotate(datetime.datetime.now(), xy=(-2, 0.2), xycoords='axes fraction', fontsize=8, ha='center')
+    plt.annotate(f"generated in {os.path.basename(__file__)}", xy=(-2, 0.1), xycoords='axes fraction', fontsize=8, ha='center')
 
