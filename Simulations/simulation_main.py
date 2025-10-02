@@ -209,7 +209,7 @@ def main():
                         # when to start plotting (in ms)
                         start_plot = 0
                         # plot only one coupling strength value with time on the x-axis
-                        pf.plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot)
+                        pf.plot_results(all_rates, Iext, Ib, step_size, simulation_time, start_plot, gE, gI)
                         
                         # plot the potentials (this only works for a single simulation)
                         potential_sum = np.sum(potential, axis=1)
@@ -230,75 +230,3 @@ def main():
     return potential, rate
 if __name__ == '__main__':
    potential, rate = main()
-
-# %%
-# compute the rate from the potential
-potentialA1 = potential[4:4+13]
-n_cells = potentialA1.shape[0]
-n_timepoints = potentialA1.shape[2]
-m_out_all = np.zeros((n_timepoints, n_cells))  # NumPy array, not list!
-
-potentialA3b = potential[0:4]
-n_cells_A3b = potentialA3b.shape[0]
-n_timepoints_A3b = potentialA3b.shape[2]
-m_out_all_A3b = np.zeros((n_timepoints_A3b, n_cells_A3b))  # NumPy array, not list!
-
-
-# %% 
-
-import parameters
-par = parameters.Parameter()
-
-# get the parameter
-sigm = par.get_sigmoid()
-sigmA1 = sigm[4:4+13]
-sigmA3b = sigm[0:4]
-
-# %%
-# loop over the potentials and compute the rate
-for t in range(n_timepoints_A3b):
-    for i, target_pop in enumerate(potentialA3b):
-
-        #print(target_pop.shape)
-        m_out_all_A3b[t, i] = sigmA3b[i][2] / (1 + np.exp(sigmA3b[i][0]*(sigmA3b[i][1] - np.sum(target_pop[:, t]))))  
-
-cells_A3b = ['E', 'PV', 'SST', 'VIP']
-rates_df_A3b = pd.DataFrame(m_out_all_A3b, columns=cells_A3b)
-
-for t in range(n_timepoints):
-    for i, target_pop in enumerate(potentialA1):
-
-        #print(target_pop.shape)
-        m_out_all[t, i] = sigmA1[i][2] / (1 + np.exp(sigmA1[i][0]*(sigmA1[i][1] - np.sum(target_pop[:, t]))))  
-
-cells = ['E1', 'PV1', 'SST1', 'VIP', 'E2', 'PV2', 'SST2', 'E3', 'PV3', 'SST3', 'E4', 'PV4', 'SST4']
-rates_df = pd.DataFrame(m_out_all, columns=cells)
-
-# %%
-# plot rates A3b
-
-figA3b, axsA3b = plt.subplots(1, 1, figsize=(5, 5))
-rates_df_A3b.plot(ax=axsA3b)
-#axsA3b.plot(steps[start_plot:], rates[0, :4].T[start_plot:], linewidth=1)
-figA3b.suptitle('Area 3b')
-#plt.legend([f'E {np.round(rates_df_A3b['E'].iloc[-1], 6)}', f'PV {np.round(rates_df_A3b['PV'].iloc[-1], 6)}', f'SOM {np.round(rates_df_A3b['SST'].iloc[-1], 6)}', f'VIP {np.round(rates_df_A3b['VIP'].iloc[-1], 6)}'])
-plt.tight_layout() 
-
-# %%
-# plot rates A1
-layers = [rates_df.columns[[0,4,7,10]],   # first 4 
-          rates_df.columns[[1,5,8,11]],  # next 4
-          rates_df.columns[[2,6,9,12]], # next 4
-          rates_df.columns[[3]]]  # in case of extras (not needed here)
-
-fig, axes = plt.subplots(2, 2, figsize=(14, 10))  # 2x2 grid
-axes = axes.flatten()
-
-for ax, cols in zip(axes, layers):
-    rates_df[cols].plot(ax=ax)
-    ax.set_title(", ".join(cols))  # show which cols are in this subplot
-    ax.legend(loc="best")
-
-plt.tight_layout()
-plt.show() 
-# %%
