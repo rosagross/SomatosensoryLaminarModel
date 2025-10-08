@@ -5,7 +5,7 @@ import os
 
 class JR_Model():
 
-    def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, filedir, filename, step_size=0.001, simulation_time=1, area='all'):
+    def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, step_size=0.001, simulation_time=1, area='all'):
         
         # load in all parameters
         self.p = Parameter()
@@ -20,6 +20,9 @@ class JR_Model():
         self.gEthal = gEthal
         self.gIthal = gIthal
         self.thal_connect = thal_connect
+        self.extI_cellcount = extI_cellcount
+        self.bI_cellcount = bI_cellcount
+        self.thal_cellcount = thal_cellcount
 
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
         self.sigm = self.p.sigmoid_params
@@ -53,7 +56,7 @@ class JR_Model():
         self.u_t = np.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
 
         # Weight matrix [to x from]
-        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, area=self.area) 
+        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcount, self.bI_cellcount, self.thal_cellcount, area=self.area) 
 
         last_step = self.steps[-1] 
 
