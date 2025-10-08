@@ -182,7 +182,7 @@ def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels):
     axs_op.legend(legend_list, loc='upper right')
 
 
-def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g, area):
+def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g, area, d, sb, s):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
     fig, axs = plt.subplots(4, 3, figsize=(15, 15))  # Set figure size
     figure_style()
@@ -256,7 +256,8 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g
     if not os.path.exists(figdir):
         os.makedirs(figdir)
 
-    plt.savefig(os.path.join(figdir, f'population_rates_bEI-{bEI}_g-{g}_area-{area}.pdf'), dpi=300)
+    plt.savefig(os.path.join(figdir, f'population_rates_bEI-{bEI}_g-{g}_area-{area}_Iextdur-{d}_Iextstr-{s}_Ibstr-{sb}.pdf'), dpi=300)
+    plt.show()
 
 def annotate_fig(dataname):
     """ Write on the figure with which data it was generated, the date and the script name."""
