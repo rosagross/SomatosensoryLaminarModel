@@ -162,6 +162,7 @@ def main():
     thal_connect = np.array([0, 0, 0, 0])
     extI_cellcounts = 1000
     bI_cellcounts = 100
+    thal_cellcounts = 500
 
     for d in input_durations:
         simulation_time = int(input_onset) + simulation_dur
