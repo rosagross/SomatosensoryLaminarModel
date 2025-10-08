@@ -171,7 +171,7 @@ class Parameter():
 
         return C 
 
-    def get_raw_connectivity(self, thal_connect, extI_cellcount, bI_cellcount):
+    def get_raw_connectivity(self, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount):
         """
         thal_connect: connecivity between thalamic neurons (E and I)
         extI_cellcount: number of external input neurons (in the thalamus)
@@ -296,7 +296,7 @@ class Parameter():
         W_to_thal = np.multiply(PS_to_thal, C_all)
         # thalamus input to S1 connectivity  
         PS_from_thal_S1 = np.multiply(P_thalToS1, S_thalToS1)
-        cell_count_thal = 230 # based on Jiang et al. 2023
+        cell_count_thal = thal_cellcount # it is 230 in Jiang et al. 2023 but for us it might be different!
         W_from_thal_S1 = np.multiply(PS_from_thal_S1, cell_count_thal)
 
         # now that we have the connectivity from- and to thalamus and S1/S2,
@@ -330,9 +330,9 @@ class Parameter():
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
 
-    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, area='all'):
+    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, area='all'):
 
-        W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(thal_connect, extI_cellcount, bI_cellcount)
+        W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(thal_connect, extI_cellcount, bI_cellcount, thal_cellcount)
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])
