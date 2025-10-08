@@ -171,7 +171,11 @@ class Parameter():
 
         return C 
 
-    def get_raw_connectivity(self, thal_connect):
+    def get_raw_connectivity(self, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount):
+        """
+        thal_connect: connecivity between thalamic neurons (E and I)
+        extI_cellcount: number of external input neurons (in the thalamus)
+        bI_cellcount: number of background input neurons (from other cortical areas)"""
         # g is a scaling factor scaling the general coupling strength
 
         S = self.get_connectStrength()
@@ -292,7 +296,8 @@ class Parameter():
         W_to_thal = np.multiply(PS_to_thal, C_all)
         # thalamus input to S1 connectivity  
         PS_from_thal_S1 = np.multiply(P_thalToS1, S_thalToS1)
-        W_from_thal_S1 = np.multiply(PS_from_thal_S1, C[:int(len(C)/2)])
+        cell_count_thal = thal_cellcount # it is 230 in Jiang et al. 2023 but for us it might be different!
+        W_from_thal_S1 = np.multiply(PS_from_thal_S1, cell_count_thal)
 
         # now that we have the connectivity from- and to thalamus and S1/S2,
         # we can collapse it to get input array to area 3b 
@@ -315,19 +320,19 @@ class Parameter():
         # Create the external input matrix
         # Only the thalamus E population receives the external input (from the brain stem)
         Wext = np.zeros((W_from_thal.shape[1],1))
-        Wext[-2] = 1 # thalamus E population
+        Wext[-2] = 1 * extI_cellcount # thalamus E population
         Wext[-1] = 0 # reticular I population
 
         # .. and also for the background input (all cells receive input except the thalamus)
         Wb = np.zeros((W_from_thal.shape[1],1))
-        Wb[:-2] = 1
+        Wb[:-2] = 1 * bI_cellcount # 
 
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
 
-    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, area='all'):
+    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, area='all'):
 
-        W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(thal_connect)
+        W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(thal_connect, extI_cellcount, bI_cellcount, thal_cellcount)
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])
@@ -355,8 +360,6 @@ class Parameter():
         W0 = np.append(W0, W_to_thal, axis=0)
         W0 = np.append(W0, W_from_thal.T, axis=1)
         W = np.concatenate((W0, Wb, Wext), axis=1)
-        #print('\nW matrix shape', W.shape) 
-        #print('W matrix\n', W[:,-4:]) 
 
         # based on what area was chosen, set the respective connectivity values to 0 
         if area=='ThalA3b':
