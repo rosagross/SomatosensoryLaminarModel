@@ -142,7 +142,7 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
 
         plt.tight_layout()
         plt.savefig('all_areas_potentials.png', dpi=300)
-        plt.show()
+        #plt.show()
             
 
     elif area=='A1':
@@ -257,7 +257,7 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g
         os.makedirs(figdir)
 
     plt.savefig(os.path.join(figdir, f'population_rates_bEI-{bEI}_g-{g}_area-{area}_Iextdur-{d}_Iextstr-{s}_Ibstr-{sb}.pdf'), dpi=300)
-    plt.show()
+    #plt.show()
 
 def annotate_fig(dataname):
     """ Write on the figure with which data it was generated, the date and the script name."""
