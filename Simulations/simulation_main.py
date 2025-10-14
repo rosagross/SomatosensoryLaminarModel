@@ -111,7 +111,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
         psp_filename = "full_" + filename
         write_3D_csv(os.path.join(filedir, psp_filename), potentials)
 
-
+# TODO: implement saving in hdf5 format
 def write_3D_csv(filename, data):
     """
     Write results in form of a 3D hdf5 file.
@@ -139,10 +139,8 @@ def main():
     # to simulate:
     # thalamus I to E inhibition
 
-    coupling_strengths = [20, 40, 60]  # , 150, 200, 250, 300]
-    balance_EI = [
-        0.7, 0.8, 0.9
-    ]  # np.arange(0, 1.1, 0.1) # excitation-inhibition balance (between 0 and 1)
+    coupling_strengths = [20]  # , 150, 200, 250, 300]
+    balance_EI = [0.8] # excitation-inhibition balance
     g_thal = 2
     bEI_thal = 0.5  # if g_thal is 0, this does not matter
     step_size = 1e-3
@@ -229,6 +227,7 @@ def main():
                             thal_connect_scaled,
                             extI_cellcounts,
                             bI_cellcounts,
+                            thal_cellcounts,
                             step_size,
                             simulation_time,
                             area=area,
