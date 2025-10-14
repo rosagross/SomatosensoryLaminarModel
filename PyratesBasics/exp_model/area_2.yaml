@@ -1,0 +1,1201 @@
+PRO_E1:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+RPO_E1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.006
+    H: 1.0
+RPO_PV1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.003
+    H: 1.0
+RPO_SST1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.02
+    H: 1.0
+RPO_VIP:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.015
+    H: 1.0
+RPO_E2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.006
+    H: 1.0
+RPO_PV2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.003
+    H: 1.0
+RPO_SST2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.02
+    H: 1.0
+RPO_E3:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.006
+    H: 1.0
+RPO_PV3:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.003
+    H: 1.0
+RPO_SST3:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.02
+    H: 1.0
+RPO_E4:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.006
+    H: 1.0
+RPO_PV4:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.003
+    H: 1.0
+RPO_SST4:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    bI: 0.0
+    tau: 0.02
+    H: 1.0
+E1:
+  base: NodeTemplate
+  operators:
+  - PRO_E1
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_PV1:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+PV1:
+  base: NodeTemplate
+  operators:
+  - PRO_PV1
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_SST1:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+SST1:
+  base: NodeTemplate
+  operators:
+  - PRO_SST1
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_VIP:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.0704119
+    V_thr: 37.86409387
+    m_max: 38.52689646
+VIP:
+  base: NodeTemplate
+  operators:
+  - PRO_VIP
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_E2:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+E2:
+  base: NodeTemplate
+  operators:
+  - PRO_E2
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_PV2:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+PV2:
+  base: NodeTemplate
+  operators:
+  - PRO_PV2
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_SST2:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+SST2:
+  base: NodeTemplate
+  operators:
+  - PRO_SST2
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_E3:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+E3:
+  base: NodeTemplate
+  operators:
+  - PRO_E3
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_PV3:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+PV3:
+  base: NodeTemplate
+  operators:
+  - PRO_PV3
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_SST3:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+SST3:
+  base: NodeTemplate
+  operators:
+  - PRO_SST3
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_E4:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+E4:
+  base: NodeTemplate
+  operators:
+  - PRO_E4
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_PV4:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+PV4:
+  base: NodeTemplate
+  operators:
+  - PRO_PV4
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+PRO_SST4:
+  base: OperatorTemplate
+  equations:
+  - m_out = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_out: output
+    v: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+SST4:
+  base: NodeTemplate
+  operators:
+  - PRO_SST4
+  - RPO_E1
+  - RPO_PV1
+  - RPO_SST1
+  - RPO_VIP
+  - RPO_E2
+  - RPO_PV2
+  - RPO_SST2
+  - RPO_E3
+  - RPO_PV3
+  - RPO_SST3
+  - RPO_E4
+  - RPO_PV4
+  - RPO_SST4
+area_2:
+  base: CircuitTemplate
+  circuits: {}
+  nodes:
+    E1: E1
+    PV1: PV1
+    SST1: SST1
+    VIP: VIP
+    E2: E2
+    PV2: PV2
+    SST2: SST2
+    E3: E3
+    PV3: PV3
+    SST3: SST3
+    E4: E4
+    PV4: PV4
+    SST4: SST4
+  edges:
+  - - E1/PRO_E1/m_out
+    - E1/RPO_E1/m_in
+    - 
+    - weight: 0.6589078008684864
+  - - PV1/PRO_PV1/m_out
+    - E1/RPO_PV1/m_in
+    - 
+    - weight: -0.18912841191066998
+  - - SST1/PRO_SST1/m_out
+    - E1/RPO_SST1/m_in
+    - 
+    - weight: -0.16066997518610424
+  - - VIP/PRO_VIP/m_out
+    - E1/RPO_VIP/m_in
+    - 
+    - weight: -0.02834212158808933
+  - - E2/PRO_E2/m_out
+    - E1/RPO_E2/m_in
+    - 
+    - weight: 0.5296991315136477
+  - - PV2/PRO_PV2/m_out
+    - E1/RPO_PV2/m_in
+    - 
+    - weight: -0.013182382133995037
+  - - SST2/PRO_SST2/m_out
+    - E1/RPO_SST2/m_in
+    - 
+    - weight: -0.01674937965260546
+  - - E3/PRO_E3/m_out
+    - E1/RPO_E3/m_in
+    - 
+    - weight: 0.06368253722084367
+  - - PV3/PRO_PV3/m_out
+    - E1/RPO_PV3/m_in
+    - 
+    - weight: -0.0008452233250620348
+  - - SST3/PRO_SST3/m_out
+    - E1/RPO_SST3/m_in
+    - 
+    - weight: -0.012213089330024815
+  - - E4/PRO_E4/m_out
+    - E1/RPO_E4/m_in
+    - 
+    - weight: 0.0
+  - - PV4/PRO_PV4/m_out
+    - E1/RPO_PV4/m_in
+    - 
+    - weight: -0.0
+  - - SST4/PRO_SST4/m_out
+    - E1/RPO_SST4/m_in
+    - 
+    - weight: -0.0
+  - - E1/PRO_E1/m_out
+    - PV1/RPO_E1/m_in
+    - 
+    - weight: 2.8028167648883375
+  - - PV1/PRO_PV1/m_out
+    - PV1/RPO_PV1/m_in
+    - 
+    - weight: -0.22192928039702234
+  - - SST1/PRO_SST1/m_out
+    - PV1/RPO_SST1/m_in
+    - 
+    - weight: -0.06771091811414393
+  - - VIP/PRO_VIP/m_out
+    - PV1/RPO_VIP/m_in
+    - 
+    - weight: -0.03625155086848635
+  - - E2/PRO_E2/m_out
+    - PV1/RPO_E2/m_in
+    - 
+    - weight: 0.04622828784119107
+  - - PV2/PRO_PV2/m_out
+    - PV1/RPO_PV2/m_in
+    - 
+    - weight: -0.011205024813895783
+  - - SST2/PRO_SST2/m_out
+    - PV1/RPO_SST2/m_in
+    - 
+    - weight: -0.011910669975186104
+  - - E3/PRO_E3/m_out
+    - PV1/RPO_E3/m_in
+    - 
+    - weight: 0.0026534390508684866
+  - - PV3/PRO_PV3/m_out
+    - PV1/RPO_PV3/m_in
+    - 
+    - weight: -0.0008452233250620348
+  - - SST3/PRO_SST3/m_out
+    - PV1/RPO_SST3/m_in
+    - 
+    - weight: -0.011398883374689825
+  - - E4/PRO_E4/m_out
+    - PV1/RPO_E4/m_in
+    - 
+    - weight: 0.000499379652605459
+  - - PV4/PRO_PV4/m_out
+    - PV1/RPO_PV4/m_in
+    - 
+    - weight: -4.3424317617866005e-05
+  - - SST4/PRO_SST4/m_out
+    - PV1/RPO_SST4/m_in
+    - 
+    - weight: -0.0030707196029776678
+  - - E1/PRO_E1/m_out
+    - SST1/RPO_E1/m_in
+    - 
+    - weight: 1.5931800558312657
+  - - PV1/PRO_PV1/m_out
+    - SST1/RPO_PV1/m_in
+    - 
+    - weight: -0.20308622828784123
+  - - SST1/PRO_SST1/m_out
+    - SST1/RPO_SST1/m_in
+    - 
+    - weight: -0.0
+  - - VIP/PRO_VIP/m_out
+    - SST1/RPO_VIP/m_in
+    - 
+    - weight: -0.17862127791563276
+  - - E2/PRO_E2/m_out
+    - SST1/RPO_E2/m_in
+    - 
+    - weight: 0.019261786600496277
+  - - PV2/PRO_PV2/m_out
+    - SST1/RPO_PV2/m_in
+    - 
+    - weight: -0.007909429280397022
+  - - SST2/PRO_SST2/m_out
+    - SST1/RPO_SST2/m_in
+    - 
+    - weight: -0.016377171215880896
+  - - E3/PRO_E3/m_out
+    - SST1/RPO_E3/m_in
+    - 
+    - weight: 0.0015920634305210918
+  - - PV3/PRO_PV3/m_out
+    - SST1/RPO_PV3/m_in
+    - 
+    - weight: -0.0008452233250620348
+  - - SST3/PRO_SST3/m_out
+    - SST1/RPO_SST3/m_in
+    - 
+    - weight: -0.01709832506203474
+  - - E4/PRO_E4/m_out
+    - SST1/RPO_E4/m_in
+    - 
+    - weight: 0.0
+  - - PV4/PRO_PV4/m_out
+    - SST1/RPO_PV4/m_in
+    - 
+    - weight: -0.0
+  - - SST4/PRO_SST4/m_out
+    - SST1/RPO_SST4/m_in
+    - 
+    - weight: -0.0
+  - - E1/PRO_E1/m_out
+    - VIP/RPO_E1/m_in
+    - 
+    - weight: 0.5245037220843672
+  - - PV1/PRO_PV1/m_out
+    - VIP/RPO_PV1/m_in
+    - 
+    - weight: -0.14376550868486354
+  - - SST1/PRO_SST1/m_out
+    - VIP/RPO_SST1/m_in
+    - 
+    - weight: -0.2656792803970223
+  - - VIP/PRO_VIP/m_out
+    - VIP/RPO_VIP/m_in
+    - 
+    - weight: -0.04152450372208437
+  - - E2/PRO_E2/m_out
+    - VIP/RPO_E2/m_in
+    - 
+    - weight: 0.0057785359801488835
+  - - PV2/PRO_PV2/m_out
+    - VIP/RPO_PV2/m_in
+    - 
+    - weight: -0.006591191066997518
+  - - SST2/PRO_SST2/m_out
+    - VIP/RPO_SST2/m_in
+    - 
+    - weight: -0.006327543424317619
+  - - E3/PRO_E3/m_out
+    - VIP/RPO_E3/m_in
+    - 
+    - weight: 0.0005306878101736973
+  - - PV3/PRO_PV3/m_out
+    - VIP/RPO_PV3/m_in
+    - 
+    - weight: -0.0008452233250620348
+  - - SST3/PRO_SST3/m_out
+    - VIP/RPO_SST3/m_in
+    - 
+    - weight: -0.004885235732009926
+  - - E4/PRO_E4/m_out
+    - VIP/RPO_E4/m_in
+    - 
+    - weight: 0.0
+  - - PV4/PRO_PV4/m_out
+    - VIP/RPO_PV4/m_in
+    - 
+    - weight: -8.684863523573201e-05
+  - - SST4/PRO_SST4/m_out
+    - VIP/RPO_SST4/m_in
+    - 
+    - weight: -0.00255893300248139
+  - - E1/PRO_E1/m_out
+    - E2/RPO_E1/m_in
+    - 
+    - weight: 0.08523185483870968
+  - - PV1/PRO_PV1/m_out
+    - E2/RPO_PV1/m_in
+    - 
+    - weight: -0.024426178660049633
+  - - SST1/PRO_SST1/m_out
+    - E2/RPO_SST1/m_in
+    - 
+    - weight: -0.03385545905707196
+  - - VIP/PRO_VIP/m_out
+    - E2/RPO_VIP/m_in
+    - 
+    - weight: -0.04613833746898263
+  - - E2/PRO_E2/m_out
+    - E2/RPO_E2/m_in
+    - 
+    - weight: 1.5159989143920598
+  - - PV2/PRO_PV2/m_out
+    - E2/RPO_PV2/m_in
+    - 
+    - weight: -0.2465105459057072
+  - - SST2/PRO_SST2/m_out
+    - E2/RPO_SST2/m_in
+    - 
+    - weight: -0.07369727047146403
+  - - E3/PRO_E3/m_out
+    - E2/RPO_E3/m_in
+    - 
+    - weight: 0.03184126861042184
+  - - PV3/PRO_PV3/m_out
+    - E2/RPO_PV3/m_in
+    - 
+    - weight: -0.02366625310173697
+  - - SST3/PRO_SST3/m_out
+    - E2/RPO_SST3/m_in
+    - 
+    - weight: -0.042338709677419366
+  - - E4/PRO_E4/m_out
+    - E2/RPO_E4/m_in
+    - 
+    - weight: 0.0
+  - - PV4/PRO_PV4/m_out
+    - E2/RPO_PV4/m_in
+    - 
+    - weight: -0.0008684863523573202
+  - - SST4/PRO_SST4/m_out
+    - E2/RPO_SST4/m_in
+    - 
+    - weight: -0.012282878411910671
+  - - E1/PRO_E1/m_out
+    - PV2/RPO_E1/m_in
+    - 
+    - weight: 0.23602667493796528
+  - - PV1/PRO_PV1/m_out
+    - PV2/RPO_PV1/m_in
+    - 
+    - weight: -0.011166253101736972
+  - - SST1/PRO_SST1/m_out
+    - PV2/RPO_SST1/m_in
+    - 
+    - weight: -0.013197890818858561
+  - - VIP/PRO_VIP/m_out
+    - PV2/RPO_VIP/m_in
+    - 
+    - weight: -0.03493331265508685
+  - - E2/PRO_E2/m_out
+    - PV2/RPO_E2/m_in
+    - 
+    - weight: 5.402931141439206
+  - - PV2/PRO_PV2/m_out
+    - PV2/RPO_PV2/m_in
+    - 
+    - weight: -0.18982630272952858
+  - - SST2/PRO_SST2/m_out
+    - PV2/RPO_SST2/m_in
+    - 
+    - weight: -0.13511166253101736
+  - - E3/PRO_E3/m_out
+    - PV2/RPO_E3/m_in
+    - 
+    - weight: 0.04776190291563276
+  - - PV3/PRO_PV3/m_out
+    - PV2/RPO_PV3/m_in
+    - 
+    - weight: -0.02366625310173697
+  - - SST3/PRO_SST3/m_out
+    - PV2/RPO_SST3/m_in
+    - 
+    - weight: -0.038267679900744415
+  - - E4/PRO_E4/m_out
+    - PV2/RPO_E4/m_in
+    - 
+    - weight: 0.0049937965260545905
+  - - PV4/PRO_PV4/m_out
+    - PV2/RPO_PV4/m_in
+    - 
+    - weight: -0.0013027295285359803
+  - - SST4/PRO_SST4/m_out
+    - PV2/RPO_SST4/m_in
+    - 
+    - weight: -0.009212158808933004
+  - - E1/PRO_E1/m_out
+    - SST2/RPO_E1/m_in
+    - 
+    - weight: 0.23602667493796528
+  - - PV1/PRO_PV1/m_out
+    - SST2/RPO_PV1/m_in
+    - 
+    - weight: -0.012562034739454095
+  - - SST1/PRO_SST1/m_out
+    - SST2/RPO_SST1/m_in
+    - 
+    - weight: -0.013771712158808933
+  - - VIP/PRO_VIP/m_out
+    - SST2/RPO_VIP/m_in
+    - 
+    - weight: -0.03229683622828784
+  - - E2/PRO_E2/m_out
+    - SST2/RPO_E2/m_in
+    - 
+    - weight: 0.9149348635235732
+  - - PV2/PRO_PV2/m_out
+    - SST2/RPO_PV2/m_in
+    - 
+    - weight: -0.21882754342431765
+  - - SST2/PRO_SST2/m_out
+    - SST2/RPO_SST2/m_in
+    - 
+    - weight: -0.0008486352357320099
+  - - E3/PRO_E3/m_out
+    - SST2/RPO_E3/m_in
+    - 
+    - weight: 0.04776190291563276
+  - - PV3/PRO_PV3/m_out
+    - SST2/RPO_PV3/m_in
+    - 
+    - weight: -0.027047146401985113
+  - - SST3/PRO_SST3/m_out
+    - SST2/RPO_SST3/m_in
+    - 
+    - weight: -0.038267679900744415
+  - - E4/PRO_E4/m_out
+    - SST2/RPO_E4/m_in
+    - 
+    - weight: 0.009987593052109181
+  - - PV4/PRO_PV4/m_out
+    - SST2/RPO_PV4/m_in
+    - 
+    - weight: -0.0008684863523573202
+  - - SST4/PRO_SST4/m_out
+    - SST2/RPO_SST4/m_in
+    - 
+    - weight: -0.011771091811414393
+  - - E1/PRO_E1/m_out
+    - E3/RPO_E1/m_in
+    - 
+    - weight: 0.5638415012406948
+  - - PV1/PRO_PV1/m_out
+    - E3/RPO_PV1/m_in
+    - 
+    - weight: -0.029311414392059556
+  - - SST1/PRO_SST1/m_out
+    - E3/RPO_SST1/m_in
+    - 
+    - weight: -0.053939205955334996
+  - - VIP/PRO_VIP/m_out
+    - E3/RPO_VIP/m_in
+    - 
+    - weight: -0.04086538461538462
+  - - E2/PRO_E2/m_out
+    - E3/RPO_E2/m_in
+    - 
+    - weight: 0.5027326302729528
+  - - PV2/PRO_PV2/m_out
+    - E3/RPO_PV2/m_in
+    - 
+    - weight: -0.0507521712158809
+  - - SST2/PRO_SST2/m_out
+    - E3/RPO_SST2/m_in
+    - 
+    - weight: -0.01074937965260546
+  - - E3/PRO_E3/m_out
+    - E3/RPO_E3/m_in
+    - 
+    - weight: 0.8321184863523575
+  - - PV3/PRO_PV3/m_out
+    - E3/RPO_PV3/m_in
+    - 
+    - weight: -0.3347084367245658
+  - - SST3/PRO_SST3/m_out
+    - E3/RPO_SST3/m_in
+    - 
+    - weight: -0.12294509925558313
+  - - E4/PRO_E4/m_out
+    - E3/RPO_E4/m_in
+    - 
+    - weight: 0.04993796526054591
+  - - PV4/PRO_PV4/m_out
+    - E3/RPO_PV4/m_in
+    - 
+    - weight: -0.007816377171215881
+  - - SST4/PRO_SST4/m_out
+    - E3/RPO_SST4/m_in
+    - 
+    - weight: -0.026101116625310172
+  - - E1/PRO_E1/m_out
+    - PV3/RPO_E1/m_in
+    - 
+    - weight: 0.05572852047146403
+  - - PV1/PRO_PV1/m_out
+    - PV3/RPO_PV1/m_in
+    - 
+    - weight: -0.0034894540942928044
+  - - SST1/PRO_SST1/m_out
+    - PV3/RPO_SST1/m_in
+    - 
+    - weight: -0.006312034739454095
+  - - VIP/PRO_VIP/m_out
+    - PV3/RPO_VIP/m_in
+    - 
+    - weight: -0.012523263027295286
+  - - E2/PRO_E2/m_out
+    - PV3/RPO_E2/m_in
+    - 
+    - weight: 0.08427031637717124
+  - - PV2/PRO_PV2/m_out
+    - PV3/RPO_PV2/m_in
+    - 
+    - weight: -0.019773573200992555
+  - - SST2/PRO_SST2/m_out
+    - PV3/RPO_SST2/m_in
+    - 
+    - weight: -0.008560794044665013
+  - - E3/PRO_E3/m_out
+    - PV3/RPO_E3/m_in
+    - 
+    - weight: 1.0507618641439207
+  - - PV3/PRO_PV3/m_out
+    - PV3/RPO_PV3/m_in
+    - 
+    - weight: -0.20792493796526057
+  - - SST3/PRO_SST3/m_out
+    - PV3/RPO_SST3/m_in
+    - 
+    - weight: -0.19622363523573205
+  - - E4/PRO_E4/m_out
+    - PV3/RPO_E4/m_in
+    - 
+    - weight: 0.009987593052109181
+  - - PV4/PRO_PV4/m_out
+    - PV3/RPO_PV4/m_in
+    - 
+    - weight: -0.005645161290322581
+  - - SST4/PRO_SST4/m_out
+    - PV3/RPO_SST4/m_in
+    - 
+    - weight: -0.013306451612903229
+  - - E1/PRO_E1/m_out
+    - SST3/RPO_E1/m_in
+    - 
+    - weight: 0.05245037220843673
+  - - PV1/PRO_PV1/m_out
+    - SST3/RPO_PV1/m_in
+    - 
+    - weight: -0.002791563275434243
+  - - SST1/PRO_SST1/m_out
+    - SST3/RPO_SST1/m_in
+    - 
+    - weight: -0.0057382133995037225
+  - - VIP/PRO_VIP/m_out
+    - SST3/RPO_VIP/m_in
+    - 
+    - weight: -0.012523263027295286
+  - - E2/PRO_E2/m_out
+    - SST3/RPO_E2/m_in
+    - 
+    - weight: 0.09149348635235732
+  - - PV2/PRO_PV2/m_out
+    - SST3/RPO_PV2/m_in
+    - 
+    - weight: -0.019773573200992555
+  - - SST2/PRO_SST2/m_out
+    - SST3/RPO_SST2/m_in
+    - 
+    - weight: -0.009305210918114145
+  - - E3/PRO_E3/m_out
+    - SST3/RPO_E3/m_in
+    - 
+    - weight: 0.5439550054280398
+  - - PV3/PRO_PV3/m_out
+    - SST3/RPO_PV3/m_in
+    - 
+    - weight: -0.2628644540942928
+  - - SST3/PRO_SST3/m_out
+    - SST3/RPO_SST3/m_in
+    - 
+    - weight: -0.004885235732009926
+  - - E4/PRO_E4/m_out
+    - SST3/RPO_E4/m_in
+    - 
+    - weight: 0.014981389578163772
+  - - PV4/PRO_PV4/m_out
+    - SST3/RPO_PV4/m_in
+    - 
+    - weight: -0.0021712158808933004
+  - - SST4/PRO_SST4/m_out
+    - SST3/RPO_SST4/m_in
+    - 
+    - weight: -0.016377171215880896
+  - - E1/PRO_E1/m_out
+    - E4/RPO_E1/m_in
+    - 
+    - weight: 0.0
+  - - PV1/PRO_PV1/m_out
+    - E4/RPO_PV1/m_in
+    - 
+    - weight: -0.0013957816377171215
+  - - SST1/PRO_SST1/m_out
+    - E4/RPO_SST1/m_in
+    - 
+    - weight: -0.0017214640198511167
+  - - VIP/PRO_VIP/m_out
+    - E4/RPO_VIP/m_in
+    - 
+    - weight: -0.005272952853598015
+  - - E2/PRO_E2/m_out
+    - E4/RPO_E2/m_in
+    - 
+    - weight: 0.0837887717121588
+  - - PV2/PRO_PV2/m_out
+    - E4/RPO_PV2/m_in
+    - 
+    - weight: -0.009886786600496278
+  - - SST2/PRO_SST2/m_out
+    - E4/RPO_SST2/m_in
+    - 
+    - weight: -0.0037220843672456576
+  - - E3/PRO_E3/m_out
+    - E4/RPO_E3/m_in
+    - 
+    - weight: 0.2122751240694789
+  - - PV3/PRO_PV3/m_out
+    - E4/RPO_PV3/m_in
+    - 
+    - weight: -0.01605924317617866
+  - - SST3/PRO_SST3/m_out
+    - E4/RPO_SST3/m_in
+    - 
+    - weight: -0.013841501240694791
+  - - E4/PRO_E4/m_out
+    - E4/RPO_E4/m_in
+    - 
+    - weight: 0.15730459057071963
+  - - PV4/PRO_PV4/m_out
+    - E4/RPO_PV4/m_in
+    - 
+    - weight: -0.3439205955334988
+  - - SST4/PRO_SST4/m_out
+    - E4/RPO_SST4/m_in
+    - 
+    - weight: -0.07727977667493796
+  - - E1/PRO_E1/m_out
+    - PV4/RPO_E1/m_in
+    - 
+    - weight: 0.009834444789081888
+  - - PV1/PRO_PV1/m_out
+    - PV4/RPO_PV1/m_in
+    - 
+    - weight: -6.978908188585609e-05
+  - - SST1/PRO_SST1/m_out
+    - PV4/RPO_SST1/m_in
+    - 
+    - weight: -0.00011476426799007446
+  - - VIP/PRO_VIP/m_out
+    - PV4/RPO_VIP/m_in
+    - 
+    - weight: -0.0013182382133995038
+  - - E2/PRO_E2/m_out
+    - PV4/RPO_E2/m_in
+    - 
+    - weight: 0.012038616625310174
+  - - PV2/PRO_PV2/m_out
+    - PV4/RPO_PV2/m_in
+    - 
+    - weight: -0.0013182382133995038
+  - - SST2/PRO_SST2/m_out
+    - PV4/RPO_SST2/m_in
+    - 
+    - weight: -0.00018610421836228288
+  - - E3/PRO_E3/m_out
+    - PV4/RPO_E3/m_in
+    - 
+    - weight: 0.16982009925558314
+  - - PV3/PRO_PV3/m_out
+    - PV4/RPO_PV3/m_in
+    - 
+    - weight: -0.0
+  - - SST3/PRO_SST3/m_out
+    - PV4/RPO_SST3/m_in
+    - 
+    - weight: -0.002442617866004963
+  - - E4/PRO_E4/m_out
+    - PV4/RPO_E4/m_in
+    - 
+    - weight: 3.955086848635236
+  - - PV4/PRO_PV4/m_out
+    - PV4/RPO_PV4/m_in
+    - 
+    - weight: -0.10682382133995039
+  - - SST4/PRO_SST4/m_out
+    - PV4/RPO_SST4/m_in
+    - 
+    - weight: -0.12334057071960298
+  - - E1/PRO_E1/m_out
+    - SST4/RPO_E1/m_in
+    - 
+    - weight: 0.006556296526054591
+  - - PV1/PRO_PV1/m_out
+    - SST4/RPO_PV1/m_in
+    - 
+    - weight: -0.0
+  - - SST1/PRO_SST1/m_out
+    - SST4/RPO_SST1/m_in
+    - 
+    - weight: -0.00011476426799007446
+  - - VIP/PRO_VIP/m_out
+    - SST4/RPO_VIP/m_in
+    - 
+    - weight: -0.0006591191066997519
+  - - E2/PRO_E2/m_out
+    - SST4/RPO_E2/m_in
+    - 
+    - weight: 0.012038616625310174
+  - - PV2/PRO_PV2/m_out
+    - SST4/RPO_PV2/m_in
+    - 
+    - weight: -0.0013182382133995038
+  - - SST2/PRO_SST2/m_out
+    - SST4/RPO_SST2/m_in
+    - 
+    - weight: -0.00014888337468982633
+  - - E3/PRO_E3/m_out
+    - SST4/RPO_E3/m_in
+    - 
+    - weight: 0.039801585763027295
+  - - PV3/PRO_PV3/m_out
+    - SST4/RPO_PV3/m_in
+    - 
+    - weight: -0.0
+  - - SST3/PRO_SST3/m_out
+    - SST4/RPO_SST3/m_in
+    - 
+    - weight: -0.0016284119106699752
+  - - E4/PRO_E4/m_out
+    - SST4/RPO_E4/m_in
+    - 
+    - weight: 0.5118641439205956
+  - - PV4/PRO_PV4/m_out
+    - SST4/RPO_PV4/m_in
+    - 
+    - weight: -0.2700992555831266
+  - - SST4/PRO_SST4/m_out
+    - SST4/RPO_SST4/m_in
+    - 
+    - weight: -0.0030707196029776678

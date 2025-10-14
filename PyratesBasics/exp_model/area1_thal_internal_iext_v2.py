@@ -1,13 +1,13 @@
 # %%
 import os 
-os.chdir("/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model") 
+os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
 from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-#from numba import njit
+from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
 
@@ -21,11 +21,11 @@ params = Parameter()
 # %% Input definition
 
 input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
-input_onset = 1.001 # in sec
+input_onset = 1 # in sec
 simulation_dur = 1 
 input_duration = 0.5  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 0 # [0, 50, 300, 500] #np.arange(0, 500, 100)
-backgrndI_strengths = 200 #[0, 5, 10, 15, 20]
+input_strength = 50 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+backgrndI_strengths = 0 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
 simulation_time = int(input_onset) + simulation_dur
@@ -62,14 +62,13 @@ gEthal = 0
 gIthal = 0
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect) 
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='all') 
 
 # selecting the region --> A1: FROM THE 5TH ELEMENT TO THE 17TH (INCLUDED) 
 # in python the results include the start index but excludes the end index
 rows = np.r_[4:17, 30, 31]
 cols = np.r_[4:17, 30, 31]
 W_A1_thal = W[np.ix_(rows, cols)]
-
 """
 W[-2:,-4:-2] (within thalamus connectivity)
 W[-2:,4:-4] (A1 to thalamus connectivity)
@@ -100,21 +99,16 @@ pros = [deepcopy(pro).update_template(name=pro_names[i],
 rpo = OperatorTemplate(
     name='RPO', path=None,
     equations=['d/dt * v = i',
-               'd/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2'],
+               'd/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
                'm_in': 'input',
-               'bI': 'input',
+               'bI': 0.0,
                'tau': 0.01,
                'H': 1.0},
     description="excitatory rate-to-potential operator")
 
-# background input to all populations except thalE and thalI
-bI_array = np.ones(N_cells) * backgrndI_strengths
-bI_array[-2:] = 0
-
-# TODO: this version does not work because we have two different taus: one for the background input and one for the cell itself
-rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau_a1_thal[i], "bI": bI_array[i]}) for i in range(N_cells)]
+rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau_a1_thal[i]}) for i in range(N_cells)]
 
 # %% Operator template for the external input --> only for thalE!
 rpo_Iext_thalE = [OperatorTemplate(
@@ -128,21 +122,39 @@ rpo_Iext_thalE = [OperatorTemplate(
                'H': 1.0}
     ) 
 ]
+"""
 create_I_ext = [OperatorTemplate(
     name="InputOp", path=None,
     equations=[
         # step input: A during [onset, onset+dur), else 0
-        "Iext = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))"
+       "Iext = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))"
+       #"Iext = step(t, onset, onset + dur, A)"
     ],
     variables={
         "Iext": "output",
         "t": "variable",
         "A": input_strength,
-        "onset": input_onset/step_size,
-        "dur": input_duration/step_size
+        "onset": float(input_onset/step_size),
+        "dur": float(input_duration/step_size)
+    },
+    description="External step input"
+)]"""
+create_I_ext = [OperatorTemplate(
+    name="InputOp", path=None,
+    equations=[
+        # step input: A during [onset, onset+dur), else 0
+        "Iext = (A/2)*(1 + sign(t - onset)) - (A/2)*(1 + sign(t - (onset + dur)))"
+    ],
+    variables={
+        "Iext": "output",
+        "t": "variable",          # scalar time
+        "A": float(input_strength),
+        "onset": float(input_onset),
+        "dur": float(input_duration)
     },
     description="External step input"
 )]
+
 # %%
 # Node templates
 nodes = [
@@ -163,10 +175,13 @@ for i, cell_i in enumerate(cells):
 
 # Set up the Model Circuit 
 area_1_thal_iext = CircuitTemplate(
-    name = 'area_1_thal',
+    name = 'area_1_thal_iext',
     nodes = {name: node for name, node in zip(cells, nodes)},
     edges = edges,
     path = None)
+"""
+area_1_thal.update_var(node_vars={'thalE/RPO_thalE/bI': 0.0,
+                    'thalI/RPO_thalI/bI': 0.0})"""
 
 # %% save PyRates model template in a yaml file
 #area_1.get_run_func(func_name='area_1', file_name='area_12', step_size=1e-4, auto=True, backend='python', solver='scipy',vectorize=False, float_precision='float64')

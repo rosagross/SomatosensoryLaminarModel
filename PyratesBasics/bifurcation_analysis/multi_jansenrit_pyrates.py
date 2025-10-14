@@ -1,18 +1,19 @@
 # %%
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
-from parameters import Parameter
+from parameters_visual import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from numba import njit
+#from numba import njit
 
-# https://parameters.readthedocs.io/en/latest/
 #Parameter
 cells = ['E1', 'E2', 'E3', 'E4', 'P1', 'P2', 'P3', 'P4', 'S1', 'S2', 'S3']
+# E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
 N_cells = len(cells)
-cortex_type = 'visual'
-params = Parameter(cortex_type)
+#cortex_type = 'visual'
+#params = Parameter(cortex_type)
+params = Parameter()
 sigm = params.get_sigmoid()
 
 r = []
@@ -26,8 +27,17 @@ for row in range(N_cells):
 tau,_ = params.get_params()                  
 tau = tau[0]
 
-w0 = 100.0
-W = params.get_connectivity(1, include_Iext=False) * w0
+bEI = 0.5
+connect_reverse_factor =  6448 
+g = 100.0 # (g)
+gE = g * bEI /connect_reverse_factor
+gI = g * (1 - bEI) /connect_reverse_factor
+gEthal = 0
+gIthal = 0
+thal_connect = 0
+
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, include_Iext=False) 
+# selecting the region --> E3b to SST4 
 # %%
 # Operator template for the PRO
 
@@ -59,13 +69,15 @@ pros = [deepcopy(pro).update_template(name=pro_names[i],
 rpo = OperatorTemplate(
     name='RPO', path=None,
     equations=['d/dt * v = i',
-               'd/dt * i = H/tau * m_in - 2 * i/tau - v/tau^2'],
+               'd/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
                'm_in': 'input',
+               'bI': 0.0,
                'tau': 0.01,
                'H': 1.0},
     description="excitatory rate-to-potential operator")
+
 
 rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau[i]}) for i in range(N_cells)]
 
@@ -82,12 +94,15 @@ for i, cell_i in enumerate(cells):
         edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': W[i, j]}))
 
 # Set up the Model Circuit 
-jrc = CircuitTemplate(
-    name = 'cir',
+area_1 = CircuitTemplate(
+    name = 'area_1',
     nodes = {name: node for name, node in zip(cells, nodes)},
     edges = edges,
     path = None)
 
+# %%
+    # SAVE MODEL
+# %%
 # Run the simulation 
 outputs = {}
 for target_cell in cells:  
@@ -102,9 +117,10 @@ results = jrc.run(simulation_time=2.0,
                   vectorize=True,
                   clear=False,
                   float_precision="float64",
-                  decorator=njit)
+                  #decorator=njit
+                  )
 
-# Save output in csv file
+# %% Save output in csv file
 all_potentials = []
 for i in cells:
     sources = results[[f'V_{i}/{rpo_name}' for rpo_name in rpo_names[:N_cells]]]
@@ -114,3 +130,5 @@ all_potentials = np.array(all_potentials).T
 potential_df = pd.DataFrame(all_potentials, columns=cells)
 potential_df.plot()
 plt.show()
+
+# %%

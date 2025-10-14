@@ -1,13 +1,13 @@
 # %%
 import os 
-os.chdir("/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model") 
+os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
 from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-#from numba import njit
+from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
 
@@ -24,8 +24,8 @@ input_type = "step" # other options are "step", "baseline" (equals input strengt
 input_onset = 1.001 # in sec
 simulation_dur = 1 
 input_duration = 0.5  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
-backgrndI_strengths = 50 #[0, 5, 10, 15, 20]
+input_strength = 50 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+backgrndI_strengths = 5 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
 simulation_time = int(input_onset) + simulation_dur
@@ -62,14 +62,13 @@ gEthal = 0
 gIthal = 0
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect) 
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='all') 
 
 # selecting the region --> A1: FROM THE 5TH ELEMENT TO THE 17TH (INCLUDED) 
 # in python the results include the start index but excludes the end index
-rows = np.r_[4:17, -2, -1]
-cols = np.r_[4:17, -4, -3]
+rows = np.r_[4:17, 30, 31]
+cols = np.r_[4:17, 30, 31]
 W_A1_thal = W[np.ix_(rows, cols)]
-
 """
 W[-2:,-4:-2] (within thalamus connectivity)
 W[-2:,4:-4] (A1 to thalamus connectivity)
@@ -77,7 +76,9 @@ W[4:13,-4:-2] (thalamus to A1 connectivity)"""
 
 # %% operator names
 pro_names = ["PRO_" + cell for cell in cells]
+
 rpo_names = ["RPO_" + cell for cell in cells]
+rpo_names_bI = ["RPO_bI_" + cell for cell in cells[:-2]]
 
 # %% Operator templates for the PRO
 pro = OperatorTemplate(
@@ -115,10 +116,12 @@ rpo_bI = OperatorTemplate(
                'd/dt * i = H/tau * (bI) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
-               'bI': f'input({bckgrndI_strengths})',  # external background input
-               'tau': 0.003,
+               'bI': 'input',
+               'tau': 0.01,
                'H': 1.0},
     description="excitatory rate-to-potential operator")
+
+rpos_bI = [deepcopy(rpo_bI).update_template(name=rpo_names_bI[i], variables={"tau": tau_a1_thal[i]}) for i in range(N_cells-2)]
 
 create_bI = [OperatorTemplate(
     name="backInputOp", path=None,
@@ -167,7 +170,7 @@ nodes = [
         path=None,
         operators=(
             [pros[i]] + rpos +
-            ([rpo_bI] if i in range(N_cells-2) else []) +
+            (rpos_bI + create_bI if i in range(N_cells-2) else []) +
             (rpo_Iext_thalE + create_I_ext if i == 13 else [])
         )
     )
@@ -212,55 +215,28 @@ rpo_names_extended = rpo_names + ['RPO_Iext']
 # %%
 # Run the simulation 
 outputs = {}
-b_inputs = []
 
 for i, target_cell in enumerate(cells):
-    if i == 13:
+    if i == 13: # thal E
         for rpo_name_ext in rpo_names_extended[:N_cells+1]:
             outputs[f'V_{target_cell}/{rpo_name_ext}'] = f'{target_cell}/{rpo_name_ext}/v'
+    elif i == 14: # thal I
+        for rpo_name in rpo_names[:N_cells]:
+            outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
     else:
         for rpo_name in rpo_names[:N_cells]:
             outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
-
-    # Include rpo_names_bI only if i in range(N_cells-2)
-    if i in range(N_cells-2):
-        print(f'{target_cell}/RPO_bI/v')
-        outputs[f'V_{target_cell}/RPO_bI'] = f'{target_cell}/RPO_bI/v'
-
-    # Include rpo_names_extended only if i == 13
+        for rpo_name_bI in rpo_names_bI[:N_cells]:
+            outputs[f'V_{target_cell}/{rpo_name_bI}'] = f'{target_cell}/{rpo_name_bI}/v'
     
-
+    
 # %%
-def create_Ib(simulation_time, step_size, input_strength):
-    ''' Creates external background input.
-    Inputs in the function
-    - simulation_time:
-    - step_size:
-    - input_onset:
-    - input_duration:
-    - input_strength: 
-    '''
-
-    Iext = np.zeros(int(simulation_time/step_size))
-    
-    # provide input for the entire simulation duration 
-    Iext[:] = input_strength
-
-    return Iext
-
-bI_array = create_Ib(simulation_time, step_size, backgrndI_strengths)
- 
-
-# TODO: define input for bI 
 results = area_1_thal_bI.run(simulation_time=simulation_time,
                   step_size=step_size,
                   sampling_step_size=sampling_step_size,
                   #inputs={
                   #  'thalE/RPO_thalE/Iext': Iext
                   #  },
-                  inputs={
-                    f'{cell}/RPO_bI/Ib': bI_array for cell in cells[:N_cells-2]
-                    },
                   outputs=outputs,
                   backend ="scipy",
                   vectorize=True,
@@ -278,14 +254,12 @@ for i, cell in enumerate(cells):
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names_extended[:N_cells+1]]
     else: 
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names[:N_cells]]
-
-    # include rpo_name only if i in range(N_cells-2)
+    # include rpo_names_bI[:N_cells] only if i in range(N_cells-2)
     if i in range(N_cells-2):
-        potential_keys += [f'V_{cell}/RPO_bI']
+        potential_keys += [f'V_{cell}/{rpo_bI}' for rpo_bI in rpo_names_bI[:N_cells-2]]
 
     # include rpo_names_extended[:N_cells+1] only if i == 13
     
-
     sources = results[potential_keys]
     all_potentials.append(np.sum(sources, axis=1))
 
@@ -303,7 +277,7 @@ m_out_all = np.zeros((n_timepoints, n_cells))  # NumPy array, not list!
 
 for i, source_cell in enumerate(cells):
     m_out_all[:, i] =  m_max[i] / (
-        1 + np.exp(r[i] * (v_thr[i] - all_potentials[:, i]))
+        1 + np.exp(r[i] * (v_thr[i] - all_potentials[:, i] ))
     )
 
 rates_df = pd.DataFrame(m_out_all, columns=cells)
