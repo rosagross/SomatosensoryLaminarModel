@@ -1,7 +1,9 @@
 # %% 
+# 
+import os 
+os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations""") 
 from parameters import Parameter
 import numpy as np
-import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
@@ -35,7 +37,7 @@ def adjust_connectivity_matrix(conmatrix):
     return conmatrix
 
 # Set the directory where to save the figures
-figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/PosterFigures'
+figure_dir = '/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/'
 
 params = Parameter()
 population_names = ['E3b','PV3b','SST3b','VIP3b', 'E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4',

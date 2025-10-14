@@ -107,7 +107,7 @@ rpo_bI = OperatorTemplate(
     variables={'v': 'output',
                'i': 'variable',
                'm_in': 'input',
-               'bI': backgrndI_strengths,
+               'bI': 'input(5.0)',
                'tau': 0.01,
                'H': 1.0},
     description="excitatory rate-to-potential operator")

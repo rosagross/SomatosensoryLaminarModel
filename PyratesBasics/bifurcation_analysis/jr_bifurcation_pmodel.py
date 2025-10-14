@@ -21,13 +21,13 @@ model = "model_templates.neural_mass_models.jansenrit.JRC"
 
 jrc = CircuitTemplate.from_yaml("model_templates.neural_mass_models.jansenrit.JRC")
 # updating the model (u=220Hz-->0.0Hz)
-jrc.update_var(node_vars={'pc/rpo_e_in/u': 0.0})
+jrc.update_var(node_vars={'pc/rpo_e_in/u': 400.0})
 
 # %% changing the initial conditions --> influence on the bifurcation ??
 """
 # y0 => ein/rpo_e/v / 135
 # y1 => pc/rpo_e_in/v [mV]
-# y2 => - pc/rpo_i/v [mV]"""
+# y2 => - pc/rpo_i/v [mV]
 
 y0_init = 0.0 # [mV]
 y1_init = 0.0 # [mV]
@@ -37,7 +37,13 @@ C = 135
 # updating the model
 jrc.update_var(node_vars={'ein/rpo_e/v': (y0_init/C) }) # y0
 jrc.update_var(node_vars={'pc/rpo_e_in/v': y1_init}) # y1
-jrc.update_var(node_vars={'ein/rpo_e/v': -y2_init}) # y2
+jrc.update_var(node_vars={'pc/rpo_i/v': -y2_init}) # y2"""
+
+# %% 
+jrc.update_var(node_vars={'ein/rpo_e/v': 1.762243e-02 }) # y0
+jrc.update_var(node_vars={'pc/rpo_e_in/v': 3.052549e-02}) # y1
+jrc.update_var(node_vars={'pc/rpo_i/v': -2.195986e-02})
+jrc.update_var(node_vars={'iin/rpo_e/v': 4.405607e-03 })
 
 # %% PyCobi model definition:
 
@@ -48,7 +54,7 @@ pprint(jrc_auto._var_map)
 # %% Time continuation - PyCobi:
 t_sols, t_cont = jrc_auto.run(
     c='ivp', name='time', DS=1e-4, DSMIN=1e-10, EPSL=1e-08, EPSU=1e-08, EPSS=1e-06,
-    DSMAX=1e-4, NMX=100000, UZR={14: 2.0}, STOP={'UZ1'})
+    DSMAX=1e-3, NMX=50000, UZR={14: 2.0}, STOP={'UZ1'})
 
 #   - `DS=1e-3` defines the initial step-size of the time continuation (in ms)
 #   - `DSMIN=1e-4` defines the minimal step-size of the time continuation (in ms)
@@ -79,11 +85,11 @@ plt.close()
 # 'pc/rpo_e_in/u': {'cont': 1, 'plot': 'PAR(1)'}
 
 """c='ivp', name='time', DS=1e-4, DSMIN=1e-10, EPSL=1e-08, EPSU=1e-08, EPSS=1e-06,
-    DSMAX=1e-4, NMX=100000, UZR={14: 2.0}, STOP={'UZ1'}"""
+    DSMAX=1e-4, NMX=100000, UZR={14: 2.0}, STOP={'UZ1'}""" 
 
 u_sols, u_cont = jrc_auto.run(
     origin=t_cont, 
-    starting_point='EP', 
+    starting_point='UZ1', 
     name='u', # Name of continuation parameter (variable to vary) 
     bidirectional=True, #  Continue both forward and backward from starting point
     ICP=1, # Index of parameter(s) to continue in (AUTO parameter numbering) --> checl from the ODESystem!
@@ -98,25 +104,25 @@ u_sols, u_cont = jrc_auto.run(
     IPLT=0, 
     NBC=0, 
     NINT=0, 
-    NMX=100000, 
-    NPR=1, # Print/report frequency (every NPR steps)
+    NMX=8000, 
+    NPR=20, # Print/report frequency (every NPR steps)
     MXBF={}, # Maximum number of bifurcations to locate
     IID=2,
-    ITMX=100, # max.num. of iterations allowed in the accurate location of special solutions
+    ITMX=1000, # max.num. of iterations allowed in the accurate location of special solutions
     ITNW=40, 
     NWTN=12, 
     JAC=0, 
-    EPSL=1e-06, # recommended in the auto docs
-    EPSU=1e-06, # recommended in the auto docs
-    EPSS=1e-04, # recommended in the auto docs (approx.100/1000 times EPSL,EPSU)
-    DS=0.5, # initial continuation step size (0.5)
+    EPSL=1e-07, # recommended in the auto docs
+    EPSU=1e-07, # recommended in the auto docs
+    EPSS=1e-05, # recommended in the auto docs (approx.100/1000 times EPSL,EPSU)
+    DS=1e-03, # initial continuation step size (0.5)
     DSMIN=1e-8, # minimum allowed step size
-    DSMAX=4, # maximum allowed step size (4)
+    DSMAX=0.5, # maximum allowed step size (4)
     IADS=1, 
     THL={}, 
     THU={}, 
-    UZR={"pc/rpo_e_in/u": 600}, 
-    STOP={'UZ1'}
+    UZR={}, 
+    STOP={}
 )
 jrc_auto.plot_continuation('PAR(1)', 'U(1)', cont='u')
 plt.show()
@@ -129,7 +135,6 @@ Neural Comput. 18, 3052–3068.)
 
 # y1 = U(1)
 # y2 = -U(3)
-# y0 = U(5)-U(7) ???
 """
 # Parameters:--> mV to make computation easier
 v0 = 6 # mV
@@ -162,6 +167,25 @@ for ax in axs.flat:
 plt.tight_layout()
 plt.show()
 # %%
+hopf_sols, hopf_cont = jrc_auto.run(
+    origin=u_cont, starting_point='HB2', name='u_hopf',
+    IPS=2, ISP=2, ISW=-1, STOP=['BP2']
+)
+
+# %%
+fig, ax = plt.subplots()
+jrc_auto.plot_continuation('PAR(1)', 'U(4)', cont='u', ax=ax)
+jrc_auto.plot_continuation('PAR(1)', 'U(4)', cont='u_hopf',ax=ax, ignore=["UZ", "BP"])
+
+plt.show()
+
+# %%
+# time continuations in a specified point to see the behav
+"""
+ode.run(origin=hopf_cont, starting_point="UZ1", c="ivp", name="lc")
+ode.plot_continuation("t", "p/qif_sfa_op/r", cont="lc")
+plt.show()"""
+
 
 jrc.clear()
 jrc_auto.close_session(clear_files=True)

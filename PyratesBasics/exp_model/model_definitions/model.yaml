@@ -1,0 +1,6802 @@
+PRO_E3b:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E3b:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+RPO_E3b:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV3b:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST3b:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_VIP3b:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.015
+    H: 1.0
+RPO_E1S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV1S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST1S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_VIPS1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.015
+    H: 1.0
+RPO_E2S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV2S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST2S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_E3S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV3S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST3S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_E4S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV4S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST4S1:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_E1S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV1S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST1S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_VIPS2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.015
+    H: 1.0
+RPO_E2S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV2S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST2S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_E3S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV3S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST3S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_E4S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.006
+    H: 1.0
+RPO_PV4S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_SST4S2:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.02
+    H: 1.0
+RPO_thalE:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+RPO_thalI:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    m_in: input
+    tau: 0.003
+    H: 1.0
+E3b:
+  base: NodeTemplate
+  operators:
+  - PRO_E3b
+  - connectivity_E3b
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV3b:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV3b:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV3b:
+  base: NodeTemplate
+  operators:
+  - PRO_PV3b
+  - connectivity_PV3b
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST3b:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST3b:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST3b:
+  base: NodeTemplate
+  operators:
+  - PRO_SST3b
+  - connectivity_SST3b
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_VIP3b:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.0704119
+    V_thr: 37.86409387
+    m_max: 38.52689646
+connectivity_VIP3b:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+VIP3b:
+  base: NodeTemplate
+  operators:
+  - PRO_VIP3b
+  - connectivity_VIP3b
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_E1S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E1S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+E1S1:
+  base: NodeTemplate
+  operators:
+  - PRO_E1S1
+  - connectivity_E1S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV1S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV1S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV1S1:
+  base: NodeTemplate
+  operators:
+  - PRO_PV1S1
+  - connectivity_PV1S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST1S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST1S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST1S1:
+  base: NodeTemplate
+  operators:
+  - PRO_SST1S1
+  - connectivity_SST1S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_VIPS1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.0704119
+    V_thr: 37.86409387
+    m_max: 38.52689646
+connectivity_VIPS1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+VIPS1:
+  base: NodeTemplate
+  operators:
+  - PRO_VIPS1
+  - connectivity_VIPS1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_E2S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E2S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+E2S1:
+  base: NodeTemplate
+  operators:
+  - PRO_E2S1
+  - connectivity_E2S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV2S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV2S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV2S1:
+  base: NodeTemplate
+  operators:
+  - PRO_PV2S1
+  - connectivity_PV2S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST2S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST2S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST2S1:
+  base: NodeTemplate
+  operators:
+  - PRO_SST2S1
+  - connectivity_SST2S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_E3S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E3S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+E3S1:
+  base: NodeTemplate
+  operators:
+  - PRO_E3S1
+  - connectivity_E3S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV3S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV3S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV3S1:
+  base: NodeTemplate
+  operators:
+  - PRO_PV3S1
+  - connectivity_PV3S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST3S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST3S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST3S1:
+  base: NodeTemplate
+  operators:
+  - PRO_SST3S1
+  - connectivity_SST3S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_E4S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E4S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+E4S1:
+  base: NodeTemplate
+  operators:
+  - PRO_E4S1
+  - connectivity_E4S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV4S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV4S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV4S1:
+  base: NodeTemplate
+  operators:
+  - PRO_PV4S1
+  - connectivity_PV4S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST4S1:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST4S1:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST4S1:
+  base: NodeTemplate
+  operators:
+  - PRO_SST4S1
+  - connectivity_SST4S1
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_E1S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E1S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+E1S2:
+  base: NodeTemplate
+  operators:
+  - PRO_E1S2
+  - connectivity_E1S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV1S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV1S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV1S2:
+  base: NodeTemplate
+  operators:
+  - PRO_PV1S2
+  - connectivity_PV1S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST1S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST1S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST1S2:
+  base: NodeTemplate
+  operators:
+  - PRO_SST1S2
+  - connectivity_SST1S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_VIPS2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.0704119
+    V_thr: 37.86409387
+    m_max: 38.52689646
+connectivity_VIPS2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+VIPS2:
+  base: NodeTemplate
+  operators:
+  - PRO_VIPS2
+  - connectivity_VIPS2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_E2S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E2S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+E2S2:
+  base: NodeTemplate
+  operators:
+  - PRO_E2S2
+  - connectivity_E2S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV2S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV2S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV2S2:
+  base: NodeTemplate
+  operators:
+  - PRO_PV2S2
+  - connectivity_PV2S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST2S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST2S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST2S2:
+  base: NodeTemplate
+  operators:
+  - PRO_SST2S2
+  - connectivity_SST2S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_E3S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E3S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+E3S2:
+  base: NodeTemplate
+  operators:
+  - PRO_E3S2
+  - connectivity_E3S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV3S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV3S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV3S2:
+  base: NodeTemplate
+  operators:
+  - PRO_PV3S2
+  - connectivity_PV3S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST3S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST3S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST3S2:
+  base: NodeTemplate
+  operators:
+  - PRO_SST3S2
+  - connectivity_SST3S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_E4S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.12782346
+    V_thr: 32.10540543
+    m_max: 31.39696397
+connectivity_E4S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    m_outC: input
+    connect_reverse_factor: input(6448.0)
+E4S2:
+  base: NodeTemplate
+  operators:
+  - PRO_E4S2
+  - connectivity_E4S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_PV4S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.14218422
+    V_thr: 40.03107351
+    m_max: 166.82960408
+connectivity_PV4S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+PV4S2:
+  base: NodeTemplate
+  operators:
+  - PRO_PV4S2
+  - connectivity_PV4S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_SST4S2:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))
+  variables:
+    m_outC: output
+    v: input
+    v_bIn: input
+    r: 0.07937015
+    V_thr: 42.01276379
+    m_max: 56.95305832
+connectivity_SST4S2:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  variables:
+    m_out: output
+    g: input
+    bEI: input
+    connect_reverse_factor: input(6448.0)
+    m_outC: input
+SST4S2:
+  base: NodeTemplate
+  operators:
+  - PRO_SST4S2
+  - connectivity_SST4S2
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+PRO_thalE:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_outC: output
+    v: input
+    r: 0.1
+    V_thr: 40.0
+    m_max: 30.0
+connectivity_thalE:
+  base: OperatorTemplate
+  equations:
+  - m_out = (g_thal*bEI_thal/connect_reverse_factor_thal)*m_outC
+  variables:
+    m_out: output
+    g_thal: input
+    bEI_thal: input
+    connect_reverse_factor_thal: input(6448.0)
+    m_outC: input
+RPO_Iext:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v = i
+  - d/dt * i = H/tau * (Iext) - 2 * i/tau - v/tau^2
+  variables:
+    v: output
+    i: variable
+    Iext: input
+    tau: 0.003
+    H: 1.0
+InputOp:
+  base: OperatorTemplate
+  equations:
+  - Iext = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))
+  variables:
+    Iext: output
+    t: variable
+    A: 0.0
+    onset: 1000.0
+    dur: 1000.0
+thalE:
+  base: NodeTemplate
+  operators:
+  - PRO_thalE
+  - connectivity_thalE
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+  - RPO_Iext
+  - InputOp
+PRO_thalI:
+  base: OperatorTemplate
+  equations:
+  - m_outC = m_max / (1 + exp(r*(V_thr - v)))
+  variables:
+    m_outC: output
+    v: input
+    r: 0.1
+    V_thr: 40.0
+    m_max: 30.0
+connectivity_thalI:
+  base: OperatorTemplate
+  equations:
+  - m_out = ((-g_thal)*(1-bEI_thal)/connect_reverse_factor_thal)*m_outC
+  variables:
+    m_out: output
+    g_thal: input
+    bEI_thal: input
+    connect_reverse_factor_thal: input(6448.0)
+    m_outC: input
+thalI:
+  base: NodeTemplate
+  operators:
+  - PRO_thalI
+  - connectivity_thalI
+  - RPO_E3b
+  - RPO_PV3b
+  - RPO_SST3b
+  - RPO_VIP3b
+  - RPO_E1S1
+  - RPO_PV1S1
+  - RPO_SST1S1
+  - RPO_VIPS1
+  - RPO_E2S1
+  - RPO_PV2S1
+  - RPO_SST2S1
+  - RPO_E3S1
+  - RPO_PV3S1
+  - RPO_SST3S1
+  - RPO_E4S1
+  - RPO_PV4S1
+  - RPO_SST4S1
+  - RPO_E1S2
+  - RPO_PV1S2
+  - RPO_SST1S2
+  - RPO_VIPS2
+  - RPO_E2S2
+  - RPO_PV2S2
+  - RPO_SST2S2
+  - RPO_E3S2
+  - RPO_PV3S2
+  - RPO_SST3S2
+  - RPO_E4S2
+  - RPO_PV4S2
+  - RPO_SST4S2
+  - RPO_thalE
+  - RPO_thalI
+RPO_bI:
+  base: OperatorTemplate
+  equations:
+  - d/dt * v_bI = i
+  - d/dt * i = H/tau * (bI) - 2 * i/tau - v_bI/tau^2
+  variables:
+    v_bI: output
+    i: variable
+    bI: input(0.0)
+    tau: 0.003
+    H: 1.0
+BACKGROUND:
+  base: NodeTemplate
+  operators:
+  - RPO_bI
+g_definition:
+  base: OperatorTemplate
+  equations:
+  - gC = g_input
+  variables:
+    gC: output
+    g_input: input(100.0)
+G:
+  base: NodeTemplate
+  operators:
+  - g_definition
+g_thal_definition:
+  base: OperatorTemplate
+  equations:
+  - g_thalC = g_thal_input
+  variables:
+    g_thalC: output
+    g_thal_input: input(200.0)
+G_THAL:
+  base: NodeTemplate
+  operators:
+  - g_thal_definition
+bEI_definition:
+  base: OperatorTemplate
+  equations:
+  - bEIC = bEI_input
+  variables:
+    bEIC: output
+    bEI_input: input(0.5)
+BEI:
+  base: NodeTemplate
+  operators:
+  - bEI_definition
+bEI_thal_definition:
+  base: OperatorTemplate
+  equations:
+  - bEI_thalC = bEI_thal_input
+  variables:
+    bEI_thalC: output
+    bEI_thal_input: input(0.5)
+BEI_THAL:
+  base: NodeTemplate
+  operators:
+  - bEI_thal_definition
+model:
+  base: CircuitTemplate
+  circuits: {}
+  nodes:
+    E3b: E3b
+    PV3b: PV3b
+    SST3b: SST3b
+    VIP3b: VIP3b
+    E1S1: E1S1
+    PV1S1: PV1S1
+    SST1S1: SST1S1
+    VIPS1: VIPS1
+    E2S1: E2S1
+    PV2S1: PV2S1
+    SST2S1: SST2S1
+    E3S1: E3S1
+    PV3S1: PV3S1
+    SST3S1: SST3S1
+    E4S1: E4S1
+    PV4S1: PV4S1
+    SST4S1: SST4S1
+    E1S2: E1S2
+    PV1S2: PV1S2
+    SST1S2: SST1S2
+    VIPS2: VIPS2
+    E2S2: E2S2
+    PV2S2: PV2S2
+    SST2S2: SST2S2
+    E3S2: E3S2
+    PV3S2: PV3S2
+    SST3S2: SST3S2
+    E4S2: E4S2
+    PV4S2: PV4S2
+    SST4S2: SST4S2
+    thalE: thalE
+    thalI: thalI
+    BACKGROUND: BACKGROUND
+    G: G
+    G_THAL: G_THAL
+    BEI: BEI
+    BEI_THAL: BEI_THAL
+  edges:
+  - - BACKGROUND/RPO_bI/v_bI
+    - E3b/PRO_E3b/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E3b/connectivity_E3b/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E3b/connectivity_E3b/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E3b/RPO_E3b/m_in
+    - 
+    - weight: 53.61853519164955
+  - - PV3b/connectivity_PV3b/m_out
+    - E3b/RPO_PV3b/m_in
+    - 
+    - weight: 9.920668080279233
+  - - SST3b/connectivity_SST3b/m_out
+    - E3b/RPO_SST3b/m_in
+    - 
+    - weight: 5.541078936916653
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E3b/RPO_VIP3b/m_in
+    - 
+    - weight: 3.958166666666667
+  - - E1S1/connectivity_E1S1/m_out
+    - E3b/RPO_E1S1/m_in
+    - 
+    - weight: 42.148617670157066
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E3b/RPO_PV1S1/m_in
+    - 
+    - weight: 8.870999999999999
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E3b/RPO_SST1S1/m_in
+    - 
+    - weight: 8.75573682373473
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E3b/RPO_VIPS1/m_in
+    - 
+    - weight: 3.958166666666667
+  - - E2S1/connectivity_E2S1/m_out
+    - E3b/RPO_E2S1/m_in
+    - 
+    - weight: 121.9719314764398
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E3b/RPO_PV2S1/m_in
+    - 
+    - weight: 11.226512216404885
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E3b/RPO_SST2S1/m_in
+    - 
+    - weight: 3.756955811518325
+  - - E3S1/connectivity_E3S1/m_out
+    - E3b/RPO_E3S1/m_in
+    - 
+    - weight: 24.216507853403147
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E3b/RPO_PV3S1/m_in
+    - 
+    - weight: 9.628352356020942
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E3b/RPO_SST3S1/m_in
+    - 
+    - weight: 5.473890052356022
+  - - E4S1/connectivity_E4S1/m_out
+    - E3b/RPO_E4S1/m_in
+    - 
+    - weight: 5.790605235602095
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E3b/RPO_PV4S1/m_in
+    - 
+    - weight: 10.194521465968588
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E3b/RPO_SST4S1/m_in
+    - 
+    - weight: 3.3412010471204185
+  - - E1S2/connectivity_E1S2/m_out
+    - E3b/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E3b/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E3b/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E3b/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - E3b/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E3b/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E3b/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - E3b/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E3b/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E3b/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - E3b/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E3b/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E3b/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - E3b/RPO_thalE/m_in
+    - 
+    - weight: 571.71583
+  - - thalI/connectivity_thalI/m_out
+    - E3b/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV3b/PRO_PV3b/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV3b/connectivity_PV3b/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV3b/connectivity_PV3b/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV3b/RPO_E3b/m_in
+    - 
+    - weight: 126.85331071899701
+  - - PV3b/connectivity_PV3b/m_out
+    - PV3b/RPO_PV3b/m_in
+    - 
+    - weight: 7.405289065743944
+  - - SST3b/connectivity_SST3b/m_out
+    - PV3b/RPO_SST3b/m_in
+    - 
+    - weight: 5.908537795623368
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV3b/RPO_VIP3b/m_in
+    - 
+    - weight: 2.9094999999999995
+  - - E1S1/connectivity_E1S1/m_out
+    - PV3b/RPO_E1S1/m_in
+    - 
+    - weight: 105.80064779411764
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV3b/RPO_PV1S1/m_in
+    - 
+    - weight: 8.081629411764707
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV3b/RPO_SST1S1/m_in
+    - 
+    - weight: 3.000308235294118
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV3b/RPO_VIPS1/m_in
+    - 
+    - weight: 2.9094999999999995
+  - - E2S1/connectivity_E2S1/m_out
+    - PV3b/RPO_E2S1/m_in
+    - 
+    - weight: 239.3443588235294
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV3b/RPO_PV2S1/m_in
+    - 
+    - weight: 7.348000000000001
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV3b/RPO_SST2S1/m_in
+    - 
+    - weight: 5.120470588235294
+  - - E3S1/connectivity_E3S1/m_out
+    - PV3b/RPO_E3S1/m_in
+    - 
+    - weight: 38.94335294117648
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV3b/RPO_PV3S1/m_in
+    - 
+    - weight: 9.388105882352942
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV3b/RPO_SST3S1/m_in
+    - 
+    - weight: 9.787235294117648
+  - - E4S1/connectivity_E4S1/m_out
+    - PV3b/RPO_E4S1/m_in
+    - 
+    - weight: 84.5988705882353
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV3b/RPO_PV4S1/m_in
+    - 
+    - weight: 2.545858823529412
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV3b/RPO_SST4S1/m_in
+    - 
+    - weight: 3.5717647058823534
+  - - E1S2/connectivity_E1S2/m_out
+    - PV3b/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV3b/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV3b/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV3b/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - PV3b/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV3b/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV3b/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - PV3b/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV3b/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV3b/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - PV3b/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV3b/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV3b/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - PV3b/RPO_thalE/m_in
+    - 
+    - weight: 35.69699
+  - - thalI/connectivity_thalI/m_out
+    - PV3b/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST3b/PRO_SST3b/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST3b/connectivity_SST3b/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST3b/connectivity_SST3b/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST3b/RPO_E3b/m_in
+    - 
+    - weight: 34.73829288056395
+  - - PV3b/connectivity_PV3b/m_out
+    - SST3b/RPO_PV3b/m_in
+    - 
+    - weight: 8.711911694438868
+  - - SST3b/connectivity_SST3b/m_out
+    - SST3b/RPO_SST3b/m_in
+    - 
+    - weight: 1.1365268618155135
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST3b/RPO_VIP3b/m_in
+    - 
+    - weight: 7.097935153583618
+  - - E1S1/connectivity_E1S1/m_out
+    - SST3b/RPO_E1S1/m_in
+    - 
+    - weight: 59.49088054607509
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST3b/RPO_PV1S1/m_in
+    - 
+    - weight: 7.008941979522185
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST3b/RPO_SST1S1/m_in
+    - 
+    - weight: 0.5594703071672356
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST3b/RPO_VIPS1/m_in
+    - 
+    - weight: 7.097935153583618
+  - - E2S1/connectivity_E2S1/m_out
+    - SST3b/RPO_E2S1/m_in
+    - 
+    - weight: 32.71306484641638
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST3b/RPO_PV2S1/m_in
+    - 
+    - weight: 5.8327986348122876
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST3b/RPO_SST2S1/m_in
+    - 
+    - weight: 0.9856939249146759
+  - - E3S1/connectivity_E3S1/m_out
+    - SST3b/RPO_E3S1/m_in
+    - 
+    - weight: 21.884490614334474
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST3b/RPO_PV3S1/m_in
+    - 
+    - weight: 12.747047781569966
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST3b/RPO_SST3S1/m_in
+    - 
+    - weight: 1.638430034129693
+  - - E4S1/connectivity_E4S1/m_out
+    - SST3b/RPO_E4S1/m_in
+    - 
+    - weight: 15.772505119453925
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST3b/RPO_PV4S1/m_in
+    - 
+    - weight: 7.964805460750854
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST3b/RPO_SST4S1/m_in
+    - 
+    - weight: 1.0947440273037545
+  - - E1S2/connectivity_E1S2/m_out
+    - SST3b/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST3b/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST3b/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST3b/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - SST3b/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST3b/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST3b/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - SST3b/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST3b/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST3b/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - SST3b/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST3b/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST3b/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - SST3b/RPO_thalE/m_in
+    - 
+    - weight: 2.3520000000000003
+  - - thalI/connectivity_thalI/m_out
+    - SST3b/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - VIP3b/PRO_VIP3b/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - VIP3b/connectivity_VIP3b/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - VIP3b/connectivity_VIP3b/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - VIP3b/RPO_E3b/m_in
+    - 
+    - weight: 20.2590912478185
+  - - PV3b/connectivity_PV3b/m_out
+    - VIP3b/RPO_PV3b/m_in
+    - 
+    - weight: 5.156935882352942
+  - - SST3b/connectivity_SST3b/m_out
+    - VIP3b/RPO_SST3b/m_in
+    - 
+    - weight: 9.086982935153586
+  - - VIP3b/connectivity_VIP3b/m_out
+    - VIP3b/RPO_VIP3b/m_in
+    - 
+    - weight: 5.355
+  - - E1S1/connectivity_E1S1/m_out
+    - VIP3b/RPO_E1S1/m_in
+    - 
+    - weight: 67.64
+  - - PV1S1/connectivity_PV1S1/m_out
+    - VIP3b/RPO_PV1S1/m_in
+    - 
+    - weight: 18.540000000000003
+  - - SST1S1/connectivity_SST1S1/m_out
+    - VIP3b/RPO_SST1S1/m_in
+    - 
+    - weight: 34.262
+  - - VIPS1/connectivity_VIPS1/m_out
+    - VIP3b/RPO_VIPS1/m_in
+    - 
+    - weight: 5.355
+  - - E2S1/connectivity_E2S1/m_out
+    - VIP3b/RPO_E2S1/m_in
+    - 
+    - weight: 0.9935999999999998
+  - - PV2S1/connectivity_PV2S1/m_out
+    - VIP3b/RPO_PV2S1/m_in
+    - 
+    - weight: 0.85
+  - - SST2S1/connectivity_SST2S1/m_out
+    - VIP3b/RPO_SST2S1/m_in
+    - 
+    - weight: 0.816
+  - - E3S1/connectivity_E3S1/m_out
+    - VIP3b/RPO_E3S1/m_in
+    - 
+    - weight: 0.05474999999999999
+  - - PV3S1/connectivity_PV3S1/m_out
+    - VIP3b/RPO_PV3S1/m_in
+    - 
+    - weight: 0.10900000000000001
+  - - SST3S1/connectivity_SST3S1/m_out
+    - VIP3b/RPO_SST3S1/m_in
+    - 
+    - weight: 0.63
+  - - E4S1/connectivity_E4S1/m_out
+    - VIP3b/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - VIP3b/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0112
+  - - SST4S1/connectivity_SST4S1/m_out
+    - VIP3b/RPO_SST4S1/m_in
+    - 
+    - weight: 0.33
+  - - E1S2/connectivity_E1S2/m_out
+    - VIP3b/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - VIP3b/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - VIP3b/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - VIP3b/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - VIP3b/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - VIP3b/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - VIP3b/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - VIP3b/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - VIP3b/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - VIP3b/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - VIP3b/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - VIP3b/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - VIP3b/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - VIP3b/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - VIP3b/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - E1S1/PRO_E1S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E1S1/connectivity_E1S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E1S1/connectivity_E1S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E1S1/RPO_E3b/m_in
+    - 
+    - weight: 52.65472081151833
+  - - PV3b/connectivity_PV3b/m_out
+    - E1S1/RPO_PV3b/m_in
+    - 
+    - weight: 6.916120588235294
+  - - SST3b/connectivity_SST3b/m_out
+    - E1S1/RPO_SST3b/m_in
+    - 
+    - weight: 6.151313993174062
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E1S1/RPO_VIP3b/m_in
+    - 
+    - weight: 3.6550000000000002
+  - - E1S1/connectivity_E1S1/m_out
+    - E1S1/RPO_E1S1/m_in
+    - 
+    - weight: 84.97275
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E1S1/RPO_PV1S1/m_in
+    - 
+    - weight: 24.39
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E1S1/RPO_SST1S1/m_in
+    - 
+    - weight: 20.720000000000002
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E1S1/RPO_VIPS1/m_in
+    - 
+    - weight: 3.655
+  - - E2S1/connectivity_E2S1/m_out
+    - E1S1/RPO_E2S1/m_in
+    - 
+    - weight: 91.08
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E1S1/RPO_PV2S1/m_in
+    - 
+    - weight: 1.7
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E1S1/RPO_SST2S1/m_in
+    - 
+    - weight: 2.16
+  - - E3S1/connectivity_E3S1/m_out
+    - E1S1/RPO_E3S1/m_in
+    - 
+    - weight: 6.57
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E1S1/RPO_PV3S1/m_in
+    - 
+    - weight: 0.109
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E1S1/RPO_SST3S1/m_in
+    - 
+    - weight: 1.575
+  - - E4S1/connectivity_E4S1/m_out
+    - E1S1/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E1S1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E1S1/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - E1S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E1S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E1S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E1S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - E1S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E1S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E1S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - E1S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E1S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E1S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - E1S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E1S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E1S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - E1S1/RPO_thalE/m_in
+    - 
+    - weight: 41.09806400000001
+  - - thalI/connectivity_thalI/m_out
+    - E1S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV1S1/PRO_PV1S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV1S1/connectivity_PV1S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV1S1/connectivity_PV1S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV1S1/RPO_E3b/m_in
+    - 
+    - weight: 109.03315532286214
+  - - PV3b/connectivity_PV3b/m_out
+    - PV1S1/RPO_PV3b/m_in
+    - 
+    - weight: 7.972998823529411
+  - - SST3b/connectivity_SST3b/m_out
+    - PV1S1/RPO_SST3b/m_in
+    - 
+    - weight: 3.072976109215017
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV1S1/RPO_VIP3b/m_in
+    - 
+    - weight: 4.675
+  - - E1S1/connectivity_E1S1/m_out
+    - PV1S1/RPO_E1S1/m_in
+    - 
+    - weight: 361.45125
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV1S1/RPO_PV1S1/m_in
+    - 
+    - weight: 28.62
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV1S1/RPO_SST1S1/m_in
+    - 
+    - weight: 8.732000000000001
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV1S1/RPO_VIPS1/m_in
+    - 
+    - weight: 4.675
+  - - E2S1/connectivity_E2S1/m_out
+    - PV1S1/RPO_E2S1/m_in
+    - 
+    - weight: 7.948799999999999
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV1S1/RPO_PV2S1/m_in
+    - 
+    - weight: 1.445
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV1S1/RPO_SST2S1/m_in
+    - 
+    - weight: 1.536
+  - - E3S1/connectivity_E3S1/m_out
+    - PV1S1/RPO_E3S1/m_in
+    - 
+    - weight: 0.27375
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV1S1/RPO_PV3S1/m_in
+    - 
+    - weight: 0.109
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV1S1/RPO_SST3S1/m_in
+    - 
+    - weight: 1.4699999999999998
+  - - E4S1/connectivity_E4S1/m_out
+    - PV1S1/RPO_E4S1/m_in
+    - 
+    - weight: 0.0644
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV1S1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0056
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV1S1/RPO_SST4S1/m_in
+    - 
+    - weight: 0.396
+  - - E1S2/connectivity_E1S2/m_out
+    - PV1S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV1S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV1S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV1S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - PV1S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV1S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV1S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - PV1S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV1S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV1S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - PV1S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV1S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV1S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - PV1S1/RPO_thalE/m_in
+    - 
+    - weight: 2.1873600000000004
+  - - thalI/connectivity_thalI/m_out
+    - PV1S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST1S1/PRO_SST1S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST1S1/connectivity_SST1S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST1S1/connectivity_SST1S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST1S1/RPO_E3b/m_in
+    - 
+    - weight: 61.62154751308901
+  - - PV3b/connectivity_PV3b/m_out
+    - SST1S1/RPO_PV3b/m_in
+    - 
+    - weight: 7.22259117647059
+  - - SST3b/connectivity_SST3b/m_out
+    - SST1S1/RPO_SST3b/m_in
+    - 
+    - weight: 1.1361808873720136
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST1S1/RPO_VIP3b/m_in
+    - 
+    - weight: 23.035
+  - - E1S1/connectivity_E1S1/m_out
+    - SST1S1/RPO_E1S1/m_in
+    - 
+    - weight: 205.4565
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST1S1/RPO_PV1S1/m_in
+    - 
+    - weight: 26.190000000000005
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST1S1/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST1S1/RPO_VIPS1/m_in
+    - 
+    - weight: 23.035
+  - - E2S1/connectivity_E2S1/m_out
+    - SST1S1/RPO_E2S1/m_in
+    - 
+    - weight: 3.3120000000000003
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST1S1/RPO_PV2S1/m_in
+    - 
+    - weight: 1.02
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST1S1/RPO_SST2S1/m_in
+    - 
+    - weight: 2.112
+  - - E3S1/connectivity_E3S1/m_out
+    - SST1S1/RPO_E3S1/m_in
+    - 
+    - weight: 0.16424999999999998
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST1S1/RPO_PV3S1/m_in
+    - 
+    - weight: 0.109
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST1S1/RPO_SST3S1/m_in
+    - 
+    - weight: 2.205
+  - - E4S1/connectivity_E4S1/m_out
+    - SST1S1/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST1S1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST1S1/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - SST1S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST1S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST1S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST1S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - SST1S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST1S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST1S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - SST1S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST1S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST1S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - SST1S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST1S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST1S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - SST1S1/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - SST1S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - VIPS1/PRO_VIPS1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - VIPS1/connectivity_VIPS1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - VIPS1/connectivity_VIPS1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - VIPS1/RPO_E3b/m_in
+    - 
+    - weight: 20.2590912478185
+  - - PV3b/connectivity_PV3b/m_out
+    - VIPS1/RPO_PV3b/m_in
+    - 
+    - weight: 5.156935882352942
+  - - SST3b/connectivity_SST3b/m_out
+    - VIPS1/RPO_SST3b/m_in
+    - 
+    - weight: 9.086982935153586
+  - - VIP3b/connectivity_VIP3b/m_out
+    - VIPS1/RPO_VIP3b/m_in
+    - 
+    - weight: 5.355
+  - - E1S1/connectivity_E1S1/m_out
+    - VIPS1/RPO_E1S1/m_in
+    - 
+    - weight: 67.64
+  - - PV1S1/connectivity_PV1S1/m_out
+    - VIPS1/RPO_PV1S1/m_in
+    - 
+    - weight: 18.540000000000003
+  - - SST1S1/connectivity_SST1S1/m_out
+    - VIPS1/RPO_SST1S1/m_in
+    - 
+    - weight: 34.262
+  - - VIPS1/connectivity_VIPS1/m_out
+    - VIPS1/RPO_VIPS1/m_in
+    - 
+    - weight: 5.355
+  - - E2S1/connectivity_E2S1/m_out
+    - VIPS1/RPO_E2S1/m_in
+    - 
+    - weight: 0.9935999999999999
+  - - PV2S1/connectivity_PV2S1/m_out
+    - VIPS1/RPO_PV2S1/m_in
+    - 
+    - weight: 0.85
+  - - SST2S1/connectivity_SST2S1/m_out
+    - VIPS1/RPO_SST2S1/m_in
+    - 
+    - weight: 0.8160000000000001
+  - - E3S1/connectivity_E3S1/m_out
+    - VIPS1/RPO_E3S1/m_in
+    - 
+    - weight: 0.05475
+  - - PV3S1/connectivity_PV3S1/m_out
+    - VIPS1/RPO_PV3S1/m_in
+    - 
+    - weight: 0.109
+  - - SST3S1/connectivity_SST3S1/m_out
+    - VIPS1/RPO_SST3S1/m_in
+    - 
+    - weight: 0.63
+  - - E4S1/connectivity_E4S1/m_out
+    - VIPS1/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - VIPS1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0112
+  - - SST4S1/connectivity_SST4S1/m_out
+    - VIPS1/RPO_SST4S1/m_in
+    - 
+    - weight: 0.33
+  - - E1S2/connectivity_E1S2/m_out
+    - VIPS1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - VIPS1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - VIPS1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - VIPS1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - VIPS1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - VIPS1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - VIPS1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - VIPS1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - VIPS1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - VIPS1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - VIPS1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - VIPS1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - VIPS1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - VIPS1/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - VIPS1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - E2S1/PRO_E2S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E2S1/connectivity_E2S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E2S1/connectivity_E2S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E2S1/RPO_E3b/m_in
+    - 
+    - weight: 79.20677334380456
+  - - PV3b/connectivity_PV3b/m_out
+    - E2S1/RPO_PV3b/m_in
+    - 
+    - weight: 9.77820588235294
+  - - SST3b/connectivity_SST3b/m_out
+    - E2S1/RPO_SST3b/m_in
+    - 
+    - weight: 4.973105802047783
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E2S1/RPO_VIP3b/m_in
+    - 
+    - weight: 5.95
+  - - E1S1/connectivity_E1S1/m_out
+    - E2S1/RPO_E1S1/m_in
+    - 
+    - weight: 10.9915
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E2S1/RPO_PV1S1/m_in
+    - 
+    - weight: 3.1500000000000004
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E2S1/RPO_SST1S1/m_in
+    - 
+    - weight: 4.3660000000000005
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E2S1/RPO_VIPS1/m_in
+    - 
+    - weight: 5.95
+  - - E2S1/connectivity_E2S1/m_out
+    - E2S1/RPO_E2S1/m_in
+    - 
+    - weight: 260.67096000000004
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E2S1/RPO_PV2S1/m_in
+    - 
+    - weight: 31.79
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E2S1/RPO_SST2S1/m_in
+    - 
+    - weight: 9.504000000000001
+  - - E3S1/connectivity_E3S1/m_out
+    - E2S1/RPO_E3S1/m_in
+    - 
+    - weight: 3.285
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E2S1/RPO_PV3S1/m_in
+    - 
+    - weight: 3.0519999999999996
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E2S1/RPO_SST3S1/m_in
+    - 
+    - weight: 5.460000000000001
+  - - E4S1/connectivity_E4S1/m_out
+    - E2S1/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E2S1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.112
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E2S1/RPO_SST4S1/m_in
+    - 
+    - weight: 1.584
+  - - E1S2/connectivity_E1S2/m_out
+    - E2S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E2S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E2S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E2S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - E2S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E2S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E2S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - E2S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E2S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E2S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - E2S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E2S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E2S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - E2S1/RPO_thalE/m_in
+    - 
+    - weight: 259.66080000000005
+  - - thalI/connectivity_thalI/m_out
+    - E2S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV2S1/PRO_PV2S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV2S1/connectivity_PV2S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV2S1/connectivity_PV2S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV2S1/RPO_E3b/m_in
+    - 
+    - weight: 278.5595529668412
+  - - PV3b/connectivity_PV3b/m_out
+    - PV2S1/RPO_PV3b/m_in
+    - 
+    - weight: 7.507282352941177
+  - - SST3b/connectivity_SST3b/m_out
+    - PV2S1/RPO_SST3b/m_in
+    - 
+    - weight: 5.320419795221842
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV2S1/RPO_VIP3b/m_in
+    - 
+    - weight: 4.505
+  - - E1S1/connectivity_E1S1/m_out
+    - PV2S1/RPO_E1S1/m_in
+    - 
+    - weight: 30.438000000000002
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV2S1/RPO_PV1S1/m_in
+    - 
+    - weight: 1.44
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV2S1/RPO_SST1S1/m_in
+    - 
+    - weight: 1.702
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV2S1/RPO_VIPS1/m_in
+    - 
+    - weight: 4.505
+  - - E2S1/connectivity_E2S1/m_out
+    - PV2S1/RPO_E2S1/m_in
+    - 
+    - weight: 929.0159999999998
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV2S1/RPO_PV2S1/m_in
+    - 
+    - weight: 24.480000000000004
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV2S1/RPO_SST2S1/m_in
+    - 
+    - weight: 17.424
+  - - E3S1/connectivity_E3S1/m_out
+    - PV2S1/RPO_E3S1/m_in
+    - 
+    - weight: 4.9275
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV2S1/RPO_PV3S1/m_in
+    - 
+    - weight: 3.0519999999999996
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV2S1/RPO_SST3S1/m_in
+    - 
+    - weight: 4.935
+  - - E4S1/connectivity_E4S1/m_out
+    - PV2S1/RPO_E4S1/m_in
+    - 
+    - weight: 0.644
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV2S1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.168
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV2S1/RPO_SST4S1/m_in
+    - 
+    - weight: 1.1880000000000002
+  - - E1S2/connectivity_E1S2/m_out
+    - PV2S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV2S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV2S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV2S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - PV2S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV2S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV2S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - PV2S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV2S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV2S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - PV2S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV2S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV2S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - PV2S1/RPO_thalE/m_in
+    - 
+    - weight: 13.328000000000001
+  - - thalI/connectivity_thalI/m_out
+    - PV2S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST2S1/PRO_SST2S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST2S1/connectivity_SST2S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST2S1/connectivity_SST2S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST2S1/RPO_E3b/m_in
+    - 
+    - weight: 55.68012818499127
+  - - PV3b/connectivity_PV3b/m_out
+    - SST2S1/RPO_PV3b/m_in
+    - 
+    - weight: 8.620482352941178
+  - - SST3b/connectivity_SST3b/m_out
+    - SST2S1/RPO_SST3b/m_in
+    - 
+    - weight: 2.5769287372013654
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST2S1/RPO_VIP3b/m_in
+    - 
+    - weight: 4.165
+  - - E1S1/connectivity_E1S1/m_out
+    - SST2S1/RPO_E1S1/m_in
+    - 
+    - weight: 30.438000000000002
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST2S1/RPO_PV1S1/m_in
+    - 
+    - weight: 1.62
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST2S1/RPO_SST1S1/m_in
+    - 
+    - weight: 1.776
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST2S1/RPO_VIPS1/m_in
+    - 
+    - weight: 4.165
+  - - E2S1/connectivity_E2S1/m_out
+    - SST2S1/RPO_E2S1/m_in
+    - 
+    - weight: 157.32
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST2S1/RPO_PV2S1/m_in
+    - 
+    - weight: 28.220000000000002
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST2S1/RPO_SST2S1/m_in
+    - 
+    - weight: 0.10944
+  - - E3S1/connectivity_E3S1/m_out
+    - SST2S1/RPO_E3S1/m_in
+    - 
+    - weight: 4.9275
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST2S1/RPO_PV3S1/m_in
+    - 
+    - weight: 3.488
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST2S1/RPO_SST3S1/m_in
+    - 
+    - weight: 4.935
+  - - E4S1/connectivity_E4S1/m_out
+    - SST2S1/RPO_E4S1/m_in
+    - 
+    - weight: 1.288
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST2S1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.112
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST2S1/RPO_SST4S1/m_in
+    - 
+    - weight: 1.518
+  - - E1S2/connectivity_E1S2/m_out
+    - SST2S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST2S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST2S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST2S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - SST2S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST2S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST2S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - SST2S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST2S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST2S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - SST2S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST2S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST2S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - SST2S1/RPO_thalE/m_in
+    - 
+    - weight: 1.8816000000000004
+  - - thalI/connectivity_thalI/m_out
+    - SST2S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - E3S1/PRO_E3S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E3S1/connectivity_E3S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E3S1/connectivity_E3S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E3S1/RPO_E3b/m_in
+    - 
+    - weight: 64.2942237696335
+  - - PV3b/connectivity_PV3b/m_out
+    - E3S1/RPO_PV3b/m_in
+    - 
+    - weight: 16.64073235294118
+  - - SST3b/connectivity_SST3b/m_out
+    - E3S1/RPO_SST3b/m_in
+    - 
+    - weight: 8.423940341296928
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E3S1/RPO_VIP3b/m_in
+    - 
+    - weight: 5.2700000000000005
+  - - E1S1/connectivity_E1S1/m_out
+    - E3S1/RPO_E1S1/m_in
+    - 
+    - weight: 72.713
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E3S1/RPO_PV1S1/m_in
+    - 
+    - weight: 3.7800000000000002
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E3S1/RPO_SST1S1/m_in
+    - 
+    - weight: 6.956
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E3S1/RPO_VIPS1/m_in
+    - 
+    - weight: 5.2700000000000005
+  - - E2S1/connectivity_E2S1/m_out
+    - E3S1/RPO_E2S1/m_in
+    - 
+    - weight: 86.44319999999999
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E3S1/RPO_PV2S1/m_in
+    - 
+    - weight: 6.545000000000001
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E3S1/RPO_SST2S1/m_in
+    - 
+    - weight: 1.38624
+  - - E3S1/connectivity_E3S1/m_out
+    - E3S1/RPO_E3S1/m_in
+    - 
+    - weight: 85.84800000000001
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E3S1/RPO_PV3S1/m_in
+    - 
+    - weight: 43.164
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E3S1/RPO_SST3S1/m_in
+    - 
+    - weight: 15.854999999999999
+  - - E4S1/connectivity_E4S1/m_out
+    - E3S1/RPO_E4S1/m_in
+    - 
+    - weight: 6.44
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E3S1/RPO_PV4S1/m_in
+    - 
+    - weight: 1.008
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E3S1/RPO_SST4S1/m_in
+    - 
+    - weight: 3.3659999999999997
+  - - E1S2/connectivity_E1S2/m_out
+    - E3S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E3S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E3S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E3S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - E3S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E3S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E3S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - E3S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E3S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E3S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - E3S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E3S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E3S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - E3S1/RPO_thalE/m_in
+    - 
+    - weight: 111.17316
+  - - thalI/connectivity_thalI/m_out
+    - E3S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV3S1/PRO_PV3S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV3S1/connectivity_PV3S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV3S1/connectivity_PV3S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV3S1/RPO_E3b/m_in
+    - 
+    - weight: 27.314250130890052
+  - - PV3b/connectivity_PV3b/m_out
+    - PV3S1/RPO_PV3b/m_in
+    - 
+    - weight: 9.472776470588236
+  - - SST3b/connectivity_SST3b/m_out
+    - PV3S1/RPO_SST3b/m_in
+    - 
+    - weight: 9.841327645051194
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV3S1/RPO_VIP3b/m_in
+    - 
+    - weight: 1.615
+  - - E1S1/connectivity_E1S1/m_out
+    - PV3S1/RPO_E1S1/m_in
+    - 
+    - weight: 7.186750000000001
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV3S1/RPO_PV1S1/m_in
+    - 
+    - weight: 0.45
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV3S1/RPO_SST1S1/m_in
+    - 
+    - weight: 0.8140000000000001
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV3S1/RPO_VIPS1/m_in
+    - 
+    - weight: 1.615
+  - - E2S1/connectivity_E2S1/m_out
+    - PV3S1/RPO_E2S1/m_in
+    - 
+    - weight: 14.490000000000002
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV3S1/RPO_PV2S1/m_in
+    - 
+    - weight: 2.55
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV3S1/RPO_SST2S1/m_in
+    - 
+    - weight: 1.104
+  - - E3S1/connectivity_E3S1/m_out
+    - PV3S1/RPO_E3S1/m_in
+    - 
+    - weight: 108.405
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV3S1/RPO_PV3S1/m_in
+    - 
+    - weight: 26.814000000000004
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV3S1/RPO_SST3S1/m_in
+    - 
+    - weight: 25.305000000000003
+  - - E4S1/connectivity_E4S1/m_out
+    - PV3S1/RPO_E4S1/m_in
+    - 
+    - weight: 1.288
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV3S1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.7280000000000001
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV3S1/RPO_SST4S1/m_in
+    - 
+    - weight: 1.7160000000000002
+  - - E1S2/connectivity_E1S2/m_out
+    - PV3S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV3S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV3S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV3S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - PV3S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV3S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV3S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - PV3S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV3S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV3S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - PV3S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV3S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV3S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - PV3S1/RPO_thalE/m_in
+    - 
+    - weight: 11.066552000000001
+  - - thalI/connectivity_thalI/m_out
+    - PV3S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST3S1/PRO_SST3S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST3S1/connectivity_SST3S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST3S1/connectivity_SST3S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST3S1/RPO_E3b/m_in
+    - 
+    - weight: 17.701319938917976
+  - - PV3b/connectivity_PV3b/m_out
+    - SST3S1/RPO_PV3b/m_in
+    - 
+    - weight: 11.646532352941176
+  - - SST3b/connectivity_SST3b/m_out
+    - SST3S1/RPO_SST3b/m_in
+    - 
+    - weight: 1.0849897610921504
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST3S1/RPO_VIP3b/m_in
+    - 
+    - weight: 1.615
+  - - E1S1/connectivity_E1S1/m_out
+    - SST3S1/RPO_E1S1/m_in
+    - 
+    - weight: 6.764
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST3S1/RPO_PV1S1/m_in
+    - 
+    - weight: 0.36
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST3S1/RPO_SST1S1/m_in
+    - 
+    - weight: 0.74
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST3S1/RPO_VIPS1/m_in
+    - 
+    - weight: 1.615
+  - - E2S1/connectivity_E2S1/m_out
+    - SST3S1/RPO_E2S1/m_in
+    - 
+    - weight: 15.732
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST3S1/RPO_PV2S1/m_in
+    - 
+    - weight: 2.55
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST3S1/RPO_SST2S1/m_in
+    - 
+    - weight: 1.2000000000000002
+  - - E3S1/connectivity_E3S1/m_out
+    - SST3S1/RPO_E3S1/m_in
+    - 
+    - weight: 56.118750000000006
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST3S1/RPO_PV3S1/m_in
+    - 
+    - weight: 33.899
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST3S1/RPO_SST3S1/m_in
+    - 
+    - weight: 0.63
+  - - E4S1/connectivity_E4S1/m_out
+    - SST3S1/RPO_E4S1/m_in
+    - 
+    - weight: 1.932
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST3S1/RPO_PV4S1/m_in
+    - 
+    - weight: 0.28
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST3S1/RPO_SST4S1/m_in
+    - 
+    - weight: 2.112
+  - - E1S2/connectivity_E1S2/m_out
+    - SST3S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST3S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST3S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST3S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - SST3S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST3S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST3S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - SST3S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST3S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST3S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - SST3S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST3S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST3S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - SST3S1/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - SST3S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - E4S1/PRO_E4S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E4S1/connectivity_E4S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E4S1/connectivity_E4S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E4S1/RPO_E3b/m_in
+    - 
+    - weight: 12.908759371727749
+  - - PV3b/connectivity_PV3b/m_out
+    - E4S1/RPO_PV3b/m_in
+    - 
+    - weight: 8.335370588235294
+  - - SST3b/connectivity_SST3b/m_out
+    - E4S1/RPO_SST3b/m_in
+    - 
+    - weight: 3.019279863481229
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E4S1/RPO_VIP3b/m_in
+    - 
+    - weight: 0.68
+  - - E1S1/connectivity_E1S1/m_out
+    - E4S1/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E4S1/RPO_PV1S1/m_in
+    - 
+    - weight: 0.18
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E4S1/RPO_SST1S1/m_in
+    - 
+    - weight: 0.222
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E4S1/RPO_VIPS1/m_in
+    - 
+    - weight: 0.68
+  - - E2S1/connectivity_E2S1/m_out
+    - E4S1/RPO_E2S1/m_in
+    - 
+    - weight: 14.4072
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E4S1/RPO_PV2S1/m_in
+    - 
+    - weight: 1.275
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E4S1/RPO_SST2S1/m_in
+    - 
+    - weight: 0.48
+  - - E3S1/connectivity_E3S1/m_out
+    - E4S1/RPO_E3S1/m_in
+    - 
+    - weight: 21.900000000000002
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E4S1/RPO_PV3S1/m_in
+    - 
+    - weight: 2.0709999999999997
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E4S1/RPO_SST3S1/m_in
+    - 
+    - weight: 1.7850000000000001
+  - - E4S1/connectivity_E4S1/m_out
+    - E4S1/RPO_E4S1/m_in
+    - 
+    - weight: 20.286
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E4S1/RPO_PV4S1/m_in
+    - 
+    - weight: 44.352000000000004
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E4S1/RPO_SST4S1/m_in
+    - 
+    - weight: 9.966
+  - - E1S2/connectivity_E1S2/m_out
+    - E4S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E4S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E4S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E4S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - E4S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E4S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E4S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - E4S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E4S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E4S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - E4S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E4S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E4S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - E4S1/RPO_thalE/m_in
+    - 
+    - weight: 45.44064
+  - - thalI/connectivity_thalI/m_out
+    - E4S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV4S1/PRO_PV4S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV4S1/connectivity_PV4S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV4S1/connectivity_PV4S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV4S1/RPO_E3b/m_in
+    - 
+    - weight: 118.9701142670157
+  - - PV3b/connectivity_PV3b/m_out
+    - PV4S1/RPO_PV3b/m_in
+    - 
+    - weight: 2.3138705882352943
+  - - SST3b/connectivity_SST3b/m_out
+    - PV4S1/RPO_SST3b/m_in
+    - 
+    - weight: 3.7034750853242326
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV4S1/RPO_VIP3b/m_in
+    - 
+    - weight: 0.17
+  - - E1S1/connectivity_E1S1/m_out
+    - PV4S1/RPO_E1S1/m_in
+    - 
+    - weight: 1.26825
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV4S1/RPO_PV1S1/m_in
+    - 
+    - weight: 0.009000000000000001
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV4S1/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0148
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV4S1/RPO_VIPS1/m_in
+    - 
+    - weight: 0.17
+  - - E2S1/connectivity_E2S1/m_out
+    - PV4S1/RPO_E2S1/m_in
+    - 
+    - weight: 2.07
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV4S1/RPO_PV2S1/m_in
+    - 
+    - weight: 0.17
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV4S1/RPO_SST2S1/m_in
+    - 
+    - weight: 0.024
+  - - E3S1/connectivity_E3S1/m_out
+    - PV4S1/RPO_E3S1/m_in
+    - 
+    - weight: 17.52
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV4S1/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV4S1/RPO_SST3S1/m_in
+    - 
+    - weight: 0.315
+  - - E4S1/connectivity_E4S1/m_out
+    - PV4S1/RPO_E4S1/m_in
+    - 
+    - weight: 510.048
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV4S1/RPO_PV4S1/m_in
+    - 
+    - weight: 13.776000000000002
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV4S1/RPO_SST4S1/m_in
+    - 
+    - weight: 15.906
+  - - E1S2/connectivity_E1S2/m_out
+    - PV4S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV4S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV4S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV4S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - PV4S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV4S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV4S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - PV4S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV4S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV4S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - PV4S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV4S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV4S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - PV4S1/RPO_thalE/m_in
+    - 
+    - weight: 1.9756799999999999
+  - - thalI/connectivity_thalI/m_out
+    - PV4S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST4S1/PRO_SST4S1/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST4S1/connectivity_SST4S1/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST4S1/connectivity_SST4S1/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST4S1/RPO_E3b/m_in
+    - 
+    - weight: 16.470311387434556
+  - - PV3b/connectivity_PV3b/m_out
+    - SST4S1/RPO_PV3b/m_in
+    - 
+    - weight: 5.779535294117648
+  - - SST3b/connectivity_SST3b/m_out
+    - SST4S1/RPO_SST3b/m_in
+    - 
+    - weight: 0.171340614334471
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST4S1/RPO_VIP3b/m_in
+    - 
+    - weight: 0.085
+  - - E1S1/connectivity_E1S1/m_out
+    - SST4S1/RPO_E1S1/m_in
+    - 
+    - weight: 0.8455
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST4S1/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST4S1/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0148
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST4S1/RPO_VIPS1/m_in
+    - 
+    - weight: 0.085
+  - - E2S1/connectivity_E2S1/m_out
+    - SST4S1/RPO_E2S1/m_in
+    - 
+    - weight: 2.07
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST4S1/RPO_PV2S1/m_in
+    - 
+    - weight: 0.17
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST4S1/RPO_SST2S1/m_in
+    - 
+    - weight: 0.019200000000000002
+  - - E3S1/connectivity_E3S1/m_out
+    - SST4S1/RPO_E3S1/m_in
+    - 
+    - weight: 4.10625
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST4S1/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST4S1/RPO_SST3S1/m_in
+    - 
+    - weight: 0.21
+  - - E4S1/connectivity_E4S1/m_out
+    - SST4S1/RPO_E4S1/m_in
+    - 
+    - weight: 66.01
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST4S1/RPO_PV4S1/m_in
+    - 
+    - weight: 34.832
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST4S1/RPO_SST4S1/m_in
+    - 
+    - weight: 0.396
+  - - E1S2/connectivity_E1S2/m_out
+    - SST4S1/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST4S1/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST4S1/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST4S1/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - SST4S1/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST4S1/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST4S1/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - SST4S1/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST4S1/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST4S1/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - SST4S1/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST4S1/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST4S1/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - SST4S1/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - SST4S1/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - E1S2/PRO_E1S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E1S2/connectivity_E1S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E1S2/connectivity_E1S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E1S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - E1S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - E1S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E1S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - E1S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E1S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E1S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E1S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - E1S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E1S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E1S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - E1S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E1S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E1S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - E1S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E1S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E1S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - E1S2/RPO_E1S2/m_in
+    - 
+    - weight: 84.97275
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E1S2/RPO_PV1S2/m_in
+    - 
+    - weight: 24.39
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E1S2/RPO_SST1S2/m_in
+    - 
+    - weight: 20.720000000000002
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E1S2/RPO_VIPS2/m_in
+    - 
+    - weight: 3.655
+  - - E2S2/connectivity_E2S2/m_out
+    - E1S2/RPO_E2S2/m_in
+    - 
+    - weight: 68.31
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E1S2/RPO_PV2S2/m_in
+    - 
+    - weight: 1.7
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E1S2/RPO_SST2S2/m_in
+    - 
+    - weight: 2.16
+  - - E3S2/connectivity_E3S2/m_out
+    - E1S2/RPO_E3S2/m_in
+    - 
+    - weight: 8.2125
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E1S2/RPO_PV3S2/m_in
+    - 
+    - weight: 0.109
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E1S2/RPO_SST3S2/m_in
+    - 
+    - weight: 1.575
+  - - E4S2/connectivity_E4S2/m_out
+    - E1S2/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E1S2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E1S2/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - E1S2/RPO_thalE/m_in
+    - 
+    - weight: 8.219612800000002
+  - - thalI/connectivity_thalI/m_out
+    - E1S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV1S2/PRO_PV1S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV1S2/connectivity_PV1S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV1S2/connectivity_PV1S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV1S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - PV1S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - PV1S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV1S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - PV1S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV1S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV1S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV1S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - PV1S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV1S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV1S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - PV1S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV1S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV1S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - PV1S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV1S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV1S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - PV1S2/RPO_E1S2/m_in
+    - 
+    - weight: 361.45125
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV1S2/RPO_PV1S2/m_in
+    - 
+    - weight: 28.62
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV1S2/RPO_SST1S2/m_in
+    - 
+    - weight: 8.732000000000001
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV1S2/RPO_VIPS2/m_in
+    - 
+    - weight: 4.675
+  - - E2S2/connectivity_E2S2/m_out
+    - PV1S2/RPO_E2S2/m_in
+    - 
+    - weight: 5.9616
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV1S2/RPO_PV2S2/m_in
+    - 
+    - weight: 1.445
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV1S2/RPO_SST2S2/m_in
+    - 
+    - weight: 1.536
+  - - E3S2/connectivity_E3S2/m_out
+    - PV1S2/RPO_E3S2/m_in
+    - 
+    - weight: 0.34218750000000003
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV1S2/RPO_PV3S2/m_in
+    - 
+    - weight: 0.109
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV1S2/RPO_SST3S2/m_in
+    - 
+    - weight: 1.4699999999999998
+  - - E4S2/connectivity_E4S2/m_out
+    - PV1S2/RPO_E4S2/m_in
+    - 
+    - weight: 0.0644
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV1S2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0056
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV1S2/RPO_SST4S2/m_in
+    - 
+    - weight: 0.396
+  - - thalE/connectivity_thalE/m_out
+    - PV1S2/RPO_thalE/m_in
+    - 
+    - weight: 0.4374720000000001
+  - - thalI/connectivity_thalI/m_out
+    - PV1S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST1S2/PRO_SST1S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST1S2/connectivity_SST1S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST1S2/connectivity_SST1S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST1S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - SST1S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - SST1S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST1S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - SST1S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST1S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST1S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST1S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - SST1S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST1S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST1S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - SST1S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST1S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST1S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - SST1S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST1S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST1S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - SST1S2/RPO_E1S2/m_in
+    - 
+    - weight: 205.4565
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST1S2/RPO_PV1S2/m_in
+    - 
+    - weight: 26.190000000000005
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST1S2/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST1S2/RPO_VIPS2/m_in
+    - 
+    - weight: 23.035
+  - - E2S2/connectivity_E2S2/m_out
+    - SST1S2/RPO_E2S2/m_in
+    - 
+    - weight: 2.484
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST1S2/RPO_PV2S2/m_in
+    - 
+    - weight: 1.02
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST1S2/RPO_SST2S2/m_in
+    - 
+    - weight: 2.112
+  - - E3S2/connectivity_E3S2/m_out
+    - SST1S2/RPO_E3S2/m_in
+    - 
+    - weight: 0.20531249999999998
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST1S2/RPO_PV3S2/m_in
+    - 
+    - weight: 0.109
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST1S2/RPO_SST3S2/m_in
+    - 
+    - weight: 2.205
+  - - E4S2/connectivity_E4S2/m_out
+    - SST1S2/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST1S2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST1S2/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - SST1S2/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - SST1S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - VIPS2/PRO_VIPS2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - VIPS2/connectivity_VIPS2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - VIPS2/connectivity_VIPS2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - VIPS2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - VIPS2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - VIPS2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - VIPS2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - VIPS2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - VIPS2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - VIPS2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - VIPS2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - VIPS2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - VIPS2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - VIPS2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - VIPS2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - VIPS2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - VIPS2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - VIPS2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - VIPS2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - VIPS2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - VIPS2/RPO_E1S2/m_in
+    - 
+    - weight: 67.64
+  - - PV1S2/connectivity_PV1S2/m_out
+    - VIPS2/RPO_PV1S2/m_in
+    - 
+    - weight: 18.540000000000003
+  - - SST1S2/connectivity_SST1S2/m_out
+    - VIPS2/RPO_SST1S2/m_in
+    - 
+    - weight: 34.262
+  - - VIPS2/connectivity_VIPS2/m_out
+    - VIPS2/RPO_VIPS2/m_in
+    - 
+    - weight: 5.355
+  - - E2S2/connectivity_E2S2/m_out
+    - VIPS2/RPO_E2S2/m_in
+    - 
+    - weight: 0.7452
+  - - PV2S2/connectivity_PV2S2/m_out
+    - VIPS2/RPO_PV2S2/m_in
+    - 
+    - weight: 0.85
+  - - SST2S2/connectivity_SST2S2/m_out
+    - VIPS2/RPO_SST2S2/m_in
+    - 
+    - weight: 0.8160000000000001
+  - - E3S2/connectivity_E3S2/m_out
+    - VIPS2/RPO_E3S2/m_in
+    - 
+    - weight: 0.0684375
+  - - PV3S2/connectivity_PV3S2/m_out
+    - VIPS2/RPO_PV3S2/m_in
+    - 
+    - weight: 0.109
+  - - SST3S2/connectivity_SST3S2/m_out
+    - VIPS2/RPO_SST3S2/m_in
+    - 
+    - weight: 0.63
+  - - E4S2/connectivity_E4S2/m_out
+    - VIPS2/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - VIPS2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0112
+  - - SST4S2/connectivity_SST4S2/m_out
+    - VIPS2/RPO_SST4S2/m_in
+    - 
+    - weight: 0.33
+  - - thalE/connectivity_thalE/m_out
+    - VIPS2/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - VIPS2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - E2S2/PRO_E2S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E2S2/connectivity_E2S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E2S2/connectivity_E2S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E2S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - E2S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - E2S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E2S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - E2S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E2S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E2S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E2S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - E2S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E2S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E2S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - E2S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E2S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E2S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - E2S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E2S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E2S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - E2S2/RPO_E1S2/m_in
+    - 
+    - weight: 10.9915
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E2S2/RPO_PV1S2/m_in
+    - 
+    - weight: 3.1500000000000004
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E2S2/RPO_SST1S2/m_in
+    - 
+    - weight: 4.3660000000000005
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E2S2/RPO_VIPS2/m_in
+    - 
+    - weight: 5.95
+  - - E2S2/connectivity_E2S2/m_out
+    - E2S2/RPO_E2S2/m_in
+    - 
+    - weight: 195.50322000000003
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E2S2/RPO_PV2S2/m_in
+    - 
+    - weight: 31.79
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E2S2/RPO_SST2S2/m_in
+    - 
+    - weight: 9.504000000000001
+  - - E3S2/connectivity_E3S2/m_out
+    - E2S2/RPO_E3S2/m_in
+    - 
+    - weight: 4.10625
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E2S2/RPO_PV3S2/m_in
+    - 
+    - weight: 3.0519999999999996
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E2S2/RPO_SST3S2/m_in
+    - 
+    - weight: 5.460000000000001
+  - - E4S2/connectivity_E4S2/m_out
+    - E2S2/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E2S2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.112
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E2S2/RPO_SST4S2/m_in
+    - 
+    - weight: 1.584
+  - - thalE/connectivity_thalE/m_out
+    - E2S2/RPO_thalE/m_in
+    - 
+    - weight: 51.93216000000001
+  - - thalI/connectivity_thalI/m_out
+    - E2S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV2S2/PRO_PV2S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV2S2/connectivity_PV2S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV2S2/connectivity_PV2S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV2S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - PV2S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - PV2S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV2S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - PV2S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV2S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV2S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV2S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - PV2S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV2S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV2S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - PV2S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV2S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV2S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - PV2S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV2S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV2S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - PV2S2/RPO_E1S2/m_in
+    - 
+    - weight: 30.438000000000002
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV2S2/RPO_PV1S2/m_in
+    - 
+    - weight: 1.44
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV2S2/RPO_SST1S2/m_in
+    - 
+    - weight: 1.702
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV2S2/RPO_VIPS2/m_in
+    - 
+    - weight: 4.505
+  - - E2S2/connectivity_E2S2/m_out
+    - PV2S2/RPO_E2S2/m_in
+    - 
+    - weight: 696.762
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV2S2/RPO_PV2S2/m_in
+    - 
+    - weight: 24.480000000000004
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV2S2/RPO_SST2S2/m_in
+    - 
+    - weight: 17.424
+  - - E3S2/connectivity_E3S2/m_out
+    - PV2S2/RPO_E3S2/m_in
+    - 
+    - weight: 6.159375000000001
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV2S2/RPO_PV3S2/m_in
+    - 
+    - weight: 3.0519999999999996
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV2S2/RPO_SST3S2/m_in
+    - 
+    - weight: 4.935
+  - - E4S2/connectivity_E4S2/m_out
+    - PV2S2/RPO_E4S2/m_in
+    - 
+    - weight: 0.644
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV2S2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.168
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV2S2/RPO_SST4S2/m_in
+    - 
+    - weight: 1.1880000000000002
+  - - thalE/connectivity_thalE/m_out
+    - PV2S2/RPO_thalE/m_in
+    - 
+    - weight: 2.6656000000000004
+  - - thalI/connectivity_thalI/m_out
+    - PV2S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST2S2/PRO_SST2S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST2S2/connectivity_SST2S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST2S2/connectivity_SST2S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST2S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - SST2S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - SST2S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST2S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - SST2S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST2S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST2S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST2S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - SST2S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST2S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST2S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - SST2S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST2S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST2S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - SST2S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST2S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST2S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - SST2S2/RPO_E1S2/m_in
+    - 
+    - weight: 30.438000000000002
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST2S2/RPO_PV1S2/m_in
+    - 
+    - weight: 1.62
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST2S2/RPO_SST1S2/m_in
+    - 
+    - weight: 1.776
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST2S2/RPO_VIPS2/m_in
+    - 
+    - weight: 4.165
+  - - E2S2/connectivity_E2S2/m_out
+    - SST2S2/RPO_E2S2/m_in
+    - 
+    - weight: 117.99
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST2S2/RPO_PV2S2/m_in
+    - 
+    - weight: 28.220000000000002
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST2S2/RPO_SST2S2/m_in
+    - 
+    - weight: 0.10944
+  - - E3S2/connectivity_E3S2/m_out
+    - SST2S2/RPO_E3S2/m_in
+    - 
+    - weight: 6.159375000000001
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST2S2/RPO_PV3S2/m_in
+    - 
+    - weight: 3.488
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST2S2/RPO_SST3S2/m_in
+    - 
+    - weight: 4.935
+  - - E4S2/connectivity_E4S2/m_out
+    - SST2S2/RPO_E4S2/m_in
+    - 
+    - weight: 1.288
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST2S2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.112
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST2S2/RPO_SST4S2/m_in
+    - 
+    - weight: 1.518
+  - - thalE/connectivity_thalE/m_out
+    - SST2S2/RPO_thalE/m_in
+    - 
+    - weight: 0.3763200000000001
+  - - thalI/connectivity_thalI/m_out
+    - SST2S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - E3S2/PRO_E3S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E3S2/connectivity_E3S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E3S2/connectivity_E3S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E3S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - E3S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - E3S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E3S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - E3S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E3S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E3S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E3S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - E3S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E3S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E3S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - E3S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E3S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E3S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - E3S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E3S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E3S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - E3S2/RPO_E1S2/m_in
+    - 
+    - weight: 72.713
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E3S2/RPO_PV1S2/m_in
+    - 
+    - weight: 3.7800000000000002
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E3S2/RPO_SST1S2/m_in
+    - 
+    - weight: 6.956
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E3S2/RPO_VIPS2/m_in
+    - 
+    - weight: 5.2700000000000005
+  - - E2S2/connectivity_E2S2/m_out
+    - E3S2/RPO_E2S2/m_in
+    - 
+    - weight: 64.83239999999999
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E3S2/RPO_PV2S2/m_in
+    - 
+    - weight: 6.545000000000001
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E3S2/RPO_SST2S2/m_in
+    - 
+    - weight: 1.38624
+  - - E3S2/connectivity_E3S2/m_out
+    - E3S2/RPO_E3S2/m_in
+    - 
+    - weight: 107.31000000000002
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E3S2/RPO_PV3S2/m_in
+    - 
+    - weight: 43.164
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E3S2/RPO_SST3S2/m_in
+    - 
+    - weight: 15.854999999999999
+  - - E4S2/connectivity_E4S2/m_out
+    - E3S2/RPO_E4S2/m_in
+    - 
+    - weight: 6.44
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E3S2/RPO_PV4S2/m_in
+    - 
+    - weight: 1.008
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E3S2/RPO_SST4S2/m_in
+    - 
+    - weight: 3.3659999999999997
+  - - thalE/connectivity_thalE/m_out
+    - E3S2/RPO_thalE/m_in
+    - 
+    - weight: 22.234632
+  - - thalI/connectivity_thalI/m_out
+    - E3S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV3S2/PRO_PV3S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV3S2/connectivity_PV3S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV3S2/connectivity_PV3S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV3S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - PV3S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - PV3S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV3S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - PV3S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV3S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV3S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV3S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - PV3S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV3S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV3S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - PV3S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV3S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV3S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - PV3S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV3S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV3S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - PV3S2/RPO_E1S2/m_in
+    - 
+    - weight: 7.186750000000001
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV3S2/RPO_PV1S2/m_in
+    - 
+    - weight: 0.45
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV3S2/RPO_SST1S2/m_in
+    - 
+    - weight: 0.8140000000000001
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV3S2/RPO_VIPS2/m_in
+    - 
+    - weight: 1.615
+  - - E2S2/connectivity_E2S2/m_out
+    - PV3S2/RPO_E2S2/m_in
+    - 
+    - weight: 10.867500000000001
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV3S2/RPO_PV2S2/m_in
+    - 
+    - weight: 2.55
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV3S2/RPO_SST2S2/m_in
+    - 
+    - weight: 1.104
+  - - E3S2/connectivity_E3S2/m_out
+    - PV3S2/RPO_E3S2/m_in
+    - 
+    - weight: 135.50625
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV3S2/RPO_PV3S2/m_in
+    - 
+    - weight: 26.814000000000004
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV3S2/RPO_SST3S2/m_in
+    - 
+    - weight: 25.305000000000003
+  - - E4S2/connectivity_E4S2/m_out
+    - PV3S2/RPO_E4S2/m_in
+    - 
+    - weight: 1.288
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV3S2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.7280000000000001
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV3S2/RPO_SST4S2/m_in
+    - 
+    - weight: 1.7160000000000002
+  - - thalE/connectivity_thalE/m_out
+    - PV3S2/RPO_thalE/m_in
+    - 
+    - weight: 2.2133104000000006
+  - - thalI/connectivity_thalI/m_out
+    - PV3S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST3S2/PRO_SST3S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST3S2/connectivity_SST3S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST3S2/connectivity_SST3S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST3S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - SST3S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - SST3S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST3S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - SST3S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST3S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST3S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST3S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - SST3S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST3S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST3S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - SST3S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST3S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST3S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - SST3S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST3S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST3S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - SST3S2/RPO_E1S2/m_in
+    - 
+    - weight: 6.764
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST3S2/RPO_PV1S2/m_in
+    - 
+    - weight: 0.36
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST3S2/RPO_SST1S2/m_in
+    - 
+    - weight: 0.74
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST3S2/RPO_VIPS2/m_in
+    - 
+    - weight: 1.615
+  - - E2S2/connectivity_E2S2/m_out
+    - SST3S2/RPO_E2S2/m_in
+    - 
+    - weight: 11.799
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST3S2/RPO_PV2S2/m_in
+    - 
+    - weight: 2.55
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST3S2/RPO_SST2S2/m_in
+    - 
+    - weight: 1.2000000000000002
+  - - E3S2/connectivity_E3S2/m_out
+    - SST3S2/RPO_E3S2/m_in
+    - 
+    - weight: 70.1484375
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST3S2/RPO_PV3S2/m_in
+    - 
+    - weight: 33.899
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST3S2/RPO_SST3S2/m_in
+    - 
+    - weight: 0.63
+  - - E4S2/connectivity_E4S2/m_out
+    - SST3S2/RPO_E4S2/m_in
+    - 
+    - weight: 1.932
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST3S2/RPO_PV4S2/m_in
+    - 
+    - weight: 0.28
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST3S2/RPO_SST4S2/m_in
+    - 
+    - weight: 2.112
+  - - thalE/connectivity_thalE/m_out
+    - SST3S2/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - SST3S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - E4S2/PRO_E4S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - E4S2/connectivity_E4S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - E4S2/connectivity_E4S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - E4S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - E4S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - E4S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - E4S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - E4S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - E4S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - E4S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - E4S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - E4S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - E4S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - E4S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - E4S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - E4S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - E4S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - E4S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - E4S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - E4S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - E4S2/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - E4S2/RPO_PV1S2/m_in
+    - 
+    - weight: 0.18
+  - - SST1S2/connectivity_SST1S2/m_out
+    - E4S2/RPO_SST1S2/m_in
+    - 
+    - weight: 0.222
+  - - VIPS2/connectivity_VIPS2/m_out
+    - E4S2/RPO_VIPS2/m_in
+    - 
+    - weight: 0.68
+  - - E2S2/connectivity_E2S2/m_out
+    - E4S2/RPO_E2S2/m_in
+    - 
+    - weight: 10.805399999999999
+  - - PV2S2/connectivity_PV2S2/m_out
+    - E4S2/RPO_PV2S2/m_in
+    - 
+    - weight: 1.275
+  - - SST2S2/connectivity_SST2S2/m_out
+    - E4S2/RPO_SST2S2/m_in
+    - 
+    - weight: 0.48
+  - - E3S2/connectivity_E3S2/m_out
+    - E4S2/RPO_E3S2/m_in
+    - 
+    - weight: 27.375
+  - - PV3S2/connectivity_PV3S2/m_out
+    - E4S2/RPO_PV3S2/m_in
+    - 
+    - weight: 2.0709999999999997
+  - - SST3S2/connectivity_SST3S2/m_out
+    - E4S2/RPO_SST3S2/m_in
+    - 
+    - weight: 1.7850000000000001
+  - - E4S2/connectivity_E4S2/m_out
+    - E4S2/RPO_E4S2/m_in
+    - 
+    - weight: 20.286
+  - - PV4S2/connectivity_PV4S2/m_out
+    - E4S2/RPO_PV4S2/m_in
+    - 
+    - weight: 44.352000000000004
+  - - SST4S2/connectivity_SST4S2/m_out
+    - E4S2/RPO_SST4S2/m_in
+    - 
+    - weight: 9.966
+  - - thalE/connectivity_thalE/m_out
+    - E4S2/RPO_thalE/m_in
+    - 
+    - weight: 9.088128000000001
+  - - thalI/connectivity_thalI/m_out
+    - E4S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - PV4S2/PRO_PV4S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - PV4S2/connectivity_PV4S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - PV4S2/connectivity_PV4S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - PV4S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - PV4S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - PV4S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - PV4S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - PV4S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - PV4S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - PV4S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - PV4S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - PV4S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - PV4S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - PV4S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - PV4S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - PV4S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - PV4S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - PV4S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - PV4S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - PV4S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - PV4S2/RPO_E1S2/m_in
+    - 
+    - weight: 1.26825
+  - - PV1S2/connectivity_PV1S2/m_out
+    - PV4S2/RPO_PV1S2/m_in
+    - 
+    - weight: 0.009000000000000001
+  - - SST1S2/connectivity_SST1S2/m_out
+    - PV4S2/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0148
+  - - VIPS2/connectivity_VIPS2/m_out
+    - PV4S2/RPO_VIPS2/m_in
+    - 
+    - weight: 0.17
+  - - E2S2/connectivity_E2S2/m_out
+    - PV4S2/RPO_E2S2/m_in
+    - 
+    - weight: 1.5525
+  - - PV2S2/connectivity_PV2S2/m_out
+    - PV4S2/RPO_PV2S2/m_in
+    - 
+    - weight: 0.17
+  - - SST2S2/connectivity_SST2S2/m_out
+    - PV4S2/RPO_SST2S2/m_in
+    - 
+    - weight: 0.024
+  - - E3S2/connectivity_E3S2/m_out
+    - PV4S2/RPO_E3S2/m_in
+    - 
+    - weight: 21.900000000000002
+  - - PV3S2/connectivity_PV3S2/m_out
+    - PV4S2/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - PV4S2/RPO_SST3S2/m_in
+    - 
+    - weight: 0.315
+  - - E4S2/connectivity_E4S2/m_out
+    - PV4S2/RPO_E4S2/m_in
+    - 
+    - weight: 510.048
+  - - PV4S2/connectivity_PV4S2/m_out
+    - PV4S2/RPO_PV4S2/m_in
+    - 
+    - weight: 13.776000000000002
+  - - SST4S2/connectivity_SST4S2/m_out
+    - PV4S2/RPO_SST4S2/m_in
+    - 
+    - weight: 15.906
+  - - thalE/connectivity_thalE/m_out
+    - PV4S2/RPO_thalE/m_in
+    - 
+    - weight: 0.395136
+  - - thalI/connectivity_thalI/m_out
+    - PV4S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - BACKGROUND/RPO_bI/v_bI
+    - SST4S2/PRO_SST4S2/v_bIn
+    - 
+    - weight: 1.0
+  - - G/g_definition/gC
+    - SST4S2/connectivity_SST4S2/g
+    - 
+    - weight: 1.0
+  - - BEI/bEI_definition/bEIC
+    - SST4S2/connectivity_SST4S2/bEI
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - SST4S2/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - SST4S2/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - SST4S2/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - SST4S2/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - SST4S2/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - SST4S2/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - SST4S2/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - SST4S2/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - SST4S2/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - SST4S2/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - SST4S2/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - SST4S2/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - SST4S2/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - SST4S2/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - SST4S2/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - SST4S2/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - SST4S2/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - SST4S2/RPO_E1S2/m_in
+    - 
+    - weight: 0.8455
+  - - PV1S2/connectivity_PV1S2/m_out
+    - SST4S2/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - SST4S2/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0148
+  - - VIPS2/connectivity_VIPS2/m_out
+    - SST4S2/RPO_VIPS2/m_in
+    - 
+    - weight: 0.085
+  - - E2S2/connectivity_E2S2/m_out
+    - SST4S2/RPO_E2S2/m_in
+    - 
+    - weight: 1.5525
+  - - PV2S2/connectivity_PV2S2/m_out
+    - SST4S2/RPO_PV2S2/m_in
+    - 
+    - weight: 0.17
+  - - SST2S2/connectivity_SST2S2/m_out
+    - SST4S2/RPO_SST2S2/m_in
+    - 
+    - weight: 0.019200000000000002
+  - - E3S2/connectivity_E3S2/m_out
+    - SST4S2/RPO_E3S2/m_in
+    - 
+    - weight: 5.1328125
+  - - PV3S2/connectivity_PV3S2/m_out
+    - SST4S2/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - SST4S2/RPO_SST3S2/m_in
+    - 
+    - weight: 0.21
+  - - E4S2/connectivity_E4S2/m_out
+    - SST4S2/RPO_E4S2/m_in
+    - 
+    - weight: 66.01
+  - - PV4S2/connectivity_PV4S2/m_out
+    - SST4S2/RPO_PV4S2/m_in
+    - 
+    - weight: 34.832
+  - - SST4S2/connectivity_SST4S2/m_out
+    - SST4S2/RPO_SST4S2/m_in
+    - 
+    - weight: 0.396
+  - - thalE/connectivity_thalE/m_out
+    - SST4S2/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - SST4S2/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - G_THAL/g_thal_definition/g_thalC
+    - thalE/connectivity_thalE/g_thal
+    - 
+    - weight: 1.0
+  - - BEI_THAL/bEI_thal_definition/bEI_thalC
+    - thalE/connectivity_thalE/bEI_thal
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - thalE/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - thalE/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - thalE/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - thalE/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - thalE/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - thalE/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - thalE/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - thalE/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - thalE/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - thalE/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - thalE/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - thalE/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - thalE/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - thalE/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - thalE/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - thalE/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - thalE/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - thalE/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - thalE/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - thalE/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - thalE/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - thalE/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - thalE/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - thalE/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - thalE/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - thalE/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - thalE/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - thalE/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - thalE/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - thalE/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - thalE/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - thalE/RPO_thalI/m_in
+    - 
+    - weight: 0.0
+  - - G_THAL/g_thal_definition/g_thalC
+    - thalI/connectivity_thalI/g_thal
+    - 
+    - weight: 1.0
+  - - BEI_THAL/bEI_thal_definition/bEI_thalC
+    - thalI/connectivity_thalI/bEI_thal
+    - 
+    - weight: 1.0
+  - - E3b/connectivity_E3b/m_out
+    - thalI/RPO_E3b/m_in
+    - 
+    - weight: 0.0
+  - - PV3b/connectivity_PV3b/m_out
+    - thalI/RPO_PV3b/m_in
+    - 
+    - weight: 0.0
+  - - SST3b/connectivity_SST3b/m_out
+    - thalI/RPO_SST3b/m_in
+    - 
+    - weight: 0.0
+  - - VIP3b/connectivity_VIP3b/m_out
+    - thalI/RPO_VIP3b/m_in
+    - 
+    - weight: 0.0
+  - - E1S1/connectivity_E1S1/m_out
+    - thalI/RPO_E1S1/m_in
+    - 
+    - weight: 0.0
+  - - PV1S1/connectivity_PV1S1/m_out
+    - thalI/RPO_PV1S1/m_in
+    - 
+    - weight: 0.0
+  - - SST1S1/connectivity_SST1S1/m_out
+    - thalI/RPO_SST1S1/m_in
+    - 
+    - weight: 0.0
+  - - VIPS1/connectivity_VIPS1/m_out
+    - thalI/RPO_VIPS1/m_in
+    - 
+    - weight: 0.0
+  - - E2S1/connectivity_E2S1/m_out
+    - thalI/RPO_E2S1/m_in
+    - 
+    - weight: 0.0
+  - - PV2S1/connectivity_PV2S1/m_out
+    - thalI/RPO_PV2S1/m_in
+    - 
+    - weight: 0.0
+  - - SST2S1/connectivity_SST2S1/m_out
+    - thalI/RPO_SST2S1/m_in
+    - 
+    - weight: 0.0
+  - - E3S1/connectivity_E3S1/m_out
+    - thalI/RPO_E3S1/m_in
+    - 
+    - weight: 0.0
+  - - PV3S1/connectivity_PV3S1/m_out
+    - thalI/RPO_PV3S1/m_in
+    - 
+    - weight: 0.0
+  - - SST3S1/connectivity_SST3S1/m_out
+    - thalI/RPO_SST3S1/m_in
+    - 
+    - weight: 0.0
+  - - E4S1/connectivity_E4S1/m_out
+    - thalI/RPO_E4S1/m_in
+    - 
+    - weight: 0.0
+  - - PV4S1/connectivity_PV4S1/m_out
+    - thalI/RPO_PV4S1/m_in
+    - 
+    - weight: 0.0
+  - - SST4S1/connectivity_SST4S1/m_out
+    - thalI/RPO_SST4S1/m_in
+    - 
+    - weight: 0.0
+  - - E1S2/connectivity_E1S2/m_out
+    - thalI/RPO_E1S2/m_in
+    - 
+    - weight: 0.0
+  - - PV1S2/connectivity_PV1S2/m_out
+    - thalI/RPO_PV1S2/m_in
+    - 
+    - weight: 0.0
+  - - SST1S2/connectivity_SST1S2/m_out
+    - thalI/RPO_SST1S2/m_in
+    - 
+    - weight: 0.0
+  - - VIPS2/connectivity_VIPS2/m_out
+    - thalI/RPO_VIPS2/m_in
+    - 
+    - weight: 0.0
+  - - E2S2/connectivity_E2S2/m_out
+    - thalI/RPO_E2S2/m_in
+    - 
+    - weight: 0.0
+  - - PV2S2/connectivity_PV2S2/m_out
+    - thalI/RPO_PV2S2/m_in
+    - 
+    - weight: 0.0
+  - - SST2S2/connectivity_SST2S2/m_out
+    - thalI/RPO_SST2S2/m_in
+    - 
+    - weight: 0.0
+  - - E3S2/connectivity_E3S2/m_out
+    - thalI/RPO_E3S2/m_in
+    - 
+    - weight: 0.0
+  - - PV3S2/connectivity_PV3S2/m_out
+    - thalI/RPO_PV3S2/m_in
+    - 
+    - weight: 0.0
+  - - SST3S2/connectivity_SST3S2/m_out
+    - thalI/RPO_SST3S2/m_in
+    - 
+    - weight: 0.0
+  - - E4S2/connectivity_E4S2/m_out
+    - thalI/RPO_E4S2/m_in
+    - 
+    - weight: 0.0
+  - - PV4S2/connectivity_PV4S2/m_out
+    - thalI/RPO_PV4S2/m_in
+    - 
+    - weight: 0.0
+  - - SST4S2/connectivity_SST4S2/m_out
+    - thalI/RPO_SST4S2/m_in
+    - 
+    - weight: 0.0
+  - - thalE/connectivity_thalE/m_out
+    - thalI/RPO_thalE/m_in
+    - 
+    - weight: 0.0
+  - - thalI/connectivity_thalI/m_out
+    - thalI/RPO_thalI/m_in
+    - 
+    - weight: 0.0

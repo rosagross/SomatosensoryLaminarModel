@@ -12,163 +12,163 @@ RPO_E1:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.006
     H: 1.0
 RPO_PV1:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.003
     H: 1.0
 RPO_SST1:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.02
     H: 1.0
 RPO_VIP:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.015
     H: 1.0
 RPO_E2:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.006
     H: 1.0
 RPO_PV2:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.003
     H: 1.0
 RPO_SST2:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.02
     H: 1.0
 RPO_E3:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.006
     H: 1.0
 RPO_PV3:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.003
     H: 1.0
 RPO_SST3:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.02
     H: 1.0
 RPO_E4:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.006
     H: 1.0
 RPO_PV4:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.003
     H: 1.0
 RPO_SST4:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     m_in: input
-    bI: 200.0
+    bI: 0.0
     tau: 0.02
     H: 1.0
 RPO_thalE:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
@@ -180,7 +180,7 @@ RPO_thalI:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (m_in + bI) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * (m_in + bI ) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
@@ -579,13 +579,13 @@ RPO_Iext:
 InputOp:
   base: OperatorTemplate
   equations:
-  - Iext = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))
+  - Iext = (A/2)*(1 + sign(t - onset)) - (A/2)*(1 + sign(t - (onset + dur)))
   variables:
     Iext: output
     t: variable
-    A: 0
-    onset: 1000.9999999999999
-    dur: 500.0
+    A: 50.0
+    onset: 1.0
+    dur: 0.5
 thalE:
   base: NodeTemplate
   operators:
@@ -636,7 +636,7 @@ thalI:
   - RPO_SST4
   - RPO_thalE
   - RPO_thalI
-area_1_thal:
+area_1_thal_iext:
   base: CircuitTemplate
   circuits: {}
   nodes:
