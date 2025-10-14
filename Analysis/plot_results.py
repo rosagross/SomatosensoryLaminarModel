@@ -47,9 +47,9 @@ figure_dir = 'C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS Summer
 # read in data
 input_durations = [1.5]  #, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
 input_strengths = [10] #, 50, 300, 500]  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
-coupling_strengths = [20]
-balance_EI = [0.8]
-backgroundI_strengths = [7] #, 5, 10, 15, 20]
+coupling_strengths = [10, 20, 30]
+balance_EI = [0.7, 0.75, 0.8, 0.85, 0.9]
+backgroundI_strengths = [5, 6, 7] #, 5, 10, 15, 20]
 step_size = 0.01 # this is the saving step size, NOT the simulation step_size!!!! Simulation step size is usually smaller, like 0.001
 sample_delay_immediate = 0.3
 sample_delay_late = 1 # when to start the long term behaviour "window"
@@ -64,6 +64,7 @@ name_addOn = ''
 load_trajectory = True
 load_full_potentials = False
 load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is E3)
+thalamus_source = 'thalJiang'
 
 # %% load rate and potential files 
 summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, balance_EI, backgroundI_strengths,
@@ -81,11 +82,11 @@ summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, fig
 # %% Make plots that demonstrate the sampling time line 
 
 # choose example settings
-g = 100
-bEI = 0.9
+g = 20
+bEI = 0.8
 population = 7 # 'E3'
-input_duration = 0.5
-input_strength = 0
+input_duration = 1.5
+input_strength = 10
 backgroundI_strength = 0
 line_df = trajectory_df[trajectory_df['global_coupling']==g]
 line_df = line_df[line_df['balance_EI']==bEI]
@@ -98,7 +99,7 @@ print(len(trajectory_df))
 # LONG TERM and DURING INPUT
 
 # Add a red vertical line at time of input offset (start of sampling) and stop of sampling
-simulation_time = 6*1e-3
+simulation_time = 4*1e-3
 start_sample = input_onset + input_duration + sample_delay_immediate
 stop_sample = start_sample + sample_dur
 input_offset = input_onset + input_duration
@@ -142,11 +143,11 @@ plt.show()
 '''
 
 # choose example settings
-g = 100
+g = 20
 bEI = 0.8
 population = 'E3' # 'E1'
-input_duration = 0.5
-input_strength = 100
+input_duration = 1.5
+input_strength = 10
 line_df = trajectory_df[trajectory_df['global_coupling']==g]
 line_df = line_df[line_df['balance_EI']==bEI]
 line_df = line_df[line_df['population']==population]
@@ -169,9 +170,9 @@ plt.show()
 # %%
 
 # choose a coupling strength, background input strength and a population
-g = 100
-bEI = 0.7
-backgroundI_strength = 5
+g = 20
+bEI = 0.8
+backgroundI_strength = 7
 population = 'E3'
 data_df = summary_df[summary_df['globalCoupling']==g]
 data_df = data_df[data_df['balanceEI']==bEI]
@@ -191,8 +192,8 @@ sns.heatmap(data_heatmap, cmap='magma')
 '''
 
 # choose a coupling strength and a population
-g = 100
-bEI = 0.5
+g = 20
+bEI = 0.7
 population = 'PV2'
 data_df = summary_df[summary_df['globalCoupling']==g]
 data_df = data_df[data_df['balanceEI']==bEI]
@@ -214,8 +215,8 @@ sns.heatmap(data_heatmap, cmap='magma')
 # look at several difference E-I balance values
 bEIs = balance_EI
 # choose a global coupling strength and a population
-g = 100
-backgroundI_strength = 5
+g = 20
+backgroundI_strength = 7
 cbar_ticks = ['non-responsive', 'transfer', 'memory']
 population = 'E2'
 data_df = summary_df[summary_df['population']==population]
@@ -275,7 +276,7 @@ plt.show()
 
 rate_measure = 'longtermVSbaseline_rate'
 bEI = 0.8
-backinput = 5
+backinput = 7
 populations = np.array(['E1', 'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
 #populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
