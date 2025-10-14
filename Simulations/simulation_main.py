@@ -86,7 +86,6 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     cells = np.concatenate((population_names, ["ThalE", "ThalI"]))
 
     filename = filename + ".h5"
-    filename_rates = "rates" + filename
 
     # only safe every second datapoint
     resolution_tstep = 0.01
@@ -94,7 +93,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     rates_downsampled = rates[:, :: int(1000 * resolution_tstep)]
     rates_df = pd.DataFrame(rates_downsampled.T)
     rates_df.to_hdf(
-        os.path.join(filedir, filename_rates), index=False, key="data", mode="w"
+        os.path.join(filedir, filename), index=False, key="rates", mode="w"
     )
 
     # sum the potentials together and save them
@@ -103,7 +102,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
     filename = "potentials" + filename
     potential_df.to_hdf(
-        os.path.join(filedir, filename), index=False, key="data", mode="w"
+        os.path.join(filedir, filename), index=False, key="summed_potential", mode="w"
     )
 
     if full:
@@ -124,7 +123,7 @@ def write_3D_csv(filename, data):
 # %%
 def main():
     save_params = False
-    save_results = False
+    save_results = True
     save_full_potentials = False  # if True the potential matrix is 3D, otherwise 2D
     plot_rates = True
     plot_potentials = False
@@ -152,7 +151,7 @@ def main():
     input_onset = 1.001  # in sec
     simulation_dur = 2
     input_durations = [1.5]  # , 1, 1.5] # np.arange(0, 1, 1) # in sec
-    input_strengths = [500]  # np.arange(0, 500, 100)
+    input_strengths = [10]  # np.arange(0, 500, 100)
     backgrndI_strengths = [7]
 
     # connections within the thalamus
@@ -186,8 +185,7 @@ def main():
                             f"Thalamus EtoI:{thal_connect[2]} ItoI: {thal_connect[3]}"
                         )
 
-                        filename = f"_g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_thalJiang_thalUncon_S1S2Uncon"
-                        # filename = f'_gE{int(gE*connect_reverse_factor)}gI{int(gI*connect_reverse_factor)}_{cortex_type}_IbStrength{sb}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0_S1S2'
+                        filename = f"_g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_thalUncon_S1S2Uncon"
 
                         # create input array
                         Iext = create_Iext(
