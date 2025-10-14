@@ -10,7 +10,7 @@ import ast
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, balance_EI,  
                         backgroundI_strengths, step_size, sample_delay_immediate, sample_delay_late, input_onset, sample_dur, cortex_type, input_type,
-                        thalamus_source, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1):
+                        thal_cellcounts, bI_cellcounts, extI_cellcounts, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1):
     '''
     Parameter:
     sample_dur: duration of sampling baseline and longterm activity in s 
@@ -39,14 +39,11 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         df = pd.DataFrame()
 
                         # read in firing rates in data matrix (datapoints x populations)
-                        filename_rates = f'rates_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalUncon_S1S2Uncon.h5'  #thalEI0_S1S2.csv'
-                        # filename_rates = f"rates_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
-                        rates_df = pd.read_hdf(os.path.join(output_dir, filename_rates))
+                        filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
+                        rates_df = pd.read_hdf(os.path.join(output_dir, filename), key='rates')
                         
                         # read in potentials in data matrix (datapoints x populations)
-                        #filename_potentials = f"potentials_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
-                        filename_potentials = f'potentials_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalUncon_S1S2Uncon.h5'  #thalEI0_S1S2.csv'
-                        potentials_df = pd.read_hdf(os.path.join(output_dir, filename_potentials))
+                        potentials_df = pd.read_hdf(os.path.join(output_dir, filename), key='summed_potential')
 
                         # LONG TERM immediate (sample for x ms starting x secs after offset)
                         start_sample_immediate = int((input_onset+d+sample_delay_immediate)/step_size)
@@ -151,7 +148,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
 
                         if load_full_potentials:
                             # load full 3D (target x source x timestep) potential of selected population 
-                            filename = f"full_potentials_g{g}_bEI{bEI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0.csv"
+                            filename = f"full_potentials_g{g}_bEI{bEI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalcells}_thalEI0.csv"
                             potential_df = pd.read_csv(os.path.join(output_dir, filename), sep=',', header=None)
                             potential_df = potential_df.applymap(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('[') and x.endswith(']') else x)
                             potential_df = potential_df.iloc[load_population_potential]

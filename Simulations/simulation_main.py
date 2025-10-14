@@ -11,7 +11,7 @@ Description: Run this file to run the simulation!
 import numpy as np
 import os
 import matplotlib.pyplot as plt
-import jax.numpy as jnp
+#import jax.numpy as jnp
 import pandas as pd
 import time
 import csv
@@ -85,7 +85,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     ]
     cells = np.concatenate((population_names, ["ThalE", "ThalI"]))
 
-    filename = filename + ".h5"
+    filename = filename + ".hdf5"
 
     # only safe every second datapoint
     resolution_tstep = 0.01
@@ -93,16 +93,15 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     rates_downsampled = rates[:, :: int(1000 * resolution_tstep)]
     rates_df = pd.DataFrame(rates_downsampled.T)
     rates_df.to_hdf(
-        os.path.join(filedir, filename), index=False, key="rates", mode="w"
+        os.path.join(filedir, filename), index=False, key="rates", mode="a"
     )
 
     # sum the potentials together and save them
     potential_sum = np.sum(potentials, axis=1)
     potential_sum_downsampled = potential_sum[:, :: int(1000 * resolution_tstep)]
     potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
-    filename = "potentials" + filename
     potential_df.to_hdf(
-        os.path.join(filedir, filename), index=False, key="summed_potential", mode="w"
+        os.path.join(filedir, filename), index=False, key="summed_potential", mode="a"
     )
 
     if full:
@@ -138,21 +137,21 @@ def main():
     # to simulate:
     # thalamus I to E inhibition
 
-    coupling_strengths = [20]  # , 150, 200, 250, 300]
-    balance_EI = [0.8] # excitation-inhibition balance
+    coupling_strengths = [10, 20, 30]  # , 150, 200, 250, 300]
+    balance_EI = [0.7, 0.75, 0.8, 0.85, 0.9] # excitation-inhibition balance
     g_thal = 2
     bEI_thal = 0.5  # if g_thal is 0, this does not matter
     step_size = 1e-3
     area = "all"
-    filedir = "/data/p_02989/Modelling/output/"
+    filedir = "/data/p_02989/Modelling/output_test/"
 
     # define input
     input_type = "step"  # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001  # in sec
     simulation_dur = 2
     input_durations = [1.5]  # , 1, 1.5] # np.arange(0, 1, 1) # in sec
-    input_strengths = [10]  # np.arange(0, 500, 100)
-    backgrndI_strengths = [7]
+    input_strengths = [10, 20, 30]  # np.arange(0, 500, 100)
+    backgrndI_strengths = [5, 6, 7]
 
     # connections within the thalamus
     # in this order: tEE, tEI, tIE, tII
@@ -185,7 +184,7 @@ def main():
                             f"Thalamus EtoI:{thal_connect[2]} ItoI: {thal_connect[3]}"
                         )
 
-                        filename = f"_g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_thalUncon_S1S2Uncon"
+                        filename = f"g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon"
 
                         # create input array
                         Iext = create_Iext(
