@@ -91,7 +91,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     resolution_tstep = 0.01
     print("tstep resolution", resolution_tstep)
     rates_downsampled = rates[:, :: int(1000 * resolution_tstep)]
-    rates_df = pd.DataFrame(rates_downsampled.T)
+    rates_df = pd.DataFrame(rates_downsampled.T, columns=cells)
     rates_df.to_hdf(
         os.path.join(filedir, filename), index=False, key="rates", mode="a"
     )
@@ -148,7 +148,7 @@ def main():
     # define input
     input_type = "step"  # other options are "step", "baseline" (equals input strength 0) or "background"
     input_onset = 1.001  # in sec
-    simulation_dur = 2
+    simulation_dur = 4
     input_durations = [1.5]  # , 1, 1.5] # np.arange(0, 1, 1) # in sec
     input_strengths = [10, 20, 30]  # np.arange(0, 500, 100)
     backgrndI_strengths = [5, 6, 7]

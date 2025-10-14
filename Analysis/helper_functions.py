@@ -120,7 +120,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         # TODO: also include where there are oscillations or not (maybe in the non-responsive behaviour)
 
                         # set info in data frame
-                        df['population'] = df.index.values
+                        df['population'] = potentials_df.columns
                         df['globalCoupling'] = g
                         df['balanceEI'] = bEI
                         df['InputDuration'] = d
@@ -131,7 +131,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         if load_trajectory:
                             # load entire trajectory in data frame
                             for pop_rate, pop_potential in zip(rates_df.items(), potentials_df.items()):
-                                pop_name = pop_rate[0]
+                                pop_name = pop_potential[0]
                                 rate_trajectory = pop_rate[1]
                                 potential_trajectory = pop_potential[1]
                                 pop_df = pd.DataFrame()
@@ -157,7 +157,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                             longterm_input = []
                             for sourcepop in potential_df:
                                 # extract the longterm behaviour
-                                longterm_input.append(sourcepop[start_sample:stop_sample])
+                                longterm_input.append(sourcepop[start_sample_late:stop_sample_late])
                             
                             longterm_input = np.sum(np.array(longterm_input), axis=0)
                             longterm_mean = np.sum(longterm_input)
