@@ -10,6 +10,7 @@ Description: Run this file to run the simulation!
 # %%
 import numpy as np
 import os
+import json
 import matplotlib.pyplot as plt
 #import jax.numpy as jnp
 import pandas as pd
@@ -17,6 +18,11 @@ import time
 import csv
 from jr_model import JR_Model
 import plotting_functions as pf
+
+# %%
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+figure_dir = os.path.join(SIMDIR, "Figures")
 
 # %%
 
@@ -120,45 +126,68 @@ def write_3D_csv(filename, data):
 
 
 # %%
+
+def read_simulation_params():
+    """Read simulation parameters from json file."""
+    # Read in preprocessing parameters
+    with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
+        params = json.load(json_file)
+    
+    return params
+
+
 def main():
-    save_params = False
-    save_results = True
-    save_full_potentials = False  # if True the potential matrix is 3D, otherwise 2D
-    plot_rates = True
-    plot_potentials = False
-    plot_all_potentials = False
-    jax_mode = False
 
-    # set coupling strengths, step size and cortex type (visual or somato)
-    # connectivity reverse factor is the absolute cell count divided by
-    connect_reverse_factor = (
-        1  # 6448 # TODO: adapt this factor also to S2 cell populations!
-    )
-    # to simulate:
-    # thalamus I to E inhibition
+    params = read_simulation_params()
 
-    coupling_strengths = [10, 20, 30]  # , 150, 200, 250, 300]
-    balance_EI = [0.7, 0.75, 0.8, 0.85, 0.9] # excitation-inhibition balance
-    g_thal = 2
-    bEI_thal = 0.5  # if g_thal is 0, this does not matter
-    step_size = 1e-3
-    area = "all"
-    filedir = "/data/p_02989/Modelling/output_test/"
+    # Assign variables from loaded parameters
+    save_params = params['save_params']
+    save_results = params['save_results']
+    save_full_potentials = params['save_full_potentials']
+    plot_rates = params['plot_rates']
+    plot_potentials = params['plot_potentials']
+    plot_all_potentials = params['plot_all_potentials']
+    jax_mode = params['jax_mode']
 
-    # define input
-    input_type = "step"  # other options are "step", "baseline" (equals input strength 0) or "background"
-    input_onset = 1.001  # in sec
-    simulation_dur = 4
-    input_durations = [1.5]  # , 1, 1.5] # np.arange(0, 1, 1) # in sec
-    input_strengths = [10, 20, 30]  # np.arange(0, 500, 100)
-    backgrndI_strengths = [5, 6, 7]
+    # coupling strengths, balance and area selection
+    coupling_strengths = params['coupling_strengths']
+    balance_EI = params['balance_EI']
+    g_thal = params['g_thal']
+    bEI_thal = params['bEI_thal']
+    step_size = params['step_size']
+    area = params['area']
+    filedir = params['filedir']
 
-    # connections within the thalamus
-    # in this order: tEE, tEI, tIE, tII
-    thal_connect = np.array([0, 0, 0, 0])
-    extI_cellcounts = 1000
-    bI_cellcounts = 100
-    thal_cellcounts = 500
+    # inputs
+    input_type = params['input_type']
+    input_onset = params['input_onset']
+    simulation_dur = params['simulation_dur']
+    input_durations = params['input_durations']
+    input_strengths = params['input_strengths']
+    backgrndI_strengths = params['backgrndI_strengths']
+
+    # connectivity 
+    thal_connect = np.array(params['thal_connect'])
+    extI_cellcounts = params['extI_cellcounts']
+    bI_cellcounts = params['bI_cellcounts']
+    thal_cellcounts = params['thal_cellcounts']
+
+    # implement option to choose only one part of the cortical circuit
+    # this can be done by putting the connectivity for those parts to zero
+    # options:
+    # 1. only thalamus & Area 3b
+    # 2. A3b and Area 1
+    # 3. A3b and Area 1 and thalamus
+    # 4. only Area 1
+    # 5. only Area 1 and S2 and thalamus
+    # 6. only Area 1 and S2
+    # 7. only S2
+    # 8. default: all
+
+    filedir = os.path.join(SIMDIR, 'simulation_results')
+    if not os.path.exists(filedir):
+        os.makedirs(filedir)
+
 
     for d in input_durations:
         simulation_time = int(input_onset) + simulation_dur
@@ -191,8 +220,8 @@ def main():
                             simulation_time, step_size, input_onset, d, s, input_type
                         )
                         Ib = create_Ibackground(simulation_time, step_size, sb)
-                        gE = g * bEI / connect_reverse_factor
-                        gI = g * (1 - bEI) / connect_reverse_factor
+                        gE = g * bEI 
+                        gI = g * (1 - bEI)
                         gE_thal = g_thal * bEI_thal
                         gI_thal = g_thal * (1 - bEI_thal)
                         # for now we use the same coupling strength for the thalamus connections as for the cortical connections
@@ -200,19 +229,7 @@ def main():
                         coupling_thalI = gI_thal
                         print("gE", gE)
                         print("gI", gI)
-                        thal_connect_scaled = thal_connect / connect_reverse_factor
-
-                        # implement option to choose only one part of the cortical circuit
-                        # this can be done by putting the connectivity for those parts to zero
-                        # options:
-                        # 1. only thalamus & Area 3b
-                        # 2. A3b and Area 1
-                        # 3. A3b and Area 1 and thalamus
-                        # 4. only Area 1
-                        # 5. only Area 1 and S2 and thalamus
-                        # 6. only Area 1 and S2
-                        # 7. only S2
-                        # 8. default: all
+                        thal_connect_scaled = thal_connect 
 
                         model = JR_Model(
                             Iext,
@@ -281,6 +298,7 @@ def main():
                                 d,
                                 sb,
                                 s,
+                                figure_dir
                             )
 
                         if plot_potentials:
@@ -296,6 +314,12 @@ def main():
                                 step_size,
                                 simulation_time,
                                 start_plot,
+                                figure_dir,
+                                bEI,
+                                g,
+                                d,
+                                sb,
+                                s
                             )
 
                         if plot_all_potentials:
