@@ -11,8 +11,8 @@ Description: Run this file to run the simulation!
 import numpy as np
 import os
 import json
+import argparse
 import matplotlib.pyplot as plt
-#import jax.numpy as jnp
 import pandas as pd
 import time
 import csv
@@ -25,7 +25,6 @@ WDDIR = os.getenv("WDDIR")
 figure_dir = os.path.join(SIMDIR, "Figures")
 
 # %%
-
 
 def create_Iext(
     simulation_time, step_size, input_onset, input_duration, input_strength, input_type
@@ -135,10 +134,21 @@ def read_simulation_params():
     
     return params
 
-
 def main():
-
+    # read simulation params
     params = read_simulation_params()
+    
+    # we parallelize over different coupling strengths (in srun HPC script)   
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--g",
+        type=float,
+        nargs="+",
+        help="coupling strengths",
+        required=False,
+    )
+    coupling_strengths = parser.parse_args().g
+    #coupling_strengths = params['coupling_strengths'] # coupling_strengths
 
     # Assign variables from loaded parameters
     save_params = params['save_params']
@@ -150,7 +160,6 @@ def main():
     jax_mode = params['jax_mode']
 
     # coupling strengths, balance and area selection
-    coupling_strengths = params['coupling_strengths']
     balance_EI = params['balance_EI']
     g_thal = params['g_thal']
     bEI_thal = params['bEI_thal']
@@ -340,7 +349,6 @@ def main():
     print("Mean Saving duration: ", np.mean(all_durations_saving))
 
     return potential, rate
-
 
 if __name__ == "__main__":
     potential, rate = main()
