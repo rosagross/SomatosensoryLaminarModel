@@ -36,8 +36,8 @@ input_type = "step" # other options are "step", "baseline" (equals input strengt
 input_onset = 1.0 # in sec
 simulation_dur = 2.0
 input_duration = 1.5  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 500.0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
-backgrndI_strengths = 7.0 #[0, 5, 10, 15, 20]
+input_strength = 0 # 500.0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+backgrndI_strengths = 0 # 7.0 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
 simulation_time = float(int(input_onset) + simulation_dur)
@@ -130,7 +130,7 @@ rpo_Iext_thalE = [OperatorTemplate(
     variables={'v': 'output',
                'i': 'variable',
                'Iext_in': 'input',
-               'tau': tau[N_cells-2],
+               'tau': 1, #tau[N_cells-2],
                'H': 1.0}
     ) 
 ]
@@ -363,6 +363,7 @@ for i, cell in enumerate(cells):
     # always include rpo_names[:N_cells]
     if i == (N_cells-2): # thalE
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names_extended[:N_cells+1]]
+        #potential_keys += [f'V_external/InputOp']
     else: 
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names[:N_cells]]
 
@@ -370,8 +371,10 @@ for i, cell in enumerate(cells):
     if i in range(N_cells-2):
         potential_keys += [f'V_background/RPO_bI']
 
+
     # include rpo_names_extended[:N_cells+1] only if i == 13
-    
+    if i == (N_cells-2): # thalE
+        hi = results[f'V_external/InputOp']
     sources = results[potential_keys]
     all_potentials.append(np.sum(sources, axis=1))
 
