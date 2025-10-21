@@ -38,121 +38,60 @@ from helper_functions import *
 
 colors, _ = figure_style() 
 
+# define directories of stored data
 SIMDIR = os.getenv("SIMDIR")
 WDDIR = os.getenv("WDDIR")
 figure_dir = os.path.join(SIMDIR, "Figures", "global_dynamics")
 if not os.path.exists(figure_dir):
     os.makedirs(figure_dir)
-    
 
-# define directories of stored data and figures
-output_dir = os.path.join(SIMDIR, "simulation_results")
+raw_dir = os.path.join(SIMDIR, "simulation_results")
+processed_dir = os.path.join(SIMDIR, "derivatives")
 
-# %%
-"""
-# Read in preprocessing parameters
-with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
-    params = json.load(json_file)
-
-# read in data
-coupling_strengths = params['coupling_strengths'] # coupling_strengths
-
-# coupling strengths, balance and area selection
-balance_EI = params['balance_EI']
-g_thal = params['g_thal']
-bEI_thal = params['bEI_thal']
-step_size = params['step_size']
-area = params['area']
-filedir = params['filedir']
-
-# inputs
-input_type = params['input_type']
-input_onset = params['input_onset']
-simulation_dur = params['simulation_dur']
-input_durations = params['input_durations']
-input_strengths = params['input_strengths']
-backgroundI_strengths = params['backgrndI_strengths']
-
-# connectivity 
-thal_connect = np.array(params['thal_connect'])
-extI_cellcount = params['extI_cellcounts']
-bI_cellcount = params['bI_cellcounts']
-thalamus_cellcount = params['thal_cellcounts']
-
-sample_delay_immediate = 0.3
-sample_delay_late = 1 # when to start the long term behaviour "window"
-sample_dur = 0.3 # amount of time in sec in which we look at the long term firing rate (min and max)
-cortex_type = 'somato'
-stimulation_type = 'step'
-thalamus_cellcount = 500
-extI_cellcount = 1000
-bI_cellcount = 100
-name_addOn = ''
-load_trajectory = True
-load_full_potentials = False
-load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is E3)
-thalamus_source = 'thalJiang'
-"""
-
-input_durations = [1.5]  #, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
-input_strengths = [10, 20, 30] #, 50, 300, 500]  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
-coupling_strengths = [10, 20, 30]
-balance_EI = [0.7, 0.8, 0.9]
-backgroundI_strengths = [5, 6, 7] #, 5, 10, 15, 20]
-step_size = 0.01 # this is the saving step size, NOT the simulation step_size!!!! Simulation step size is usually smaller, like 0.001
+# some global settings
+step_size = 0.01
 sample_delay_immediate = 0.3
 sample_delay_late = 1 # when to start the long term behaviour "window"
 input_onset = 1.001
-sample_dur = 0.3 # amount of time in sec in which we look at the long term firing rate (min and max)
-cortex_type = 'somato'
-stimulation_type = 'step'
-thalamus_cellcount = 500
-extI_cellcount = 1000
-bI_cellcount = 100
-name_addOn = ''
-load_trajectory = True
-load_full_potentials = False
-load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is E3)
-thalamus_source = 'thalJiang'
-
-
-# %% load rate and potential files 
-summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, balance_EI, backgroundI_strengths,
-                        step_size, sample_delay_immediate, sample_delay_late, input_onset, sample_dur, cortex_type, stimulation_type, thalamus_cellcount, bI_cellcount, extI_cellcount,
-                        load_trajectory, load_full_potentials, load_population_potential)
-
-# %% 
-# Save the summary data frame in a separate CSV, so that it does not take that much time to load anymore ...
-summary_df.to_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_{name_addOn}.h5', key='data', index=True) #, index_label='pop')
-#trajectory_df.to_hdf(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_thalUncon_S1S2Uncon.h5', index=True, index_label='pop')
-
-# %% Read in summary data frame
-#summary_df = pd.read_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_{name_addOn}.h5', index_col=False)
+sample_dur = 0.3
+offset=0.1 
+input_type = 'step'
+thalamus_source = 'Jiang'
+# connectivity params
+params = load_parameters(WDDIR)
+extI_cellcounts = params['extI_cellcounts']
+bI_cellcounts = params['bI_cellcounts']
+thal_cellcounts = params['thal_cellcounts']
 
 # %% Make plots that demonstrate the sampling time line 
 
-# choose example settings
+# load trajectory to plot
 g = 20
+Iext_dur = 1.5 
+Iext_str = 10
+Ib_str = 5
 bEI = 0.8
+rates_df, potentials_df, filename = load_simulation_data(g, bEI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir) 
+trajectory_df = load_trajectory(rates_df, potentials_df, g, bEI, Iext_dur, Iext_str, Ib_str, step_size)
+
+# choose population
 population = 'E3'
-input_duration = 1.5
-input_strength = 10
-backgroundI_strength = 5
+
 line_df = trajectory_df[trajectory_df['global_coupling']==g]
 line_df = line_df[line_df['balance_EI']==bEI]
 line_df = line_df[line_df['population']==population]
-line_df = line_df[line_df['InputDuration']==input_duration]
-line_df = line_df[line_df['InputStrength']==input_strength]
-line_df = line_df[line_df['BckgndInputStrength']==backgroundI_strength]
+line_df = line_df[line_df['InputDuration']==Iext_dur]
+line_df = line_df[line_df['InputStrength']==Iext_str]
+line_df = line_df[line_df['BckgndInputStrength']==Ib_str]
 print(len(line_df))
 print(len(trajectory_df))
-# LONG TERM and DURING INPUT
 
+# LONG TERM and DURING INPUT
 # Add a red vertical line at time of input offset (start of sampling) and stop of sampling
 simulation_time = 4*1e-3
-start_sample = input_onset + input_duration + sample_delay_immediate
+start_sample = input_onset + Iext_dur + sample_delay_immediate
 stop_sample = start_sample + sample_dur
-input_offset = input_onset + input_duration
+input_offset = input_onset + Iext_dur
 offset = 0.1 # time between baseline sampling and start of input 
 baseline_start = input_onset - (sample_dur+offset)
 baseline_stop = baseline_start + sample_dur
@@ -161,7 +100,7 @@ plotting_cut = 10
 # plot the input
 steps = np.arange(step_size, simulation_time+step_size, step_size)
 input_line = np.zeros(len(line_df))
-input_line[int((input_onset)/step_size):int(input_offset/step_size)] = input_strength
+input_line[int((input_onset)/step_size):int(input_offset/step_size)] = Iext_str
 fig = plt.figure(figsize=(10,5))
 #plt.plot(steps[:-plotting_cut], input_line[:-plotting_cut], color='green', linewidth=2)
 sns.lineplot(data=line_df[:-plotting_cut], x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
@@ -196,39 +135,51 @@ plt.show()
 # choose example settings
 g = 20
 bEI = 0.8
+Iext_dur = 1.5
+Iext_str = 30
+Ib_str = 7
+
+rates_df, potentials_df, filename = load_simulation_data(g, bEI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir) 
+trajectory_df = load_trajectory(rates_df, potentials_df, g, bEI, Iext_dur, Iext_str, Ib_str, step_size)
+
 population = 'E3' # 'E1'
-input_duration = 1.5
-input_strength = 10
 line_df = trajectory_df[trajectory_df['global_coupling']==g]
 line_df = line_df[line_df['balance_EI']==bEI]
 line_df = line_df[line_df['population']==population]
-line_df = line_df[line_df['InputDuration']==input_duration]
-line_df = line_df[line_df['InputStrength']==input_strength]
-line_df = line_df[line_df['BckgndInputStrength']==backgroundI_strength]
+line_df = line_df[line_df['InputDuration']==Iext_dur]
+line_df = line_df[line_df['InputStrength']==Iext_str]
+line_df = line_df[line_df['BckgndInputStrength']==Ib_str]
 plotting_window = []
 
 # plot the input
 steps = np.arange(step_size, simulation_time+step_size, step_size)
 fig = plt.figure(figsize=(10,5))
-sns.lineplot(data=line_df[90:2000], x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
+sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
 sns.despine(trim=True)
 plt.ylabel('Rate (Hz)')
-figure_name = f'trajectory_g{g}bEI{bEI}_pop{population}_Iduration{input_duration}_{input_strength}.pdf'
+figure_name = f'trajectory_g{g}bEI{bEI}_pop{population}_Iduration{Iext_dur}_{Iext_str}.pdf'
 plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 
 # %%
+"""
+Plot a heatmap showing the effect of Input Strength versus Input Duration
+"""
 
 # choose a coupling strength, background input strength and a population
 g = 20
 bEI = 0.8
-backgroundI_strength = 7
+Ib_str = 7
+Iext_str = params['input_strengths']
+Iext_dur = [1.5] #params['input_durations']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 population = 'E3'
-data_df = summary_df[summary_df['globalCoupling']==g]
+
+data_df = data_df[data_df['globalCoupling']==g]
 data_df = data_df[data_df['balanceEI']==bEI]
 data_df = data_df[data_df['population']==population]
-data_df = data_df[data_df['BckgndInputStrength']==backgroundI_strength]
+data_df = data_df[data_df['BckgndInputStrength']==Ib_str]
 
 data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_rate')
 sns.heatmap(data_heatmap, cmap='magma')
@@ -241,16 +192,22 @@ sns.heatmap(data_heatmap, cmap='magma')
     - x axis: duration
     - measure: longtermVSbaseline potential or rate
 '''
+values = 'longtermVSbaseline_rate'
 
 # choose a coupling strength and a population
 g = 20
-bEI = 0.7
+bEI = 0.8
+Iext_str = params['input_strengths']
+Iext_dur = [1.5] #params['input_durations']
+Ib_str = 7
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+
 population = 'PV2'
-data_df = summary_df[summary_df['globalCoupling']==g]
+data_df = data_df[data_df['globalCoupling']==g]
 data_df = data_df[data_df['balanceEI']==bEI]
 data_df = data_df[data_df['population']==population]
-data_df = data_df[data_df['BckgndInputStrength']==backgroundI_strength]
-data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values='longtermVSbaseline_rate')
+data_df = data_df[data_df['BckgndInputStrength']==Ib_str]
+data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values=values)
 sns.heatmap(data_heatmap, cmap='magma')
 
 # %% 
@@ -264,15 +221,19 @@ sns.heatmap(data_heatmap, cmap='magma')
 '''
 
 # look at several difference E-I balance values
-bEIs = balance_EI
+bEIs = [0.75, 0.8, 0.85]
 # choose a global coupling strength and a population
 g = 20
-backgroundI_strength = 7
+Ib_str = 7
+Iext_str = params['input_strengths']
+Iext_dur = [1.5]
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+
 cbar_ticks = ['non-responsive', 'transfer', 'memory']
 population = 'E2'
-data_df = summary_df[summary_df['population']==population]
+data_df = data_df[data_df['population']==population]
 data_df = data_df[data_df['globalCoupling']==g]
-data_df = data_df[data_df['BckgndInputStrength']==backgroundI_strength]
+data_df = data_df[data_df['BckgndInputStrength']==Ib_str]
 data_df['InputDuration'] = data_df['InputDuration'].round(4)
 fig, ax = plt.subplots(2, int(len(bEIs)/2), figsize=(9,4), sharex=True, sharey=True)
 

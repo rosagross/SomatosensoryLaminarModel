@@ -263,6 +263,7 @@ def set_sim_info(df, potentials_df, g, bEI, d, s, bI):
 
 def load_trajectory(rates_df, potentials_df, g, bEI, d, s, bI, step_size):
     """ load entire trajectory in data frame """
+    time_data_df = pd.DataFrame()
     for pop_rate, pop_potential in zip(rates_df.items(), potentials_df.items()):
         pop_name = pop_potential[0]
         rate_trajectory = pop_rate[1]
@@ -300,3 +301,58 @@ def load_parameters(WDDIR):
     with open(os.path.join(WDDIR, 'Analysis', 'analysis_parameter.json'), 'r') as json_file:
         params = json.load(json_file)
     return params
+
+def load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, output_dir):
+    """ Read simulation data """
+    # read in firing rates in data matrix (datapoints x populations)
+    filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
+    rates_df = pd.read_hdf(os.path.join(output_dir, filename), key='rates')
+    
+    # read in potentials in data matrix (datapoints x populations)
+    potentials_df = pd.read_hdf(os.path.join(output_dir, filename), key='summed_potential')
+
+    return rates_df, potentials_df, filename
+
+def load_derivative(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir):
+    """ load the characteristics/processed data of one simulation """
+    deriv_file = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon_processed.csv"
+    deriv_df = pd.read_csv(os.path.join(deriv_dir, deriv_file))
+    return deriv_df
+
+def check_list(sim_param):
+    if not isinstance(sim_param, list):
+        sim_param = [sim_param]
+
+    return sim_param
+
+def load_all_derivatives(Iext_dur, Iext_str, gs, bEIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir):
+    """ load all selected combinations of processed simulation (with their characteristics) into one dataframe
+    All parameters can be either lists of single values. If they are single values, 
+    convert them into lists with one entry.
+
+    Parameters:
+    -----------
+    Iext_dur : float or list of input durations
+    Iext_str : float or list of input strengths
+    g : float or list of coupling strengths
+    bEI : float or list of E/I balance values
+    Ib_str : float or list of background input strengths
+    """
+
+    # check if parameters are lists, if not convert to list
+    Iext_dur = check_list(Iext_dur)
+    Iext_str = check_list(Iext_str)
+    gs = check_list(gs)
+    bEIs = check_list(bEIs)
+    Ib_str = check_list(Ib_str)
+
+    data_df = pd.DataFrame()
+    for d in Iext_dur:
+            for s in Iext_str:
+                for g in gs:
+                    for bEI in bEIs:
+                        for bI in Ib_str:
+                            data_single_df = load_derivative(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+                            data_df = pd.concat([data_df, data_single_df], ignore_index=True)
+
+    return data_df
