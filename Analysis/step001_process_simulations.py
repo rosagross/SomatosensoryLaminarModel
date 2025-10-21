@@ -34,8 +34,8 @@ if not os.path.exists(output_dir):
 
 # %%
 
+# read params
 params = load_parameters(WDDIR)
-
 coupling_strengths = params['coupling_strengths'] # parse_coupling() coupling_strengths
 
 # connectivity 
@@ -79,12 +79,8 @@ for d in input_durations:
 
                     df = pd.DataFrame()
                     
-                    # read in firing rates in data matrix (datapoints x populations)
-                    filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
-                    rates_df = pd.read_hdf(os.path.join(sim_dir, filename), key='rates')
-                    
-                    # read in potentials in data matrix (datapoints x populations)
-                    potentials_df = pd.read_hdf(os.path.join(sim_dir, filename), key='summed_potential')
+                    # read data 
+                    rates_df, potentials_df, _ = load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, output_dir)
 
                     # compute characteristics
                     compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)
