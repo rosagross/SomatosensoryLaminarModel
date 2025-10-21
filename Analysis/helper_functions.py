@@ -1,5 +1,7 @@
 import numpy as np
 import os
+import json
+import argparse
 from matplotlib.ticker import FormatStrFormatter, FuncFormatter, FormatStrFormatter
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, Normalize
@@ -278,3 +280,23 @@ def load_trajectory(rates_df, potentials_df, g, bEI, d, s, bI, step_size):
         time_data_df = pd.concat([time_data_df, pop_df])
 
     return time_data_df
+
+def parse_coupling():
+    """ we parallelize over different coupling strengths (in srun HPC script), so we need to read in those """   
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--g",
+        type=float,
+        nargs="+",
+        help="coupling strengths",
+        required=False,
+    )
+    coupling_strengths = parser.parse_args().g
+    return coupling_strengths
+
+
+def load_parameters(WDDIR): 
+    """ Read in preprocessing parameters """
+    with open(os.path.join(WDDIR, 'Analysis', 'analysis_parameter.json'), 'r') as json_file:
+        params = json.load(json_file)
+    return params

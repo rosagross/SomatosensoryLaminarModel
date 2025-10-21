@@ -49,7 +49,7 @@ if not os.path.exists(figure_dir):
 output_dir = os.path.join(SIMDIR, "simulation_results")
 
 # %%
-
+"""
 # Read in preprocessing parameters
 with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
     params = json.load(json_file)
@@ -92,6 +92,29 @@ load_trajectory = True
 load_full_potentials = False
 load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is E3)
 thalamus_source = 'thalJiang'
+"""
+
+input_durations = [1.5]  #, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
+input_strengths = [10, 20, 30] #, 50, 300, 500]  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
+coupling_strengths = [10, 20, 30]
+balance_EI = [0.7, 0.8, 0.9]
+backgroundI_strengths = [5, 6, 7] #, 5, 10, 15, 20]
+step_size = 0.01 # this is the saving step size, NOT the simulation step_size!!!! Simulation step size is usually smaller, like 0.001
+sample_delay_immediate = 0.3
+sample_delay_late = 1 # when to start the long term behaviour "window"
+input_onset = 1.001
+sample_dur = 0.3 # amount of time in sec in which we look at the long term firing rate (min and max)
+cortex_type = 'somato'
+stimulation_type = 'step'
+thalamus_cellcount = 500
+extI_cellcount = 1000
+bI_cellcount = 100
+name_addOn = ''
+load_trajectory = True
+load_full_potentials = False
+load_population_potential = 7 # note: order is E1, P1, S1, V1, E2, ... (idx 7 is E3)
+thalamus_source = 'thalJiang'
+
 
 # %% load rate and potential files 
 summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, balance_EI, backgroundI_strengths,
@@ -100,7 +123,7 @@ summary_df, trajectory_df, potentials_df  = read_simulation_data(output_dir, fig
 
 # %% 
 # Save the summary data frame in a separate CSV, so that it does not take that much time to load anymore ...
-#summary_df.to_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_{name_addOn}.h5', key='data', index=True) #, index_label='pop')
+summary_df.to_hdf(f'sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_{name_addOn}.h5', key='data', index=True) #, index_label='pop')
 #trajectory_df.to_hdf(f'trajectories_stepAndBackground_g_bEI_sampledelay{sample_delay_immediate}_late{sample_delay_late}_sampleduration{sample_dur}_{cortex_type}_{thalamus_source}_S1S2_{datetime.date.today()}_thalUncon_S1S2Uncon.h5', index=True, index_label='pop')
 
 # %% Read in summary data frame
@@ -157,7 +180,8 @@ plt.xlabel('Time (sec)')
 plt.legend()
 sns.despine(trim=True)
 
-plt.savefig('C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/plotting_windows.pdf')
+#plt.savefig('C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/plotting_windows.pdf')
+plt.savefig(os.path.join(figure_dir, 'plotting_windows.pdf'), bbox_inches='tight')
 plt.show()
 
 # %%
