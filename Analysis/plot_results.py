@@ -23,6 +23,7 @@ Plots:
 # %% 
 import numpy as np
 import datetime
+import json
 import os
 from matplotlib.ticker import FormatStrFormatter, FuncFormatter, FormatStrFormatter
 import matplotlib.pyplot as plt
@@ -39,23 +40,47 @@ colors, _ = figure_style()
 
 SIMDIR = os.getenv("SIMDIR")
 WDDIR = os.getenv("WDDIR")
-figure_dir = os.path.join(SIMDIR, "Figures")
+figure_dir = os.path.join(SIMDIR, "Figures", "global_dynamics")
+if not os.path.exists(figure_dir):
+    os.makedirs(figure_dir)
+    
 
 # define directories of stored data and figures
 output_dir = os.path.join(SIMDIR, "simulation_results")
 
 # %%
 
+# Read in preprocessing parameters
+with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
+    params = json.load(json_file)
+
 # read in data
-input_durations = [1.5]  #, 1, 1.5] # np.arange(0.5, 2, 0.5) #np.arange(0.5, 2, 0.5) #[0.0] # [0.0, 0.5, 1.0, 1.5] # np.arange(0, 2, 0.25) # in sec 
-input_strengths = [10, 20, 30] #, 50, 300, 500]  #np.arange(0, 80, 20) # np.arange(0, 20, 2)
-coupling_strengths = [10, 20, 30]
-balance_EI = [0.7, 0.75, 0.8, 0.85, 0.9]
-backgroundI_strengths = [5, 6, 7] #, 5, 10, 15, 20]
-step_size = 0.01 # this is the saving step size, NOT the simulation step_size!!!! Simulation step size is usually smaller, like 0.001
+coupling_strengths = params['coupling_strengths'] # coupling_strengths
+
+# coupling strengths, balance and area selection
+balance_EI = params['balance_EI']
+g_thal = params['g_thal']
+bEI_thal = params['bEI_thal']
+step_size = params['step_size']
+area = params['area']
+filedir = params['filedir']
+
+# inputs
+input_type = params['input_type']
+input_onset = params['input_onset']
+simulation_dur = params['simulation_dur']
+input_durations = params['input_durations']
+input_strengths = params['input_strengths']
+backgroundI_strengths = params['backgrndI_strengths']
+
+# connectivity 
+thal_connect = np.array(params['thal_connect'])
+extI_cellcount = params['extI_cellcounts']
+bI_cellcount = params['bI_cellcounts']
+thalamus_cellcount = params['thal_cellcounts']
+
 sample_delay_immediate = 0.3
 sample_delay_late = 1 # when to start the long term behaviour "window"
-input_onset = 1.001
 sample_dur = 0.3 # amount of time in sec in which we look at the long term firing rate (min and max)
 cortex_type = 'somato'
 stimulation_type = 'step'
@@ -132,7 +157,7 @@ plt.xlabel('Time (sec)')
 plt.legend()
 sns.despine(trim=True)
 
-#plt.savefig('C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/plotting_windows.pdf')
+plt.savefig('C:/Users/gross/OneDrive - UvA/Documents/IMPRS_Leipzig/IMPRS SummerSchool/Poster/plotting_windows.pdf')
 plt.show()
 
 # %%
@@ -165,7 +190,7 @@ sns.lineplot(data=line_df[90:2000], x='time', y='rate', hue='InputStrength', leg
 sns.despine(trim=True)
 plt.ylabel('Rate (Hz)')
 figure_name = f'trajectory_g{g}bEI{bEI}_pop{population}_Iduration{input_duration}_{input_strength}.pdf'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 
@@ -262,7 +287,7 @@ for i, axis in enumerate(ax.flatten()):
 
 plt.tight_layout(h_pad=1)
 figure_name = f'_{population}pop_tauVisual_{thalamus_source}.pdf'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 # %%
@@ -326,7 +351,7 @@ fig.text(0.04, 0.83, 'Input Strength', va='center', rotation='vertical')
 
 plt.tight_layout(h_pad=1)
 figure_name = f'inputDurationVSinputStrength_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 # %% 
@@ -373,7 +398,7 @@ axs[0].set_ylim([0,100])
 sns.despine(trim=True)
 plt.tight_layout() 
 figure_name = f'BaselineAllLayers_tauVisual_{thalamus_source}.pdf'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 
@@ -421,7 +446,7 @@ sns.despine(trim=True)
 plt.legend(title='BackgroundInput Strength', loc='right')
 plt.tight_layout() 
 figure_name = f'BackgroundSteadyState_pop{population}_tauVisual_{thalamus_source}.pdf'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 # %%
@@ -462,7 +487,7 @@ sns.despine(trim=True)
 plt.annotate(f'min and max Rate_lateLongterm, \nInput Duration:{input_duration} \nInput Strength:{input_strength} Background Input:{bI} \nE-I Balance:{bEI}', xy=(0, 0), xycoords='figure fraction', xytext=(1.5, 0.2), textcoords='figure fraction', ha='center', fontsize=10)
 plt.tight_layout() 
 figure_name = f'BackgroundAllLayers_{input_strength}Istrength_tauVisual_{thalamus_source}.pdf'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 # %%
@@ -489,7 +514,7 @@ sns.lineplot(data=line_df, x='time', y='rate', hue='global_coupling',
              palette=sns.dark_palette("#69d", reverse=False))
 
 figure_name = f'population{population}_inputDur{input_duration}_inputStrength{input_strength}.png'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 
 
 # %%  
@@ -514,7 +539,7 @@ plt.title(f'Population:{population} Input Duration:{input_duration} Input Streng
 sns.lineplot(data=line_df, x='InputStrength', y='lt_potential') # , hue='coupling_strength')
 
 figure_name = f'fixedPointCurve_population{population}_inputDur{input_duration}_G{coupling_strength}.png'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 
 # %%
 populations = np.array(['E1', 'E2', 'E3', 'E4', 'PV1', 'PV2', 'PV3', 'PV4', 'SST1', 'SST2', 'SST3', 'SST4', 'VIP1'])#, 'V2', 'V3', 'V4'])
@@ -607,7 +632,7 @@ fig.text(0.04, 0.83, 'global g', va='center', rotation='vertical')
 
 plt.tight_layout(h_pad=1)
 figure_name = f'gvsbEI_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 # %%
@@ -697,7 +722,7 @@ sns.despine(trim=True)
 axs[0][-1].legend(title='Input Strength', loc='right')
 plt.tight_layout() 
 figure_name = f'BackgroundSteadyState_pop{population}_tauVisual_{thalamus_source}.pdf'
-#plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
 # %%
