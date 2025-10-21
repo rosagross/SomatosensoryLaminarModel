@@ -13,12 +13,14 @@ Description: Compute the charasteristics of the simulated time series.
 """
 # %%
 import os
+import json
 import pandas as pd
 import numpy as np
 from helper_functions import *
 
 # Define paths
 SIMDIR = os.getenv("SIMDIR")
+sim_dir = os.path.join(SIMDIR, "simulation_results")
 WDDIR = os.getenv("WDDIR")
 figure_dir = os.path.join(SIMDIR, "Figures", "global_dynamics")
 if not os.path.exists(figure_dir):
@@ -31,23 +33,42 @@ if not os.path.exists(output_dir):
 
 
 # %%
-# define parameters for looping over simulations
-input_durations = [0.5, 1, 1.5] 
-input_strengths = [10, 20, 30] 
-coupling_strengths = [10, 20, 30]  # global coupling strengths
-balance_EI = [0.7, 0.8, 0.9]  # balance of excitation and inhibition
-backgroundI_strengths = [5, 6, 7]  # background input to inhibitory populations
-input_type = 'step'
-input_onset = 1.001
-thal_cellcounts = 500
-extI_cellcounts = 1000
-bI_cellcounts = 100
+
+params = load_parameters(WDDIR)
+
+coupling_strengths = params['coupling_strengths'] # parse_coupling() coupling_strengths
+
+# connectivity 
+extI_cellcounts = params['extI_cellcounts']
+bI_cellcounts = params['bI_cellcounts']
+thal_cellcounts = params['thal_cellcounts']
+
+# coupling strengths, balance and area selection
+balance_EI = params['balance_EI']
+g_thal = params['g_thal']
+bEI_thal = params['bEI_thal']
+step_size = params['step_size']
+area = params['area']
+filedir = params['filedir']
+
+# inputs
+input_type = params['input_type']
+input_onset = params['input_onset']
+simulation_dur = params['simulation_dur']
+input_durations = params['input_durations']
+input_strengths = params['input_strengths']
+backgroundI_strengths = params['backgrndI_strengths']
+
+# sampling parameters
 step_size = 0.01
 sample_delay_immediate = 0.3
 sample_delay_late = 1 # when to start the long term behaviour "window"
 input_onset = 1.001
 sample_dur = 0.3
 offset=0.1 # offset : time in s between baseline sampling and start of input 
+
+# %%
+
 
 # loop over all simulations
 for d in input_durations:
@@ -60,10 +81,10 @@ for d in input_durations:
                     
                     # read in firing rates in data matrix (datapoints x populations)
                     filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
-                    rates_df = pd.read_hdf(os.path.join(output_dir, filename), key='rates')
+                    rates_df = pd.read_hdf(os.path.join(sim_dir, filename), key='rates')
                     
                     # read in potentials in data matrix (datapoints x populations)
-                    potentials_df = pd.read_hdf(os.path.join(output_dir, filename), key='summed_potential')
+                    potentials_df = pd.read_hdf(os.path.join(sim_dir, filename), key='summed_potential')
 
                     # compute characteristics
                     compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)
@@ -79,3 +100,5 @@ for d in input_durations:
                     outpath = os.path.join(output_dir, outfilename)
                     df.to_csv(outpath, index=False)
                     
+
+# %%
