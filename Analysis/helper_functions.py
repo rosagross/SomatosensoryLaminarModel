@@ -173,3 +173,108 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
 
     
     return summary_df, time_data_df, potential_data_df
+
+
+def compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur):
+    # LONG TERM immediate (sample for x ms starting x secs after offset)
+    start_sample_immediate = int((input_onset+d+sample_delay_immediate)/step_size)
+    stop_sample_immediate = int(start_sample_immediate + sample_dur/step_size)
+    df['rate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].mean()
+    df['minRate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].min()
+    df['maxRate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].max()
+    df['diffRate_immediateLongterm'] = df['maxRate_immediateLongterm'] - df['minRate_immediateLongterm']
+    df['potential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].mean()
+    df['minPotential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].min()
+    df['maxPotential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].max()
+    df['diffPotential_immediateLongterm'] = df['maxPotential_immediateLongterm'] - df['minPotential_immediateLongterm']
+
+def compute_longeterm_late(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_late, sample_dur):
+    # LONG TERM late (sample for x ms starting at x sec after offset)
+    start_sample_late = int((input_onset+d+sample_delay_late)/step_size)
+    stop_sample_late = int(start_sample_late + sample_dur/step_size)
+    df['rate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].mean()
+    df['minRate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].min()
+    df['maxRate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].max()
+    df['diffRate_lateLongterm'] = df['maxRate_lateLongterm'] - df['minRate_lateLongterm']
+    df['potential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].mean()
+    df['minPotential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].min()
+    df['maxPotential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].max()
+    df['diffPotential_lateLongterm'] = df['maxPotential_lateLongterm'] - df['minPotential_lateLongterm']
+
+def compute_input_response(df, rates_df, potentials_df, input_onset, d, step_size, sample_dur, offset):
+    # DURING INPUT
+    start_sample_during = int((input_onset)/step_size)
+    stop_sample_during = int((input_onset+d)/step_size)
+    df['rate_duringInput'] = rates_df.iloc[start_sample_during:stop_sample_during].mean()
+    df['minRate_duringInput'] = rates_df.iloc[start_sample_during:stop_sample_during].min()
+    df['maxRate_duringInput'] = rates_df.iloc[start_sample_during:stop_sample_during].max()
+    df['diffRate_duringInput'] = df['maxRate_duringInput'] - df['minRate_duringInput']
+    df['potential_duringInput'] = potentials_df.iloc[start_sample_during:stop_sample_during].mean()
+    df['minPotential_duringInput'] = potentials_df.iloc[start_sample_during:stop_sample_during].min()
+    df['maxPotential_duringInput'] = potentials_df.iloc[start_sample_during:stop_sample_during].max()
+    df['diffPotential_duringInput'] = df['maxPotential_duringInput'] - df['minPotential_duringInput']
+
+def compute_baseline(df, rates_df, potentials_df, input_onset, step_size, sample_dur, offset):       
+    # BASELINE SAMPLE (bofore input onset)
+    baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
+    baseline_stop = int(baseline_start + sample_dur/step_size)
+    df['rate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].mean()
+    df['potential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].mean()
+
+def compare_longterm_baseline(df):                    
+    # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
+    # oscillate and we want to compare if the long term activity is still larger than baseline)
+    df['longtermVSbaseline_rate'] = df['rate_lateLongterm'] - df['rate_baseline']
+    df['duringInputVSbaseline_rate'] = df['rate_duringInput'] - df['rate_baseline']
+    df['longtermVSbaseline_potential'] = df['potential_lateLongterm'] - df['potential_baseline']
+    df['duringInputVSbaseline_potential'] = df['potential_duringInput'] - df['potential_baseline']
+
+def classify_response(df):
+    """name the behaviour after stimulation: transfer, memory or non reponsive"""
+    
+    # rates
+    non_responsive = np.abs(df['duringInputVSbaseline_rate'])<0.1
+    transfer = ((np.abs(df['duringInputVSbaseline_rate'])>0.1) & (np.abs(df['longtermVSbaseline_rate'])<0.1))
+    memory = (np.abs(df['longtermVSbaseline_rate'])>0.1)
+    df.loc[non_responsive,'dynamic_function_rate'] = 1 # 'non-responsive'
+    df.loc[transfer,'dynamic_function_rate'] = 2 # 'transfer'
+    df.loc[memory,'dynamic_function_rate'] = 3 # 'memory'
+    
+    # potentials
+    non_responsive = np.abs(df['duringInputVSbaseline_potential'])<0.001
+    transfer = ((np.abs(df['duringInputVSbaseline_potential'])>0.001) & (np.abs(df['longtermVSbaseline_potential'])<0.001))
+    memory = (np.abs(df['longtermVSbaseline_potential'])>0.001)
+    df.loc[non_responsive,'dynamic_function_potential'] = 1 #'non-responsive'
+    df.loc[transfer,'dynamic_function_potential'] = 2 #'transfer'
+    df.loc[memory,'dynamic_function_potential'] = 3 #'memory'
+    
+
+def set_sim_info(df, potentials_df, g, bEI, d, s, bI):
+    """ set info in data frame """
+    df['population'] = potentials_df.columns
+    df['globalCoupling'] = g
+    df['balanceEI'] = bEI
+    df['InputDuration'] = d
+    df['InputStrength'] = s
+    df['BckgndInputStrength'] = bI
+
+
+def load_trajectory(rates_df, potentials_df, g, bEI, d, s, bI, step_size):
+    """ load entire trajectory in data frame """
+    for pop_rate, pop_potential in zip(rates_df.items(), potentials_df.items()):
+        pop_name = pop_potential[0]
+        rate_trajectory = pop_rate[1]
+        potential_trajectory = pop_potential[1]
+        pop_df = pd.DataFrame()
+        pop_df['population'] = [pop_name]*len(rate_trajectory)
+        pop_df['rate'] = rate_trajectory
+        pop_df['potential'] = potential_trajectory
+        pop_df['time'] = rate_trajectory.index.values * step_size # time in s
+        pop_df['global_coupling'] = g
+        pop_df['balance_EI'] = bEI
+        pop_df['InputDuration'] = d
+        pop_df['InputStrength'] = s 
+        pop_df['BckgndInputStrength'] = bI
+        time_data_df = pd.concat([time_data_df, pop_df])
+
+    return time_data_df
