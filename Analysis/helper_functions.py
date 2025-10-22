@@ -87,7 +87,13 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
                         baseline_stop = int(baseline_start + sample_dur/step_size)
                         df['rate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].mean()
+                        df['minRate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].min()
+                        df['maxRate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].max()
+                        df['diffRate_baseline'] = df['maxRate_baseline'] - df['minRate_baseline']
                         df['potential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].mean()
+                        df['minPotential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].min()
+                        df['maxPotential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].max()
+                        df['diffPotential_baseline'] = df['maxPotential_baseline'] - df['minPotential_baseline']
                         
                         # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
                         # oscillate and we want to compare if the long term activity is still larger than baseline)

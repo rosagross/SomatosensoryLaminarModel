@@ -35,6 +35,7 @@ import seaborn as sns
 import pandas as pd
 from plotting_style import figure_style
 from helper_functions import *
+from plotting_functions import *
 
 colors, _ = figure_style() 
 
@@ -76,15 +77,7 @@ trajectory_df = load_trajectory(rates_df, potentials_df, g, bEI, Iext_dur, Iext_
 
 # choose population
 population = 'E3'
-
-line_df = trajectory_df[trajectory_df['global_coupling']==g]
-line_df = line_df[line_df['balance_EI']==bEI]
-line_df = line_df[line_df['population']==population]
-line_df = line_df[line_df['InputDuration']==Iext_dur]
-line_df = line_df[line_df['InputStrength']==Iext_str]
-line_df = line_df[line_df['BckgndInputStrength']==Ib_str]
-print(len(line_df))
-print(len(trajectory_df))
+line_df = trajectory_df[trajectory_df['population']==population]
 
 # LONG TERM and DURING INPUT
 # Add a red vertical line at time of input offset (start of sampling) and stop of sampling
@@ -144,11 +137,7 @@ trajectory_df = load_trajectory(rates_df, potentials_df, g, bEI, Iext_dur, Iext_
 
 population = 'E3' # 'E1'
 line_df = trajectory_df[trajectory_df['global_coupling']==g]
-line_df = line_df[line_df['balance_EI']==bEI]
 line_df = line_df[line_df['population']==population]
-line_df = line_df[line_df['InputDuration']==Iext_dur]
-line_df = line_df[line_df['InputStrength']==Iext_str]
-line_df = line_df[line_df['BckgndInputStrength']==Ib_str]
 plotting_window = []
 
 # plot the input
@@ -211,14 +200,8 @@ data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', valu
 sns.heatmap(data_heatmap, cmap='magma')
 
 # %% 
-'''
-1.3) MULTI PLOT: Effect of input intensity and duration on dynamic behaviour (non-responsive, transfer and memory)
-    - plot style: heatmap
-    - y axis: intensity
-    - x axis: duration
-    - plotwise: coupling strength
-    - measure: dynamic function 
-'''
+
+# 1.3) MULTI fingerprint PLOT:
 
 # look at several difference E-I balance values
 bEIs = [0.75, 0.8, 0.85]
@@ -228,52 +211,8 @@ Ib_str = 7
 Iext_str = params['input_strengths']
 Iext_dur = [1.5]
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
-
-cbar_ticks = ['non-responsive', 'transfer', 'memory']
 population = 'E2'
-data_df = data_df[data_df['population']==population]
-data_df = data_df[data_df['globalCoupling']==g]
-data_df = data_df[data_df['BckgndInputStrength']==Ib_str]
-data_df['InputDuration'] = data_df['InputDuration'].round(4)
-fig, ax = plt.subplots(2, int(len(bEIs)/2), figsize=(9,4), sharex=True, sharey=True)
-
-# Define a fixed discrete colormap with colors for 1, 2, and 3
-n = 3 # there are three different functions of the dynamics --> make discrete colormap
-colors = sns.color_palette("Pastel2", n)
-cmap = ListedColormap(colors)
-
-# Define the boundaries for normalization
-bounds = [0.5, 1.5, 2.5, 3.5]
-norm = BoundaryNorm(bounds, ncolors=cmap.N)
-
-for i, axis in enumerate(ax.flatten()):
-    plot_df = data_df[data_df['balanceEI']==bEIs[i]]
-    data_heatmap = plot_df.pivot(index='InputStrength',columns='InputDuration', values='dynamic_function_potential')
-    if i == len(bEIs)-1:
-        heat_ax = sns.heatmap(data_heatmap, cmap=cmap, norm=norm, ax=axis, cbar=True)
-        # Add colorbar, make sure to specify tick locations to match desired ticklabels
-        cbar = heat_ax.collections[0].colorbar
-        cbar.set_ticks([1, 2, 3])
-        cbar.set_ticklabels(cbar_ticks)
-    else:
-        sns.heatmap(data_heatmap, cmap=cmap, norm=norm, cbar=False, ax=axis, vmin=1, vmax=3, cbar_kws={'ticks': cbar_ticks})
-
-    # Only set x-axis label for the bottom row
-    if i >= len(bEIs) // 2:
-        axis.set_xlabel('Input Duration')
-    else:
-        axis.set_xlabel('')
-    axis.set_ylabel('')
-    axis.invert_yaxis()
-    axis.set_title(f'bEI = {bEIs[i]}, g = {g}')
-
-#ax[0][0].set_ylabel('Input Strength')
-#ax[1][0].set_ylabel('Input Strength')
-
-plt.tight_layout(h_pad=1)
-figure_name = f'_{population}pop_tauVisual_{thalamus_source}.pdf'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
-plt.show()
+bEImulti_fingerprint_IextDurVsStr(data_df, g, bEIs, Ib_str, population, thalamus_source, figure_dir)
 
 # %%
 
@@ -286,105 +225,35 @@ plt.show()
     - subplot rows: coupling strengths
 '''
 
+g = [10, 20, 30]
 rate_measure = 'longtermVSbaseline_rate'
 bEI = 0.8
-backinput = 7
+Ib_str = 7
+Iext_dur = [1.5] #params['input_durations']
+Iext_str = params['input_strengths']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+
 populations = np.array(['E1', 'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
 #populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
 
-fig, axes = plt.subplots(len(coupling_strengths), len(populations), figsize=(20,15) ,sharex=True, sharey=True)
-
-# Create a single colorbar axis
-#cbar_ax = fig.add_axes([1.01, 0.3, 0.02, 0.4])
-#cbar_ax.set_title(rate_measure)
-#cbar_ax.tick_params(labelsize=12) 
-
-
-for i,g in enumerate(coupling_strengths):
-    for j,p in enumerate(populations):
-
-        minmax_df = summary_df[summary_df['globalCoupling']==g]
-        minmax_df = minmax_df[minmax_df['balanceEI']==bEI]
-        minmax_df = minmax_df[minmax_df['BckgndInputStrength']==backinput]
-        minmax_df = minmax_df[minmax_df['population']==p]
-        minmax_df['InputDuration'] = minmax_df['InputDuration'].round(4)
-        minmax_df[rate_measure] = minmax_df[rate_measure].round(5)
-
-        data_heatmap = minmax_df.pivot(index='InputStrength',columns='InputDuration', values=rate_measure)
-
-        if (minmax_df[rate_measure].isna() | (minmax_df[rate_measure] == 0)).all().all():
-            print('black')
-            sns.heatmap(data_heatmap, cmap=ListedColormap(['black']), ax=axes[i,j], norm = Normalize(vmin=0, vmax=1))
-        else:
-            sns.heatmap(data_heatmap, cmap='magma', ax=axes[i,j], vmin=-2, vmax=2)
-
-        cbar = axes[i, j].collections[0].colorbar
-        # here set the labelsize by 20
-        cbar.ax.tick_params(labelsize=12)
-        axes[i, j].invert_yaxis()
-        axes[i, j].set_ylabel('')
-        axes[i, j].set_xlabel('')
-        axes[i, j].tick_params(axis='both', labelsize=12)
-        axes[len(coupling_strengths)-1, j].set_xlabel('Input Duration')
-        axes[0,j].set_title(f'pop: {p}')
-        axes[i,0].set_ylabel(f'g: {g}, g: {bEI}', rotation=0, labelpad=60)
-
-fig.text(0.04, 0.2, 'Input Strength', va='center', rotation='vertical')
-fig.text(0.04, 0.5, 'Input Strength', va='center', rotation='vertical')
-fig.text(0.04, 0.83, 'Input Strength', va='center', rotation='vertical')
-
-plt.tight_layout(h_pad=1)
-figure_name = f'inputDurationVSinputStrength_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
-plt.show()
+multiPop_heatmap_IextDurVsStr(data_df, g, bEI, Ib_str, populations, rate_measure, figure_dir)
 
 # %% 
 """
-2.1) BASELINE vs Coupling Strengths
-Plot Mininum and Maximum Firing rates 
+2.1) Effect of Coupling Strengths on Longterm/steady state
+Plot difference between Mininum and Maximum Firing rates 
 """
 
 # choose settings (make sure that there is no input in the samples)
-input_duration = 1.5
-input_strength = 10
+Iext_dur = 1.5
+Iext_str = 10
 bEI = 0.8
-backinput = 5
-data_df = summary_df[summary_df['InputDuration']==input_duration]
-data_df = data_df[data_df['balanceEI']==bEI]
-data_df = data_df[data_df['InputStrength']==input_strength]
-data_df = data_df[data_df['BckgndInputStrength']==backinput]
+Ib_str = 5
 
-# separate data in layers
-layers = [['E1', 'PV1', 'SST1', 'VIP1'], ['E2', 'PV2', 'SST2'], ['E3', 'PV3', 'SST3'], ['E4', 'PV4', 'SST4']]
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+multiLayer_couplingOnLongeterm_diffRate(data_df, Iext_dur, Iext_str, Ib_str, bEI, thalamus_source, figure_dir)
 
-# plot results
-fig, axs = plt.subplots(4, 1, figsize=(3, 6), sharey=False, sharex=True)  # Set figure size
-
-for l, ax in zip(layers, axs):
-    layer_df = data_df.loc[l]
-    layer_df['population'] = layer_df.index
-    #sns.lineplot(layer_df, y='minRate_longterm', x='globalCoupling', hue='population', ax=ax)
-    #sns.lineplot(layer_df, y='maxRate_longterm', x='globalCoupling', hue='population', ax=ax, legend=False)
-    sns.lineplot(layer_df, y='diffRate_lateLongterm', x='globalCoupling', hue='population', ax=ax, legend=False)
-    ax.set_ylabel('Rate (Hz)')
-    ax.set_xlabel('Global Coupling Strength (g)')
-    ax.legend(prop={'size':8})
-
-axs[0].set_title(f'Layer 2/3')
-axs[1].set_title(f'Layer 4')
-axs[2].set_title(f'Layer 5')
-axs[3].set_title(f'Layer 6')
-axs[1].set_ylim([0,100])
-axs[2].set_ylim([0,100])
-axs[3].set_ylim([0,100])
-axs[0].set_ylim([0,100])
-#axs[3].set_xlim([30,60])
-sns.despine(trim=True)
-plt.tight_layout() 
-figure_name = f'BaselineAllLayers_tauVisual_{thalamus_source}.pdf'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
-plt.show()
 
 
 # %%
@@ -392,114 +261,33 @@ plt.show()
 3.1) Background input strength 
 - x-axis: input strength
 - y-axis: PSP of E3 population
+- one subplot for each bEI value
 '''
 
-bEI = 0.8
-backinputs = [5, 6, 7] 
-input_duration = 1.5
-input_strength = 10 #, 200, 300, 400]
+bEI = [0.7, 0.8, 0.9]
+Ib_str = [5,6,7]
+Iext_dur = 1.5
+Iext_str = 10 #, 200, 300, 400]
+g = [10, 20, 30]
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 population = 'E3'
-summary_df['population'] = summary_df.index
-data_df = summary_df[summary_df['population']==population]
-data_df = data_df[data_df['balanceEI']==bEI]
-data_df = data_df[data_df['InputDuration']==input_duration]
-data_df = data_df[data_df['BckgndInputStrength'].isin(backinputs)]
-data_df = data_df[data_df['InputStrength']==input_strength]
-
-# plot results
-fig, axs = plt.subplots(figsize=(6,3)) 
-
-# Create a colormap
-cmap = cm.get_cmap('Dark2', len(backinputs))  # Choose a colormap, e.g., 'viridis'
-cmap_max = cm.get_cmap('Dark2', len(backinputs))  # Choose a colormap, e.g., 'viridis'
-data_df['minPotential_lateLongterm'] = data_df['minPotential_lateLongterm'] *1e3
-data_df['maxPotential_lateLongterm'] = data_df['maxPotential_lateLongterm'] *1e3
-backinputs = data_df['BckgndInputStrength'].unique()
-
-for i, s in enumerate(backinputs):
-    Istrength_df = data_df[data_df['BckgndInputStrength']==s]
-    color = cmap(i / (len(backinputs)))  # Normalize i to [0, 1] for colormap
-    color_max = cmap_max(i / (len(backinputs)))  # Normalize i to [0, 1] for colormap
-    plt.plot(Istrength_df['globalCoupling'], Istrength_df['minRate_lateLongterm'], label=s, color=color)
-    plt.plot(Istrength_df['globalCoupling'], Istrength_df['maxRate_lateLongterm'], color=color_max)
-
-#sns.lineplot(data_df, y='maxPotential_longterm', x='coupling_strength', hue='InputStrength')
-axs.set_xlabel('Coupling Strength')
-axs.set_ylabel('Rate (Hz)')
-#axs.set_xlim([0,100])
-sns.despine(trim=True)
-plt.legend(title='BackgroundInput Strength', loc='right')
-plt.tight_layout() 
-figure_name = f'BackgroundSteadyState_pop{population}_tauVisual_{thalamus_source}.pdf'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
-plt.show()
+rate_measure = 'lateLongterm' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
+multibEI_couplingOnMinmaxRate(data_df, bEI, Ib_str, population, rate_measure, thalamus_source, figure_dir)
 
 # %%
 '''
 BACKGROUND INPUT
 3.2) all layers
 '''
-input_duration = 1.5
-input_strength = 10
-data_df = summary_df[summary_df['InputDuration']==input_duration]
-data_df = data_df[data_df['InputStrength']==input_strength]
-bI = 7
-data_df = data_df[data_df['BckgndInputStrength']==bI]
+Iext_dur = 1.5
+Iext_str = 10
+Ib_str = 7
 bEI = 0.8
-data_df = data_df[data_df['balanceEI']==bEI]
+g = [10, 20, 30]
+rate_measure = 'lateLongterm' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
 
-# separate data in layers
-layers = [['E1', 'PV1', 'SST1', 'VIP1'], ['E2', 'PV2', 'SST2'], ['E3', 'PV3', 'SST3'], ['E4', 'PV4', 'SST4']]
-
-# plot results
-fig, axs = plt.subplots(4, 1, figsize=(3, 6), sharey=False, sharex=True)  # Set figure size
-
-for l, ax in zip(layers, axs):
-    layer_df = data_df[data_df['population'].isin(l)]
-    sns.lineplot(layer_df, y='minRate_lateLongterm', x='globalCoupling', hue='population', ax=ax)
-    sns.lineplot(layer_df, y='maxRate_lateLongterm', x='globalCoupling', hue='population', ax=ax, legend=False)
-    ax.set_ylabel('Rate (Hz)')
-    ax.set_xlabel('Global Coupling Strength')
-    ax.legend(prop={'size':8})
-
-axs[0].set_title(f'Layer 2/3')
-axs[1].set_title(f'Layer 4')
-axs[2].set_title(f'Layer 5')
-axs[3].set_title(f'Layer 6')
-
-sns.despine(trim=True)
-# set title
-plt.annotate(f'min and max Rate_lateLongterm, \nInput Duration:{input_duration} \nInput Strength:{input_strength} Background Input:{bI} \nE-I Balance:{bEI}', xy=(0, 0), xycoords='figure fraction', xytext=(1.5, 0.2), textcoords='figure fraction', ha='center', fontsize=10)
-plt.tight_layout() 
-figure_name = f'BackgroundAllLayers_{input_strength}Istrength_tauVisual_{thalamus_source}.pdf'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
-plt.show()
-
-# %%
-
-'''
-1.3) Line plot
-    - x axis: time
-    - y axis: rate
-'''
-
-# For this I need a dataframe with all timepoints
-bEI = 0.8
-coupling_strengths = [10, 20, 30]
-population = 'E3'
-input_duration = 1.5
-input_strength = 10
-line_df = trajectory_df.loc[trajectory_df['global_coupling'].isin(coupling_strengths)]
-line_df = line_df[line_df['balance_EI']==bEI]
-line_df = line_df[line_df['population']==population]
-line_df = line_df[line_df['InputDuration']==input_duration]
-line_df = line_df[line_df['InputStrength']==input_strength]
-plt.title(f'Population:{population} Input Duration:{input_duration} Input Strength{input_strength}')
-sns.lineplot(data=line_df, x='time', y='rate', hue='global_coupling', 
-             palette=sns.dark_palette("#69d", reverse=False))
-
-figure_name = f'population{population}_inputDur{input_duration}_inputStrength{input_strength}.png'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+multiLayer_couplingOnMinMaxRate(data_df, Iext_dur, Iext_str, Ib_str, bEI, rate_measure, thalamus_source, figure_dir)
 
 
 # %%  
@@ -510,43 +298,17 @@ In this plot I use the potential instead of the firing rates.
     - y axis: response (steady-state/longterm) in mV
 '''
 
-mean_lt = potentials_df.groupby(['InputDuration', 'globalCoupling', 'InputStrength'], as_index=False).mean()
+# load time series data
+Iext_dur = 1.5
+Iext_str = [10, 20, 30]
+bEI = 0.8
+Ib_str = 7
+g = [10, 20, 30]
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 
-# For this I need a dataframe with all timepoints
-coupling_strength = 20
-population = 1
-input_duration = 0.5
-input_strength = np.arange(10, 50, 5)
-line_df = mean_lt[mean_lt['globalCoupling']==coupling_strength]
-line_df = line_df[line_df['population']==population]
-line_df = line_df[line_df['InputDuration']==input_duration]
-plt.title(f'Population:{population} Input Duration:{input_duration} Input Strength{input_strength}')
-sns.lineplot(data=line_df, x='InputStrength', y='lt_potential') # , hue='coupling_strength')
-
-figure_name = f'fixedPointCurve_population{population}_inputDur{input_duration}_G{coupling_strength}.png'
-plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
-
-# %%
-populations = np.array(['E1', 'E2', 'E3', 'E4', 'PV1', 'PV2', 'PV3', 'PV4', 'SST1', 'SST2', 'SST3', 'SST4', 'VIP1'])#, 'V2', 'V3', 'V4'])
-
-fig, axes = plt.subplots(4, 4, sharex=True, sharey=False)
-g = 100
-bEI = 0.5
-bI = 5
-for ax, pop in zip(axes.flatten(), populations):
-    line_df = trajectory_df[trajectory_df['global_coupling']==g]
-    line_df = line_df[line_df['balance_EI']==bEI]
-    line_df = line_df[line_df['BckgndInputStrength']==bI]
-    line_df = line_df[line_df['population']==pop]
-    line_df = line_df[line_df['InputDuration']==input_duration]
-    sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength', ax=ax)
-    ax.legend('')
-
-handles, labels = plt.gca().get_legend_handles_labels()
-fig.legend(handles, labels, loc='upper center')
-plt.tight_layout()
-plt.legend()
-plt.show()
+potential_measure = 'lateLongterm'
+population = 'E3'
+inputStrengthOnminMaxpotential(data_df, Iext_str, Ib_str, bEI, population, potential_measure, thalamus_source, figure_dir)
 
 
 # %% Line Plot 
@@ -565,40 +327,43 @@ Look at the change of rate difference comparing populations
 Look at the interaction between global coupling and E-I balance in different populations.
 '''
 
-input_duration = 1.5
-input_strength = [10]
-coupling_strengths = [10, 20, 30]
-backinput = 7
+Iext_dur = 1.5
+Iext_str = [10, 20, 30]
+g = [10, 20, 30]
+Ib_str = 7
+bEI = [0.7, 0.8, 0.9]
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+
 rate_measure = 'longtermVSbaseline_rate'
 
 populations = np.array(['E1', 'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
 #populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
 
-fig, axes = plt.subplots(len(input_strength), len(populations), figsize=(20,15) ,sharex=True, sharey=True)
+fig, axes = plt.subplots(len(Iext_str), len(populations), figsize=(20,15) ,sharex=True, sharey=True)
 
 # Create a single colorbar axis
 #cbar_ax = fig.add_axes([1.01, 0.3, 0.02, 0.4])
 #cbar_ax.set_title(rate_measure)
 #cbar_ax.tick_params(labelsize=12) 
+fig.suptitle(f'Effect of Input Strength, Global Coupling and E-I balance on {rate_measure} ', fontsize=16)
 
-
-for i,input_s in enumerate(input_strength):
+for i,input_s in enumerate(Iext_str):
     for j,p in enumerate(populations):
 
-        minmax_df = summary_df[summary_df['InputStrength']==input_s]
-        minmax_df = minmax_df[minmax_df['InputDuration']==input_duration]
-        minmax_df = minmax_df[minmax_df['BckgndInputStrength']==backinput]
+        minmax_df = data_df[data_df['InputStrength']==input_s]
+        minmax_df = minmax_df[minmax_df['InputDuration']==Iext_dur]
+        minmax_df = minmax_df[minmax_df['BckgndInputStrength']==Ib_str]
         minmax_df = minmax_df[minmax_df['population']==p]
         #minmax_df['InputDuration'] = minmax_df['InputDuration'].round(4)
 
-        data_heatmap = minmax_df.pivot(index='globalCoupling',columns='balanceEI', values=rate_measure)
+        data_heatmap = minmax_df.pivot(index='globalCoupling', columns='balanceEI', values=rate_measure)
 
         if (minmax_df[rate_measure].isna() | (minmax_df[rate_measure] == 0)).all().all():
             print('black')
             sns.heatmap(data_heatmap, cmap=ListedColormap(['black']), ax=axes[i,j], norm = Normalize(vmin=0, vmax=1))
         else:
-            sns.heatmap(data_heatmap, cmap='magma', ax=axes[i,j], vmin=-1, vmax=2)
+            sns.heatmap(data_heatmap, cmap='vlag', ax=axes[i,j], center=0)
 
         cbar = axes[i, j].collections[0].colorbar
         # here set the labelsize by 20
@@ -607,13 +372,13 @@ for i,input_s in enumerate(input_strength):
         axes[i, j].set_ylabel('')
         axes[i, j].set_xlabel('')
         axes[i, j].tick_params(axis='both', labelsize=12)
-        axes[len(input_strength)-1, j].set_xlabel('E-I balance')
+        axes[len(Iext_str)-1, j].set_xlabel('E-I balance')
         axes[0,j].set_title(f'pop: {p}')
         axes[i,0].set_ylabel(f'input strength: {input_s}', rotation=0, labelpad=60)
 
-fig.text(0.04, 0.2, 'global g', va='center', rotation='vertical')
-fig.text(0.04, 0.5, 'global g', va='center', rotation='vertical')
-fig.text(0.04, 0.83, 'global g', va='center', rotation='vertical')
+fig.text(0, 0.2, 'coupling strength', va='center', rotation='vertical')
+fig.text(0, 0.5, 'coupling strength', va='center', rotation='vertical')
+fig.text(0, 0.83, 'coupling strength', va='center', rotation='vertical')
 
 plt.tight_layout(h_pad=1)
 figure_name = f'gvsbEI_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
