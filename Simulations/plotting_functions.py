@@ -163,6 +163,11 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
             axes[i, 2].plot(potentials[layer_idx].T)
             axes[i, 2].set_ylabel('mV')
             axes[i, 2].set_title(f"Area S2 - Layer {i+1}")
+            if len(layer_idx)==4:
+                axes[i, 2].legend([f'E {np.round(potentials[layer_idx[0], -1], 6)}', f'PV {np.round(potentials[layer_idx[1], -1], 6)}', f'SOM {np.round(potentials[layer_idx[2], -1], 6)}', f'VIP {np.round(potentials[layer_idx[3], -1], 6)}'], loc='upper right')
+            else:
+                axes[i, 2].legend([f'E {np.round(potentials[layer_idx[0], -1], 6)}', f'PV {np.round(potentials[layer_idx[1], -1], 6)}', f'SOM {np.round(potentials[layer_idx[2], -1], 6)}'], loc='upper right')
+
 
         plt.tight_layout()
         figdir = os.path.join(figdir, 'single_simulations')
