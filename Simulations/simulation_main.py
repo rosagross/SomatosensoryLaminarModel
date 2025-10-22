@@ -10,8 +10,9 @@ Description: Run this file to run the simulation!
 # %%
 import numpy as np
 import os
+import json
+import argparse
 import matplotlib.pyplot as plt
-import jax.numpy as jnp
 import pandas as pd
 import time
 import csv
@@ -19,7 +20,11 @@ from jr_model import JR_Model
 import plotting_functions as pf
 
 # %%
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+figure_dir = os.path.join(SIMDIR, "Figures")
 
+# %%
 
 def create_Iext(
     simulation_time, step_size, input_onset, input_duration, input_strength, input_type
@@ -85,25 +90,23 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     ]
     cells = np.concatenate((population_names, ["ThalE", "ThalI"]))
 
-    filename = filename + ".h5"
-    filename_rates = "rates" + filename
+    filename = filename + ".hdf5"
 
     # only safe every second datapoint
     resolution_tstep = 0.01
     print("tstep resolution", resolution_tstep)
     rates_downsampled = rates[:, :: int(1000 * resolution_tstep)]
-    rates_df = pd.DataFrame(rates_downsampled.T)
+    rates_df = pd.DataFrame(rates_downsampled.T, columns=cells)
     rates_df.to_hdf(
-        os.path.join(filedir, filename_rates), index=False, key="data", mode="w"
+        os.path.join(filedir, filename), index=False, key="rates", mode="a"
     )
 
     # sum the potentials together and save them
     potential_sum = np.sum(potentials, axis=1)
     potential_sum_downsampled = potential_sum[:, :: int(1000 * resolution_tstep)]
     potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
-    filename = "potentials" + filename
     potential_df.to_hdf(
-        os.path.join(filedir, filename), index=False, key="data", mode="w"
+        os.path.join(filedir, filename), index=False, key="summed_potential", mode="a"
     )
 
     if full:
@@ -111,7 +114,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
         psp_filename = "full_" + filename
         write_3D_csv(os.path.join(filedir, psp_filename), potentials)
 
-
+# TODO: implement saving in hdf5 format
 def write_3D_csv(filename, data):
     """
     Write results in form of a 3D hdf5 file.
@@ -122,46 +125,78 @@ def write_3D_csv(filename, data):
 
 
 # %%
+
+def read_simulation_params():
+    """Read simulation parameters from json file."""
+    # Read in preprocessing parameters
+    with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
+        params = json.load(json_file)
+    
+    return params
+
 def main():
-    save_params = False
-    save_results = False
-    save_full_potentials = False  # if True the potential matrix is 3D, otherwise 2D
-    plot_rates = True
-    plot_potentials = False
-    plot_all_potentials = False
-    jax_mode = False
-
-    # set coupling strengths, step size and cortex type (visual or somato)
-    # connectivity reverse factor is the absolute cell count divided by
-    connect_reverse_factor = (
-        1  # 6448 # TODO: adapt this factor also to S2 cell populations!
+    # read simulation params
+    params = read_simulation_params()
+    
+    # we parallelize over different coupling strengths (in srun HPC script)   
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--g",
+        type=float,
+        nargs="+",
+        help="coupling strengths",
+        required=False,
     )
-    # to simulate:
-    # thalamus I to E inhibition
+    coupling_strengths = parser.parse_args().g
+    #coupling_strengths = params['coupling_strengths'] # coupling_strengths
 
-    coupling_strengths = [20, 40, 60]  # , 150, 200, 250, 300]
-    balance_EI = [
-        0.7, 0.8, 0.9
-    ]  # np.arange(0, 1.1, 0.1) # excitation-inhibition balance (between 0 and 1)
-    g_thal = 2
-    bEI_thal = 0.5  # if g_thal is 0, this does not matter
-    step_size = 1e-3
-    area = "all"
-    filedir = "/data/p_02989/Modelling/output/"
+    # Assign variables from loaded parameters
+    save_params = params['save_params']
+    save_results = params['save_results']
+    save_full_potentials = params['save_full_potentials']
+    plot_rates = params['plot_rates']
+    plot_potentials = params['plot_potentials']
+    plot_all_potentials = params['plot_all_potentials']
+    jax_mode = params['jax_mode']
 
-    # define input
-    input_type = "step"  # other options are "step", "baseline" (equals input strength 0) or "background"
-    input_onset = 1.001  # in sec
-    simulation_dur = 2
-    input_durations = [1.5]  # , 1, 1.5] # np.arange(0, 1, 1) # in sec
-    input_strengths = [500]  # np.arange(0, 500, 100)
-    backgrndI_strengths = [7]
+    # coupling strengths, balance and area selection
+    balance_EI = params['balance_EI']
+    g_thal = params['g_thal']
+    bEI_thal = params['bEI_thal']
+    step_size = params['step_size']
+    area = params['area']
+    filedir = params['filedir']
 
-    # connections within the thalamus
-    # in this order: tEE, tEI, tIE, tII
-    thal_connect = np.array([0, 0, 0, 0])
-    extI_cellcounts = 1000
-    bI_cellcounts = 100
+    # inputs
+    input_type = params['input_type']
+    input_onset = params['input_onset']
+    simulation_dur = params['simulation_dur']
+    input_durations = params['input_durations']
+    input_strengths = params['input_strengths']
+    backgrndI_strengths = params['backgrndI_strengths']
+
+    # connectivity 
+    thal_connect = np.array(params['thal_connect'])
+    extI_cellcounts = params['extI_cellcounts']
+    bI_cellcounts = params['bI_cellcounts']
+    thal_cellcounts = params['thal_cellcounts']
+
+    # implement option to choose only one part of the cortical circuit
+    # this can be done by putting the connectivity for those parts to zero
+    # options:
+    # 1. only thalamus & Area 3b
+    # 2. A3b and Area 1
+    # 3. A3b and Area 1 and thalamus
+    # 4. only Area 1
+    # 5. only Area 1 and S2 and thalamus
+    # 6. only Area 1 and S2
+    # 7. only S2
+    # 8. default: all
+
+    filedir = os.path.join(SIMDIR, 'simulation_results')
+    if not os.path.exists(filedir):
+        os.makedirs(filedir)
+
 
     for d in input_durations:
         simulation_time = int(input_onset) + simulation_dur
@@ -187,16 +222,15 @@ def main():
                             f"Thalamus EtoI:{thal_connect[2]} ItoI: {thal_connect[3]}"
                         )
 
-                        filename = f"_g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_thalJiang_thalUncon_S1S2Uncon"
-                        # filename = f'_gE{int(gE*connect_reverse_factor)}gI{int(gI*connect_reverse_factor)}_{cortex_type}_IbStrength{sb}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_thalJiang_thalEI0_S1S2'
+                        filename = f"g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon"
 
                         # create input array
                         Iext = create_Iext(
                             simulation_time, step_size, input_onset, d, s, input_type
                         )
                         Ib = create_Ibackground(simulation_time, step_size, sb)
-                        gE = g * bEI / connect_reverse_factor
-                        gI = g * (1 - bEI) / connect_reverse_factor
+                        gE = g * bEI 
+                        gI = g * (1 - bEI)
                         gE_thal = g_thal * bEI_thal
                         gI_thal = g_thal * (1 - bEI_thal)
                         # for now we use the same coupling strength for the thalamus connections as for the cortical connections
@@ -204,19 +238,7 @@ def main():
                         coupling_thalI = gI_thal
                         print("gE", gE)
                         print("gI", gI)
-                        thal_connect_scaled = thal_connect / connect_reverse_factor
-
-                        # implement option to choose only one part of the cortical circuit
-                        # this can be done by putting the connectivity for those parts to zero
-                        # options:
-                        # 1. only thalamus & Area 3b
-                        # 2. A3b and Area 1
-                        # 3. A3b and Area 1 and thalamus
-                        # 4. only Area 1
-                        # 5. only Area 1 and S2 and thalamus
-                        # 6. only Area 1 and S2
-                        # 7. only S2
-                        # 8. default: all
+                        thal_connect_scaled = thal_connect 
 
                         model = JR_Model(
                             Iext,
@@ -228,6 +250,7 @@ def main():
                             thal_connect_scaled,
                             extI_cellcounts,
                             bI_cellcounts,
+                            thal_cellcounts,
                             step_size,
                             simulation_time,
                             area=area,
@@ -284,6 +307,7 @@ def main():
                                 d,
                                 sb,
                                 s,
+                                figure_dir
                             )
 
                         if plot_potentials:
@@ -299,6 +323,12 @@ def main():
                                 step_size,
                                 simulation_time,
                                 start_plot,
+                                figure_dir,
+                                bEI,
+                                g,
+                                d,
+                                sb,
+                                s
                             )
 
                         if plot_all_potentials:
@@ -319,7 +349,6 @@ def main():
     print("Mean Saving duration: ", np.mean(all_durations_saving))
 
     return potential, rate
-
 
 if __name__ == "__main__":
     potential, rate = main()
