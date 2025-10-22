@@ -325,7 +325,7 @@ class Parameter():
 
         # .. and also for the background input (all cells receive input except the thalamus)
         Wb = np.zeros((W_from_thal.shape[1],1))
-        Wb[:-2] = 1 * bI_cellcount # 
+        Wb[:-2] = 1 * bI_cellcount # cellcount from background input
 
         return W0, W_to_thal, W_from_thal, Wb, Wext
 

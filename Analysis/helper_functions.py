@@ -1,5 +1,7 @@
 import numpy as np
 import os
+import json
+import argparse
 from matplotlib.ticker import FormatStrFormatter, FuncFormatter, FormatStrFormatter
 import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap, Normalize
@@ -10,7 +12,7 @@ import ast
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, balance_EI,  
                         backgroundI_strengths, step_size, sample_delay_immediate, sample_delay_late, input_onset, sample_dur, cortex_type, input_type,
-                        thalamus_source, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1):
+                        thal_cellcounts, bI_cellcounts, extI_cellcounts, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1):
     '''
     Parameter:
     sample_dur: duration of sampling baseline and longterm activity in s 
@@ -39,14 +41,11 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         df = pd.DataFrame()
 
                         # read in firing rates in data matrix (datapoints x populations)
-                        filename_rates = f'rates_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalUncon_S1S2Uncon.h5'  #thalEI0_S1S2.csv'
-                        # filename_rates = f"rates_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
-                        rates_df = pd.read_hdf(os.path.join(output_dir, filename_rates))
+                        filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
+                        rates_df = pd.read_hdf(os.path.join(output_dir, filename), key='rates')
                         
                         # read in potentials in data matrix (datapoints x populations)
-                        #filename_potentials = f"potentials_gE{gE}gI{gI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0_S1S2.csv"
-                        filename_potentials = f'potentials_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalUncon_S1S2Uncon.h5'  #thalEI0_S1S2.csv'
-                        potentials_df = pd.read_hdf(os.path.join(output_dir, filename_potentials))
+                        potentials_df = pd.read_hdf(os.path.join(output_dir, filename), key='summed_potential')
 
                         # LONG TERM immediate (sample for x ms starting x secs after offset)
                         start_sample_immediate = int((input_onset+d+sample_delay_immediate)/step_size)
@@ -88,7 +87,13 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
                         baseline_stop = int(baseline_start + sample_dur/step_size)
                         df['rate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].mean()
+                        df['minRate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].min()
+                        df['maxRate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].max()
+                        df['diffRate_baseline'] = df['maxRate_baseline'] - df['minRate_baseline']
                         df['potential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].mean()
+                        df['minPotential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].min()
+                        df['maxPotential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].max()
+                        df['diffPotential_baseline'] = df['maxPotential_baseline'] - df['minPotential_baseline']
                         
                         # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
                         # oscillate and we want to compare if the long term activity is still larger than baseline)
@@ -123,7 +128,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         # TODO: also include where there are oscillations or not (maybe in the non-responsive behaviour)
 
                         # set info in data frame
-                        df['population'] = df.index.values
+                        df['population'] = potentials_df.columns
                         df['globalCoupling'] = g
                         df['balanceEI'] = bEI
                         df['InputDuration'] = d
@@ -134,7 +139,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         if load_trajectory:
                             # load entire trajectory in data frame
                             for pop_rate, pop_potential in zip(rates_df.items(), potentials_df.items()):
-                                pop_name = pop_rate[0]
+                                pop_name = pop_potential[0]
                                 rate_trajectory = pop_rate[1]
                                 potential_trajectory = pop_potential[1]
                                 pop_df = pd.DataFrame()
@@ -151,7 +156,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
 
                         if load_full_potentials:
                             # load full 3D (target x source x timestep) potential of selected population 
-                            filename = f"full_potentials_g{g}_bEI{bEI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalamus_source}_thalEI0.csv"
+                            filename = f"full_potentials_g{g}_bEI{bEI}_{cortex_type}_IbStrength{bI}_Iduration{d}_{input_type}IextStrength{s}_Ionset{input_onset}_tauVisual_{thalcells}_thalEI0.csv"
                             potential_df = pd.read_csv(os.path.join(output_dir, filename), sep=',', header=None)
                             potential_df = potential_df.applymap(lambda x: ast.literal_eval(x) if isinstance(x, str) and x.startswith('[') and x.endswith(']') else x)
                             potential_df = potential_df.iloc[load_population_potential]
@@ -160,7 +165,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                             longterm_input = []
                             for sourcepop in potential_df:
                                 # extract the longterm behaviour
-                                longterm_input.append(sourcepop[start_sample:stop_sample])
+                                longterm_input.append(sourcepop[start_sample_late:stop_sample_late])
                             
                             longterm_input = np.sum(np.array(longterm_input), axis=0)
                             longterm_mean = np.sum(longterm_input)
@@ -176,3 +181,184 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
 
     
     return summary_df, time_data_df, potential_data_df
+
+
+def compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur):
+    # LONG TERM immediate (sample for x ms starting x secs after offset)
+    start_sample_immediate = int((input_onset+d+sample_delay_immediate)/step_size)
+    stop_sample_immediate = int(start_sample_immediate + sample_dur/step_size)
+    df['rate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].mean()
+    df['minRate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].min()
+    df['maxRate_immediateLongterm'] = rates_df.iloc[start_sample_immediate:stop_sample_immediate].max()
+    df['diffRate_immediateLongterm'] = df['maxRate_immediateLongterm'] - df['minRate_immediateLongterm']
+    df['potential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].mean()
+    df['minPotential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].min()
+    df['maxPotential_immediateLongterm'] = potentials_df.iloc[start_sample_immediate:stop_sample_immediate].max()
+    df['diffPotential_immediateLongterm'] = df['maxPotential_immediateLongterm'] - df['minPotential_immediateLongterm']
+
+def compute_longeterm_late(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_late, sample_dur):
+    # LONG TERM late (sample for x ms starting at x sec after offset)
+    start_sample_late = int((input_onset+d+sample_delay_late)/step_size)
+    stop_sample_late = int(start_sample_late + sample_dur/step_size)
+    df['rate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].mean()
+    df['minRate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].min()
+    df['maxRate_lateLongterm'] = rates_df.iloc[start_sample_late:stop_sample_late].max()
+    df['diffRate_lateLongterm'] = df['maxRate_lateLongterm'] - df['minRate_lateLongterm']
+    df['potential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].mean()
+    df['minPotential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].min()
+    df['maxPotential_lateLongterm'] = potentials_df.iloc[start_sample_late:stop_sample_late].max()
+    df['diffPotential_lateLongterm'] = df['maxPotential_lateLongterm'] - df['minPotential_lateLongterm']
+
+def compute_input_response(df, rates_df, potentials_df, input_onset, d, step_size, sample_dur, offset):
+    # DURING INPUT
+    start_sample_during = int((input_onset)/step_size)
+    stop_sample_during = int((input_onset+d)/step_size)
+    df['rate_duringInput'] = rates_df.iloc[start_sample_during:stop_sample_during].mean()
+    df['minRate_duringInput'] = rates_df.iloc[start_sample_during:stop_sample_during].min()
+    df['maxRate_duringInput'] = rates_df.iloc[start_sample_during:stop_sample_during].max()
+    df['diffRate_duringInput'] = df['maxRate_duringInput'] - df['minRate_duringInput']
+    df['potential_duringInput'] = potentials_df.iloc[start_sample_during:stop_sample_during].mean()
+    df['minPotential_duringInput'] = potentials_df.iloc[start_sample_during:stop_sample_during].min()
+    df['maxPotential_duringInput'] = potentials_df.iloc[start_sample_during:stop_sample_during].max()
+    df['diffPotential_duringInput'] = df['maxPotential_duringInput'] - df['minPotential_duringInput']
+
+def compute_baseline(df, rates_df, potentials_df, input_onset, step_size, sample_dur, offset):       
+    # BASELINE SAMPLE (bofore input onset)
+    baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
+    baseline_stop = int(baseline_start + sample_dur/step_size)
+    df['rate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].mean()
+    df['potential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].mean()
+
+def compare_longterm_baseline(df):                    
+    # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
+    # oscillate and we want to compare if the long term activity is still larger than baseline)
+    df['longtermVSbaseline_rate'] = df['rate_lateLongterm'] - df['rate_baseline']
+    df['duringInputVSbaseline_rate'] = df['rate_duringInput'] - df['rate_baseline']
+    df['longtermVSbaseline_potential'] = df['potential_lateLongterm'] - df['potential_baseline']
+    df['duringInputVSbaseline_potential'] = df['potential_duringInput'] - df['potential_baseline']
+
+def classify_response(df):
+    """name the behaviour after stimulation: transfer, memory or non reponsive"""
+    
+    # rates
+    non_responsive = np.abs(df['duringInputVSbaseline_rate'])<0.1
+    transfer = ((np.abs(df['duringInputVSbaseline_rate'])>0.1) & (np.abs(df['longtermVSbaseline_rate'])<0.1))
+    memory = (np.abs(df['longtermVSbaseline_rate'])>0.1)
+    df.loc[non_responsive,'dynamic_function_rate'] = 1 # 'non-responsive'
+    df.loc[transfer,'dynamic_function_rate'] = 2 # 'transfer'
+    df.loc[memory,'dynamic_function_rate'] = 3 # 'memory'
+    
+    # potentials
+    non_responsive = np.abs(df['duringInputVSbaseline_potential'])<0.001
+    transfer = ((np.abs(df['duringInputVSbaseline_potential'])>0.001) & (np.abs(df['longtermVSbaseline_potential'])<0.001))
+    memory = (np.abs(df['longtermVSbaseline_potential'])>0.001)
+    df.loc[non_responsive,'dynamic_function_potential'] = 1 #'non-responsive'
+    df.loc[transfer,'dynamic_function_potential'] = 2 #'transfer'
+    df.loc[memory,'dynamic_function_potential'] = 3 #'memory'
+    
+
+def set_sim_info(df, potentials_df, g, bEI, d, s, bI):
+    """ set info in data frame """
+    df['population'] = potentials_df.columns
+    df['globalCoupling'] = g
+    df['balanceEI'] = bEI
+    df['InputDuration'] = d
+    df['InputStrength'] = s
+    df['BckgndInputStrength'] = bI
+
+
+def load_trajectory(rates_df, potentials_df, g, bEI, d, s, bI, step_size):
+    """ load entire trajectory in data frame """
+    time_data_df = pd.DataFrame()
+    for pop_rate, pop_potential in zip(rates_df.items(), potentials_df.items()):
+        pop_name = pop_potential[0]
+        rate_trajectory = pop_rate[1]
+        potential_trajectory = pop_potential[1]
+        pop_df = pd.DataFrame()
+        pop_df['population'] = [pop_name]*len(rate_trajectory)
+        pop_df['rate'] = rate_trajectory
+        pop_df['potential'] = potential_trajectory
+        pop_df['time'] = rate_trajectory.index.values * step_size # time in s
+        pop_df['global_coupling'] = g
+        pop_df['balance_EI'] = bEI
+        pop_df['InputDuration'] = d
+        pop_df['InputStrength'] = s 
+        pop_df['BckgndInputStrength'] = bI
+        time_data_df = pd.concat([time_data_df, pop_df])
+
+    return time_data_df
+
+def parse_coupling():
+    """ we parallelize over different coupling strengths (in srun HPC script), so we need to read in those """   
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--g",
+        type=float,
+        nargs="+",
+        help="coupling strengths",
+        required=False,
+    )
+    coupling_strengths = parser.parse_args().g
+    return coupling_strengths
+
+
+def load_parameters(WDDIR): 
+    """ Read in preprocessing parameters """
+    with open(os.path.join(WDDIR, 'Analysis', 'analysis_parameter.json'), 'r') as json_file:
+        params = json.load(json_file)
+    return params
+
+def load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, output_dir):
+    """ Read simulation data """
+    # read in firing rates in data matrix (datapoints x populations)
+    filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
+    rates_df = pd.read_hdf(os.path.join(output_dir, filename), key='rates')
+    
+    # read in potentials in data matrix (datapoints x populations)
+    potentials_df = pd.read_hdf(os.path.join(output_dir, filename), key='summed_potential')
+
+    return rates_df, potentials_df, filename
+
+def load_derivative(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir):
+    """ load the characteristics/processed data of one simulation """
+    deriv_file = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon_processed.csv"
+    deriv_df = pd.read_csv(os.path.join(deriv_dir, deriv_file))
+    return deriv_df
+
+def check_list(sim_param):
+    if not isinstance(sim_param, list):
+        sim_param = [sim_param]
+
+    return sim_param
+
+def load_all_derivatives(Iext_dur, Iext_str, gs, bEIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir):
+    """ load all selected combinations of processed simulation (with their characteristics) into one dataframe
+    All parameters can be either lists of single values. If they are single values, 
+    convert them into lists with one entry.
+
+    Parameters:
+    -----------
+    Iext_dur : float or list of input durations
+    Iext_str : float or list of input strengths
+    g : float or list of coupling strengths
+    bEI : float or list of E/I balance values
+    Ib_str : float or list of background input strengths
+    """
+
+    # check if parameters are lists, if not convert to list
+    Iext_dur = check_list(Iext_dur)
+    Iext_str = check_list(Iext_str)
+    gs = check_list(gs)
+    bEIs = check_list(bEIs)
+    Ib_str = check_list(Ib_str)
+
+    data_df = pd.DataFrame()
+    for d in Iext_dur:
+            for s in Iext_str:
+                for g in gs:
+                    for bEI in bEIs:
+                        for bI in Ib_str:
+                            data_single_df = load_derivative(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+                            data_df = pd.concat([data_df, data_single_df], ignore_index=True)
+
+    return data_df

@@ -7,18 +7,17 @@
 # %%
 import os 
 import sys
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+os.chdir("/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, CircuitTemplate
 from copy import deepcopy
 #from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
 ## import dei parametri
-param_path = "/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations"
+param_path = "/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/Simulations"
 if param_path not in sys.path:
     sys.path.append(param_path)
 from parameters import Parameter
@@ -146,10 +145,12 @@ create_I_ext = [OperatorTemplate(
     name="InputOp", path=None,
     equations=[
         # step input: A during [onset, onset+dur), else 0
-        "Iext = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))"
+        'd/dt * Iext = i',
+        'd/dt * i = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))'
     ],
     variables={
         "Iext": "output",
+        'i': 'variable',
         "t": "variable",
         "A": input_strength,
         "onset": input_onset/step_size,
@@ -281,20 +282,21 @@ for i in range(N_cells):
 
 # %%
 # Node templates
-cells_ext = cells + ['BACKGROUND'] + ['G'] + ['G_THAL'] + ['BEI'] + ['BEI_THAL'] 
+cells_ext = cells + ['BACKGROUND'] + ['G'] + ['G_THAL'] + ['BEI'] + ['BEI_THAL'] + ['I_EXT']
 nodes = [
     NodeTemplate(
         name=cells_ext[i],
         path=None,
         operators=(
             ([pros[i]] + [connectivity[i]] + rpos + 
-             (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
+             (rpo_Iext_thalE if i == N_cells - 2 else [])
             ) if i < N_cells 
             #else [rpo_bI] if i == N_cells
             else [g_definition] if i == N_cells + 1 # G
             else [g_thal_definition] if i == N_cells + 2 # G_THAL
             else [bEI_definition] if i == N_cells + 3 # BEI
             else [bEI_thal_definition] if i == N_cells + 4 # BEI_THAL
+            else [create_I_ext[0]] if i == N_cells + 5 # I_EXT
             else [rpo_bI] # operator for the background input
         )
     )
@@ -307,10 +309,14 @@ edges=[]
 # i : target 
 for i, cell_i in enumerate(cells):
     if cell_i not in ['thalE', 'thalI']:
-        edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{pro_names[i]}/v_bIn', None, {'weight': 1.0})) # background input
+        edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{pro_names[i]}/v_bIn', None, {'weight': bI_cellcount})) # background input
         edges.append(('G/g_definition/gC', f'{cell_i}/{connectivity_names[i]}/g', None, {'weight': 1.0})) # G
         edges.append(('BEI/bEI_definition/bEIC', f'{cell_i}/{connectivity_names[i]}/bEI', None, {'weight': 1.0})) # BEI
     else:
+        if cell_i == 'thalE':
+            # add a connection from external input population (which has its own cellcount) to the excitatory thalamus population
+            edges.append(('I_EXT/InputOp/Iext', f'{cell_i}/RPO_Iext/Iext_in', None, {'weight': extI_cellcount})) # external input 
+
         edges.append(('G_THAL/g_thal_definition/g_thalC', f'{cell_i}/{connectivity_names[i]}/g_thal', None, {'weight': 1.0})) # G_THAL
         edges.append(('BEI_THAL/bEI_thal_definition/bEI_thalC', f'{cell_i}/{connectivity_names[i]}/bEI_thal', None, {'weight': 1.0})) # BEI_THAL
     for j, cell_j in enumerate(cells):
@@ -332,6 +338,7 @@ model = CircuitTemplate(
 rpo_names_extended = rpo_names + ['RPO_Iext']
 outputs = {}
 b_inputs = []
+# here we just define what we would like to have as output of the simulation
 for i, target_cell in enumerate(cells):
     if i == (N_cells-2):
         for rpo_name_ext in rpo_names_extended[:N_cells+1]:
@@ -341,6 +348,7 @@ for i, target_cell in enumerate(cells):
             outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
 
 outputs['V_background/RPO_bI'] = 'BACKGROUND/RPO_bI/v_bI'
+outputs['V_external/InputOp'] = 'I_EXT/InputOp/Iext'
 
 results = model.run(simulation_time=simulation_time,
                   step_size=step_size,
@@ -360,6 +368,7 @@ for i, cell in enumerate(cells):
     # always include rpo_names[:N_cells]
     if i == (N_cells-2): # thalE
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names_extended[:N_cells+1]]
+        #potential_keys += [f'V_external/InputOp']
     else: 
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names[:N_cells]]
 
@@ -367,8 +376,10 @@ for i, cell in enumerate(cells):
     if i in range(N_cells-2):
         potential_keys += [f'V_background/RPO_bI']
 
+
     # include rpo_names_extended[:N_cells+1] only if i == 13
-    
+    if i == (N_cells-2): # thalE
+        hi = results[f'V_external/InputOp']
     sources = results[potential_keys]
     all_potentials.append(np.sum(sources, axis=1))
 

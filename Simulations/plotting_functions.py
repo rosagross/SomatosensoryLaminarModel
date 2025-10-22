@@ -96,8 +96,32 @@ def plot_area_potentials(steps, potential):
     plt.show()
 
 
-def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot, area='all'):
-
+def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot, figdir, bEI, g, d, sb, s, area='all'):
+    """
+    Plot population potentials for different areas and layers.
+    Parameters:
+    potentials : np.ndarray
+    Iext : np.ndarray
+        external input array
+    Ib : np.ndarray
+        background input array  
+    step_size : float
+    simulation_time : float
+    start_plot : int
+    figdir : str
+    bEI : float
+        EI balance
+    g : float
+        Coupling strength
+    d : float
+        External input duration
+    sb : float
+        Background input strength
+    s : float   
+        External input strength 
+    area : str
+        Area to plot ('all' or only 'A1')
+    """
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
 
     if area=='all':
@@ -141,8 +165,11 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
             axes[i, 2].set_title(f"Area S2 - Layer {i+1}")
 
         plt.tight_layout()
-        plt.savefig('all_areas_potentials.png', dpi=300)
-        plt.show()
+        figdir = os.path.join(figdir, 'single_simulations')
+        if not os.path.exists(figdir):
+            os.makedirs(figdir)
+        plt.savefig(os.path.join(figdir, f'population_potentials_bEI-{bEI}_g-{g}_area-{area}_Iextdur-{d}_Iextstr-{s}_Ibstr-{sb}.pdf'), dpi=300)
+        #plt.show()
             
 
     elif area=='A1':
@@ -182,7 +209,7 @@ def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels):
     axs_op.legend(legend_list, loc='upper right')
 
 
-def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g, area, d, sb, s):
+def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g, area, d, sb, s, figure_dir):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
     fig, axs = plt.subplots(4, 3, figsize=(15, 15))  # Set figure size
     figure_style()
@@ -252,12 +279,12 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g
     sns.despine(trim=True)
     plt.tight_layout() 
     plt.legend()
-    figdir = os.path.join('Figures', 'single_simulations')
+    figdir = os.path.join(figure_dir, 'single_simulations')
     if not os.path.exists(figdir):
         os.makedirs(figdir)
 
     plt.savefig(os.path.join(figdir, f'population_rates_bEI-{bEI}_g-{g}_area-{area}_Iextdur-{d}_Iextstr-{s}_Ibstr-{sb}.pdf'), dpi=300)
-    plt.show()
+    #plt.show()
 
 def annotate_fig(dataname):
     """ Write on the figure with which data it was generated, the date and the script name."""
