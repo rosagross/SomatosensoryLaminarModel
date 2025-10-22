@@ -6,16 +6,22 @@
 """
 # %%
 import os 
+import sys
 os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, CircuitTemplate
 from copy import deepcopy
-from parameters import Parameter
+#from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
+## import dei parametri
+param_path = "/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations"
+if param_path not in sys.path:
+    sys.path.append(param_path)
+from parameters import Parameter
 #%%
 # Parameters:
 cells = ['E3b','PV3b','SST3b','VIP3b', # A3b
@@ -29,10 +35,10 @@ params = Parameter()
 # %% Input definition
 input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
 input_onset = 1.0 # in sec
-simulation_dur = 2.0
-input_duration = 1.0  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 0.0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
-backgrndI_strengths = 0.0 #[0, 5, 10, 15, 20]
+simulation_dur = 5.0
+input_duration = 1.5  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+input_strength = 10.0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+backgrndI_strengths = 5.0 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
 simulation_time = float(int(input_onset) + simulation_dur)
@@ -106,25 +112,31 @@ rpo = OperatorTemplate(
 rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau[i]}) for i in range(N_cells)]
 
 # %% Operator template for the background input --> only for the "BACKGROUND" population!
+bI_cellcount = 100 
+
 rpo_bI = OperatorTemplate(
     name='RPO_bI', path=None,
     equations=['d/dt * v_bI = i',
-               'd/dt * i = H/tau * (bI) - 2 * i/tau - v_bI/tau^2'],
+               'd/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v_bI/tau^2'],
     variables={'v_bI': 'output',
                'i': 'variable',
                'bI': f'input({backgrndI_strengths})',  # external background input
+               'bI_cellcount': bI_cellcount,
                'tau': 0.003,
                'H': 1.0},
     description="excitatory rate-to-potential operator-background input")
 
 # %% Operator template for the external input --> only for thalE!
+extI_cellcount = 1000
+
 rpo_Iext_thalE = [OperatorTemplate(
     name='RPO_Iext', path=None,
     equations=['d/dt * v = i',
-               'd/dt * i = H/tau * (Iext) - 2 * i/tau - v/tau^2'],
+               'd/dt * i = H/tau * Iext_cellcounts * (Iext) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
                'Iext': 'input',
+               'Iext_cellcounts': extI_cellcount,
                'tau': tau[N_cells-2],
                'H': 1.0}
     ) 
@@ -152,14 +164,17 @@ create_I_ext = [OperatorTemplate(
 
 # %% Weights 
 # 'raw' weights:
-g_thal = 200.0
-g = 100.0
+g_thal = 2
+g = 20.0
 connect_reverse_factor =  6448.0
 bEI_thal = 0.5
-bEI = 0.5
+bEI = 0.8
 
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
-W0, W_to_thal, W_from_thal, Wb, Wext = params.get_raw_connectivity(thal_connect)
+
+thal_cellcount = 500
+W0, W_to_thal, W_from_thal, Wb, Wext = params.get_raw_connectivity(thal_connect, extI_cellcount, bI_cellcount, thal_cellcount)
+#W0, W_to_thal, W_from_thal, Wb, Wext = params.get_raw_connectivity(thal_connect)
 W0 = np.append(W0, W_to_thal, axis=0)
 W0 = np.append(W0, W_from_thal.T, axis=1)
 W = np.concatenate((W0, Wb, Wext), axis=1)
@@ -191,50 +206,50 @@ bEI_thal_definition = OperatorTemplate(
 # %% Connectivity operators
 connectivity_names = ["connectivity_"+ cell for cell in cells]
 connectivityE = OperatorTemplate(name="connectivityE", 
-                           equations= "m_out = (g*bEI/connect_reverse_factor)*m_outC",
+                           equations= "m_out = (g*bEI)*m_outC",
                            variables={
                             "m_out": "output", 
                             #"g": g,
                             #"bEI":bEI,
                             "g": "input",
                             "bEI": "input",
-                            "m_outC":"input",
-                            "connect_reverse_factor": f"input({float(connect_reverse_factor)})"
+                            "m_outC":"input"
+                            #"connect_reverse_factor": f"input({float(connect_reverse_factor)})"
                             }
                             )
 connectivityI = OperatorTemplate(name="connectivityI", 
-                           equations= "m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC",
+                           equations= "m_out = ((-g)*(1-bEI))*m_outC",
                            variables={
                             "m_out": "output", 
                             #"g": -g,
                             #"bEI":bEI,
                             "g": "input",
                             "bEI": "input",
-                            "connect_reverse_factor":f"input({float(connect_reverse_factor)})",
+                            #"connect_reverse_factor":f"input({float(connect_reverse_factor)})",
                             "m_outC":"input"
                             }
                             )
 connectivityE_thal = OperatorTemplate(name="connectivityE_thal", 
-                           equations= "m_out = (g_thal*bEI_thal/connect_reverse_factor_thal)*m_outC",
+                           equations= "m_out = (g_thal*bEI_thal)*m_outC",
                            variables={
                             "m_out": "output", 
                             #"g_thal": g_thal,
                             #"bEI_thal":bEI_thal,
                             "g_thal": "input",
                             "bEI_thal": "input",
-                            "connect_reverse_factor_thal":f"input({float(connect_reverse_factor)})",
+                            #"connect_reverse_factor_thal":f"input({float(connect_reverse_factor)})",
                             "m_outC":"input"
                             }
                             )
 connectivityI_thal = OperatorTemplate(name="connectivityI_thal", 
-                           equations= "m_out = ((-g_thal)*(1-bEI_thal)/connect_reverse_factor_thal)*m_outC",
+                           equations= "m_out = ((-g_thal)*(1-bEI_thal))*m_outC",
                            variables={
                             "m_out": "output", 
                             #"g_thal": -g_thal,
                             #"bEI_thal":bEI_thal,
                             "g_thal": "input",
                             "bEI_thal": "input",
-                            "connect_reverse_factor_thal":f"input({float(connect_reverse_factor)})",
+                            #"connect_reverse_factor_thal":f"input({float(connect_reverse_factor)})",
                             "m_outC":"input"
                             }
                             )
@@ -310,7 +325,7 @@ model = CircuitTemplate(
     path = None)
 
 # %%
-circuit_to_yaml(model, "model.yaml")
+#circuit_to_yaml(model, "model.yaml")
 
 # %%
 # Run the simulation 
@@ -376,18 +391,31 @@ rates_df = pd.DataFrame(m_out_all, columns=cells)
 # %% plot
 
 # division into layers
+"""
 layers = [potential_df.columns[:4],   # A3b 
           potential_df.columns[4:17],  # S1
           potential_df.columns[17:30],  # S2
           potential_df.columns[30:32] # thal
          ]
+"""
+layers = [ # i_ext + bckgrd
+    ["E1S1","E2S1","E3S1","E4S1"],
+    ["E1S2","E2S2","E3S2","E4S2"],
+    ["thalE","thalI"], # thalamus
+    ["PV1S1","PV2S1","PV3S1","PV4S1"],
+    ["PV1S2","PV2S2","PV3S2","PV4S2"],
+    potential_df.columns[:4], # A3b
+    ["SST1S1","SST2S1","SST3S1","SST4S1"],
+    ["SST1S2","SST2S2","SST3S2","SST4S2"],
+    ["VIPS1"],
+    ["VIPS2"]
+]
 
-fig, axes = plt.subplots(2, 2, figsize=(14, 10))  
+"""fig, axes = plt.subplots(2, 2, figsize=(14, 10))  """
+fig, axes = plt.subplots(4, 3, figsize=(18, 16))
 axes = axes.flatten()
 for ax, cols in zip(axes, layers):
-    # Create labels with final values
     labels_with_final = [f"{col} ({potential_df[col].iloc[-1]:.6f})" for col in cols]
-    
     # Plot and override legend labels
     potential_df[cols].plot(ax=ax, legend=False)  # suppress default legend
     ax.legend(labels_with_final, loc="best")
@@ -402,13 +430,27 @@ plt.show()
 # %% plot - rates
 
 # division into layers
+"""
 layers = [rates_df.columns[:4],   # A3b 
           rates_df.columns[4:17],  # S1
           potential_df.columns[17:30],  # S2
           potential_df.columns[30:32] # thal
          ]
-
-fig, axes = plt.subplots(2, 2, figsize=(14, 10))  # 2x2 grid
+"""
+layers = [ # i_ext + bckgrd
+    ["E1S1","E2S1","E3S1","E4S1"],
+    ["E1S2","E2S2","E3S2","E4S2"],
+    ["thalE","thalI"], # thalamus
+    ["PV1S1","PV2S1","PV3S1","PV4S1"],
+    ["PV1S2","PV2S2","PV3S2","PV4S2"],
+    rates_df.columns[:4], # A3b
+    ["SST1S1","SST2S1","SST3S1","SST4S1"],
+    ["SST1S2","SST2S2","SST3S2","SST4S2"],
+    ["VIPS1"],
+    ["VIPS2"]
+]
+#fig, axes = plt.subplots(2, 2, figsize=(14, 10))  # 2x2 grid
+fig, axes = plt.subplots(4, 3, figsize=(18, 16))
 axes = axes.flatten()
 
 for ax, cols in zip(axes, layers):
