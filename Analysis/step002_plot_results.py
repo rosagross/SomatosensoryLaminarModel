@@ -67,7 +67,7 @@ thal_cellcounts = params['thal_cellcounts']
 # %% Make plots that demonstrate the sampling time line 
 
 # load trajectory to plot
-g = 20
+g = 20.0
 Iext_dur = 1.5 
 Iext_str = 10
 Ib_str = 5
@@ -126,7 +126,7 @@ plt.show()
 '''
 
 # choose example settings
-g = 20
+g = 20.0
 bEI = 0.8
 Iext_dur = 1.5
 Iext_str = 30
@@ -157,7 +157,7 @@ Plot a heatmap showing the effect of Input Strength versus Input Duration
 """
 
 # choose a coupling strength, background input strength and a population
-g = 20
+g = 20.0
 bEI = 0.8
 Ib_str = 7
 Iext_str = params['input_strengths']
@@ -184,7 +184,7 @@ sns.heatmap(data_heatmap, cmap='magma')
 values = 'longtermVSbaseline_rate'
 
 # choose a coupling strength and a population
-g = 20
+g = 20.0
 bEI = 0.8
 Iext_str = params['input_strengths']
 Iext_dur = [1.5] #params['input_durations']
@@ -206,7 +206,7 @@ sns.heatmap(data_heatmap, cmap='magma')
 # look at several difference E-I balance values
 bEIs = [0.75, 0.8, 0.85]
 # choose a global coupling strength and a population
-g = 20
+g = 20.0
 Ib_str = 7
 Iext_str = params['input_strengths']
 Iext_dur = [1.5]
@@ -225,7 +225,7 @@ bEImulti_fingerprint_IextDurVsStr(data_df, g, bEIs, Ib_str, population, thalamus
     - subplot rows: coupling strengths
 '''
 
-g = [10, 20, 30]
+g = [10.0, 20.0, 30.0]
 rate_measure = 'longtermVSbaseline_rate'
 bEI = 0.8
 Ib_str = 7
@@ -268,7 +268,7 @@ bEI = [0.7, 0.8, 0.9]
 Ib_str = [5,6,7]
 Iext_dur = 1.5
 Iext_str = 10 #, 200, 300, 400]
-g = [10, 20, 30]
+g = [10.0, 20.0, 30.0]
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 population = 'E3'
 rate_measure = 'lateLongterm' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
@@ -283,7 +283,7 @@ Iext_dur = 1.5
 Iext_str = 10
 Ib_str = 7
 bEI = 0.8
-g = [10, 20, 30]
+g = [10.0, 20.0, 30.0]
 rate_measure = 'lateLongterm' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
 
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
@@ -303,7 +303,7 @@ Iext_dur = 1.5
 Iext_str = [10, 20, 30]
 bEI = 0.8
 Ib_str = 7
-g = [10, 20, 30]
+g = [10.0, 20.0, 30.0]
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 
 potential_measure = 'lateLongterm'
@@ -329,7 +329,7 @@ Look at the interaction between global coupling and E-I balance in different pop
 
 Iext_dur = 1.5
 Iext_str = [10, 20, 30]
-g = [10, 20, 30]
+g = [10.0, 20.0, 30.0]
 Ib_str = 7
 bEI = [0.7, 0.8, 0.9]
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
