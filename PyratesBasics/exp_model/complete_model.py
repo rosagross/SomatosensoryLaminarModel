@@ -34,10 +34,10 @@ params = Parameter()
 # %% Input definition
 input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
 input_onset = 1.0 # in sec
-simulation_dur = 2.0
+simulation_dur = 5.0
 input_duration = 1.5  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 0 # 500.0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
-backgrndI_strengths = 0 # 7.0 #[0, 5, 10, 15, 20]
+input_strength = 10.0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+backgrndI_strengths = 5.0 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
 simulation_time = float(int(input_onset) + simulation_dur)
@@ -111,26 +111,32 @@ rpo = OperatorTemplate(
 rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau[i]}) for i in range(N_cells)]
 
 # %% Operator template for the background input --> only for the "BACKGROUND" population!
+bI_cellcount = 100 
+
 rpo_bI = OperatorTemplate(
     name='RPO_bI', path=None,
     equations=['d/dt * v_bI = i',
-               'd/dt * i = H/tau * (bI) - 2 * i/tau - v_bI/tau^2'],
+               'd/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v_bI/tau^2'],
     variables={'v_bI': 'output',
                'i': 'variable',
                'bI': f'input({backgrndI_strengths})',  # external background input
+               'bI_cellcount': bI_cellcount,
                'tau': 0.003,
                'H': 1.0},
     description="excitatory rate-to-potential operator-background input")
 
 # %% Operator template for the external input --> only for thalE!
+extI_cellcount = 1000
+
 rpo_Iext_thalE = [OperatorTemplate(
     name='RPO_Iext', path=None,
     equations=['d/dt * v = i',
-               'd/dt * i = H/tau * (Iext_in) - 2 * i/tau - v/tau^2'],
+               'd/dt * i = H/tau * Iext_cellcounts * (Iext) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
-               'Iext_in': 'input',
-               'tau': 1, #tau[N_cells-2],
+               'Iext': 'input',
+               'Iext_cellcounts': extI_cellcount,
+               'tau': tau[N_cells-2],
                'H': 1.0}
     ) 
 ]
@@ -166,8 +172,7 @@ bEI_thal = 0.5
 bEI = 0.8
 
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
-extI_cellcount = 1000
-bI_cellcount = 100
+
 thal_cellcount = 500
 W0, W_to_thal, W_from_thal, Wb, Wext = params.get_raw_connectivity(thal_connect, extI_cellcount, bI_cellcount, thal_cellcount)
 #W0, W_to_thal, W_from_thal, Wb, Wext = params.get_raw_connectivity(thal_connect)
