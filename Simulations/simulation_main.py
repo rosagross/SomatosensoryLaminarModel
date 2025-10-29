@@ -9,7 +9,9 @@ Description: Run this file to run the simulation!
 
 # %%
 import numpy as np
+import h5py
 import os
+import sys
 import json
 import argparse
 import matplotlib.pyplot as plt
@@ -112,6 +114,7 @@ def save_results_csv(rates, potentials, filedir, filename, full=False):
     if full:
         # save all potentials additionally
         psp_filename = "full_" + filename
+        print('full potential file:', psp_filename)
         write_3D_csv(os.path.join(filedir, psp_filename), potentials)
 
 # TODO: implement saving in hdf5 format
@@ -119,12 +122,11 @@ def write_3D_csv(filename, data):
     """
     Write results in form of a 3D hdf5 file.
     """
+    dataset_name = 'full_potentials'
 
     with h5py.File(filename, "w") as f:
         f.create_dataset(dataset_name, data=data, compression="gzip")
 
-
-# %%
 
 def read_simulation_params():
     """Read simulation parameters from json file."""
@@ -133,6 +135,8 @@ def read_simulation_params():
         params = json.load(json_file)
     
     return params
+
+# %%    
 
 def main():
     # read simulation params
@@ -147,8 +151,8 @@ def main():
         help="coupling strengths",
         required=False,
     )
-    coupling_strengths = parser.parse_args().g
-    #coupling_strengths = params['coupling_strengths'] # coupling_strengths
+    #coupling_strengths = parser.parse_args().g
+    coupling_strengths = params['coupling_strengths'] # coupling_strengths
 
     # Assign variables from loaded parameters
     save_params = params['save_params']
@@ -353,4 +357,3 @@ def main():
 if __name__ == "__main__":
     potential, rate = main()
 
-# %%
