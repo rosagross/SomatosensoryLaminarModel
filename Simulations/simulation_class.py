@@ -28,38 +28,7 @@ WDDIR = os.getenv("WDDIR")
 figure_dir = os.path.join(SIMDIR, "Figures")
 # %%
 
-def create_Iext(
-    simulation_time, step_size, input_onset, input_duration, input_strength, input_type
-):
-    """Creates external input."""
 
-    Iext = np.zeros(int(simulation_time / step_size))
-
-    if input_type == "step":
-        t = int(input_duration / step_size)
-        t0 = int(input_onset / step_size)
-        Iext[t0 : t0 + t] = input_strength
-    elif input_type == "background":
-        # provide input for the entire simulation duration
-        Iext[:] = input_strength
-
-    return Iext
-
-
-def create_Ibackground(simulation_time, step_size, input_strength):
-    """Create Background Input"""
-    Ib = np.zeros(int(simulation_time / step_size))
-    Ib[:] = input_strength
-    return Ib
-
-
-def read_simulation_params():
-    """Read simulation parameters from json file."""
-    # Read in preprocessing parameters
-    with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
-        params = json.load(json_file)
-    
-    return params
 
 
 class SimulationSomato():

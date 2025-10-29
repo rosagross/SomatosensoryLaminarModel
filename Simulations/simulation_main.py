@@ -26,116 +26,6 @@ SIMDIR = os.getenv("SIMDIR")
 WDDIR = os.getenv("WDDIR")
 figure_dir = os.path.join(SIMDIR, "Figures")
 
-# %%
-
-def create_Iext(
-    simulation_time, step_size, input_onset, input_duration, input_strength, input_type
-):
-    """Creates external input."""
-
-    Iext = np.zeros(int(simulation_time / step_size))
-
-    if input_type == "step":
-        t = int(input_duration / step_size)
-        t0 = int(input_onset / step_size)
-        Iext[t0 : t0 + t] = input_strength
-    elif input_type == "background":
-        # provide input for the entire simulation duration
-        Iext[:] = input_strength
-
-    return Iext
-
-
-def create_Ibackground(simulation_time, step_size, input_strength):
-    """Create Background Input"""
-    Ib = np.zeros(int(simulation_time / step_size))
-    Ib[:] = input_strength
-    return Ib
-
-
-def save_results_csv(rates, potentials, filedir, filename, full=False):
-    """
-    Safe the simulated data in a csv file
-    """
-
-    population_names = [
-        "E3b",
-        "PV3b",
-        "SST3b",
-        "VIP3b",
-        "E1",
-        "PV1",
-        "SST1",
-        "VIP1",
-        "E2",
-        "PV2",
-        "SST2",
-        "E3",
-        "PV3",
-        "SST3",
-        "E4",
-        "PV4",
-        "SST4",
-        "E1S2",
-        "PV1S2",
-        "SST1S2",
-        "VIP1S2",
-        "E2S2",
-        "PV2S2",
-        "SST2S2",
-        "E3S2",
-        "PV3S2",
-        "SST3S2",
-        "E4S2",
-        "PV4S2",
-        "SST4S2",
-    ]
-    cells = np.concatenate((population_names, ["ThalE", "ThalI"]))
-
-    filename = filename + ".hdf5"
-
-    # only safe every second datapoint
-    resolution_tstep = 0.01
-    print("tstep resolution", resolution_tstep)
-    rates_downsampled = rates[:, :: int(1000 * resolution_tstep)]
-    rates_df = pd.DataFrame(rates_downsampled.T, columns=cells)
-    rates_df.to_hdf(
-        os.path.join(filedir, filename), index=False, key="rates", mode="a"
-    )
-
-    # sum the potentials together and save them
-    potential_sum = np.sum(potentials, axis=1)
-    potential_sum_downsampled = potential_sum[:, :: int(1000 * resolution_tstep)]
-    potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
-    potential_df.to_hdf(
-        os.path.join(filedir, filename), index=False, key="summed_potential", mode="a"
-    )
-
-    if full:
-        # save all potentials additionally
-        psp_filename = "full_" + filename
-        print('full potential file:', psp_filename)
-        write_3D_csv(os.path.join(filedir, psp_filename), potentials)
-
-# TODO: implement saving in hdf5 format
-def write_3D_csv(filename, data):
-    """
-    Write results in form of a 3D hdf5 file.
-    """
-    dataset_name = 'full_potentials'
-
-    with h5py.File(filename, "w") as f:
-        f.create_dataset(dataset_name, data=data, compression="gzip")
-
-
-def read_simulation_params():
-    """Read simulation parameters from json file."""
-    # Read in preprocessing parameters
-    with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
-        params = json.load(json_file)
-    
-    return params
-
 # %%    
 
 def main():
@@ -228,45 +118,24 @@ def main():
 
                         filename = f"g{g}_bEI{bEI}_Ib{sb}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon"
 
-                        # create input array
-                        Iext = create_Iext(
-                            simulation_time, step_size, input_onset, d, s, input_type
-                        )
-                        Ib = create_Ibackground(simulation_time, step_size, sb)
-                        gE = g * bEI 
-                        gI = g * (1 - bEI)
-                        gE_thal = g_thal * bEI_thal
-                        gI_thal = g_thal * (1 - bEI_thal)
-                        # for now we use the same coupling strength for the thalamus connections as for the cortical connections
-                        coupling_thalE = gE_thal
-                        coupling_thalI = gI_thal
-                        print("gE", gE)
-                        print("gI", gI)
-                        thal_connect_scaled = thal_connect 
-
                         model = JR_Model(
-                            Iext,
-                            Ib,
-                            gE,
-                            gI,
-                            coupling_thalE,
-                            coupling_thalI,
-                            thal_connect_scaled,
-                            extI_cellcounts,
-                            bI_cellcounts,
-                            thal_cellcounts,
-                            step_size,
-                            simulation_time,
-                            area=area,
+                            sb,
+                            s,
+                            d,
+                            
                         )
+
                         if save_params:
                             # safe connectivty parameter in yaml file
                             model.p.save_to_yaml(
                                 os.path.join(filedir, "params" + filename),
-                                gE,
-                                gI,
-                                coupling_thalE,
-                                coupling_thalI,
+                                sb,
+                                s,
+                                d,
+                                g,
+                                g_thal,
+                                bEI,
+                                bEI_thal,
                                 thal_connect,
                             )
 
