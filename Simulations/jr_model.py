@@ -34,6 +34,9 @@ class JR_Model():
         self.steps = np.arange(self.step_size, self.simulation_time+self.step_size, self.step_size)
 
         # external input matrix and background input matrix
+        # update parameters based on file
+        #self.__dict__.update(params)
+        # extend input arrays
         self.Iext = np.tile(Iext, (self.nPop,1))
         self.Ib = np.tile(Ib, (self.nPop,1))
 
