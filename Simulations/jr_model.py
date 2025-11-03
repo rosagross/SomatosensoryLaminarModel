@@ -9,14 +9,20 @@ import os
 
 WDDIR = os.getenv("WDDIR")
 
+def read_simulation_params():
+    """Read simulation parameters from json file."""
+    # Read in preprocessing parameters
+    with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
+        params = json.load(json_file)
+    
+    return params
+
 class JR_Model():
 
-    def __init__(self, g, sb, s, d):
+    def __init__(self, params={}):
         
-        # load in all connectivity parameters
+        # load in all connectivity parameters, time constants, etc.
         self.p = Parameter()
-
-        # Simulation parameters
         self.tau = self.p.tau
         self.nPop = self.p.nPop
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
@@ -29,31 +35,28 @@ class JR_Model():
         self.input_onset = 1.001
         self.thal_connect = [0,0,0,0]
         self.extI_cellcount = 1000
+        self.bEI = 0.7
         self.bI_cellcount = 100
         self.thal_cellcount = 500
         self.bEI_thal = 0.5
         self.g_thal = 2
         self.input_type = 'step'
         self.area = 'all' 
+        self.coupling_strength = 10
+        self.Ib_strength = 7
+        self.Iext_strength = 10
+        self.Iext_duration = 0.5
 
-        # parameters that come as function parameters since we might loop over it outside of the class
-        self.g = g
-        self.sb = sb
-        self.s = s
-        self.d = d
-
-        # external input matrix and background input matrix
-        # update parameters based on file
-        params = self.read_simulation_params()
+        # update parameters based on params dicts
         self.__dict__.update(params)
 
         # create input array
-        Iext = self.create_Iext(self.simulation_time, self.step_size, self.input_onset, self.d, self.s, self.input_type)
-        Ib = self.create_Ibackground(simulation_time, self.step_size, self.sb)
-        self.gE = self.g * self.bEI 
-        self.gI = self.g * (1 - self.bEI)
-        self.gE_thal = self.g_thal * self.bEI_thal
-        self.gI_thal = self.g_thal * (1 - self.bEI_thal)
+        Iext = self.create_Iext(self.simulation_time, self.step_size, self.input_onset, self.Iext_duration, self.Iext_strength, self.input_type)
+        Ib = self.create_Ibackground(self.simulation_time, self.step_size, self.Ib_strength)
+        self.gE = self.coupling_strength * self.bEI 
+        self.gI = self.coupling_strength * (1 - self.bEI)
+        self.gEthal = self.g_thal * self.bEI_thal
+        self.gIthal = self.g_thal * (1 - self.bEI_thal)
 
         # Synaptic kernel 
         self.H = np.ones((self.nPop, self.nPop+1))
@@ -65,8 +68,14 @@ class JR_Model():
         self.Iext = np.tile(Iext, (self.nPop,1))
         self.Ib = np.tile(Ib, (self.nPop,1))
 
+        self.filename = (
+            f"g{self.coupling_strength}_bEI{self.bEI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcount}_"
+            f"Ibcells{self.bI_cellcount}_Iextcells{self.extI_cellcount}_thalUncon_S1S2Uncon"
+        )
 
-    def create_Iext(self, imulation_time, step_size, input_onset, input_duration, input_strength, input_type):
+
+    def create_Iext(self, simulation_time, step_size, input_onset, input_duration, input_strength, input_type):
         """Creates external input."""
 
         Iext = np.zeros(int(simulation_time / step_size))
@@ -88,22 +97,13 @@ class JR_Model():
         Ib[:] = input_strength
         return Ib
 
-
-    def read_simulation_params(self):
-        """Read simulation parameters from json file."""
-        # Read in preprocessing parameters
-        with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
-            params = json.load(json_file)
-        
-        return params
-
         
     def save_to_yaml(self, filename):
         
         S = self.p.get_connectStrength()
         P = self.p.get_connectProb()
         C = self.p.get_cellcounts()
-        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect)
+        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcount, self.bI_cellcount, self.thal_cellcount)
 
         # Convert numpy arrays to lists
         parameters = {
@@ -181,8 +181,10 @@ class JR_Model():
 
         print('finished loop...')
 
-        return self.rate, self.potential
+    def compute_ecds():
+        """
 
+        """
 
     def save_results_csv(self, filedir, filename, full=False):
         """
@@ -228,14 +230,14 @@ class JR_Model():
         # only safe every second datapoint
         resolution_tstep = 0.01
         print("tstep resolution", resolution_tstep)
-        rates_downsampled = self.rates[:, :: int(1000 * resolution_tstep)]
+        rates_downsampled = self.rate[:, :: int(1000 * resolution_tstep)]
         rates_df = pd.DataFrame(rates_downsampled.T, columns=cells)
         rates_df.to_hdf(
             os.path.join(filedir, filename), index=False, key="rates", mode="a"
         )
 
         # sum the potentials together and save them
-        potential_sum = np.sum(self.potentials, axis=1)
+        potential_sum = np.sum(self.potential, axis=1)
         potential_sum_downsampled = potential_sum[:, :: int(1000 * resolution_tstep)]
         potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
         potential_df.to_hdf(
@@ -248,16 +250,6 @@ class JR_Model():
             print('full potential file:', psp_filename)
             write_3D_csv(os.path.join(filedir, psp_filename), self.potentials)
 
-
-
-    def write_3D_csv(filename, data):
-        """
-        Write results in form of a 3D hdf5 file.
-        """
-        dataset_name = 'full_potentials'
-
-        with h5py.File(filename, "w") as f:
-            f.create_dataset(dataset_name, data=data, compression="gzip")
 
         
 

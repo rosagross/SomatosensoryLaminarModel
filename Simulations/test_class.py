@@ -1,6 +1,7 @@
 """
 What hast to be tested?
 
+- if pyrates and "normal" python simulation give the same solution
 - Connectivity parameter 
 - general simulation parameter 
 
