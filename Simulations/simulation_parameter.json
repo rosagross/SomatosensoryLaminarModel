@@ -7,8 +7,8 @@
     "plot_all_potentials": true,
     "jax_mode": false,
     "connect_reverse_factor": 1,
-    "coupling_strengths": [9.354],
-    "balance_EI": [0.4],
+    "coupling_strength": 9.354,
+    "balance_EI": 0.4,
     "g_thal": 2,
     "bEI_thal": 0.5,
     "step_size": 0.001,
@@ -17,13 +17,9 @@
     "input_type": "step",
     "input_onset": 1.001,
     "simulation_dur": 2,
-    "input_durations": [
-        0.5
-    ],
-    "input_strengths": [
-        50
-    ],
-    "backgrndI_strengths": [7],
+    "Iext_duration": 0.5,
+    "Iext_strength": 50,
+    "Ib_strength": 7,
     "thal_connect": [
         0,
         0,
