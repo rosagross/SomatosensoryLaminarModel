@@ -1,0 +1,32 @@
+{
+    "save_params": false,
+    "save_results": true,
+    "save_full_potentials": true,
+    "plot_rates": true,
+    "plot_potentials": true,
+    "plot_all_potentials": true,
+    "jax_mode": false,
+    "connect_reverse_factor": 1,
+    "coupling_strength": 9.354,
+    "balance_EI": 0.4,
+    "g_thal": 2,
+    "bEI_thal": 0.5,
+    "step_size": 0.001,
+    "area": "all",
+    "filedir": "/data/p_02989/Modelling/output_test/",
+    "input_type": "step",
+    "input_onset": 1.001,
+    "simulation_dur": 2,
+    "Iext_duration": 0.5,
+    "Iext_strength": 50,
+    "Ib_strength": 7,
+    "thal_connect": [
+        0,
+        0,
+        0,
+        0
+    ],
+    "extI_cellcounts": 1000,
+    "bI_cellcounts": 100,
+    "thal_cellcounts": 500
+}

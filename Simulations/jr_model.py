@@ -1,31 +1,62 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import h5py
+import yaml
+import json
 from parameters import Parameter
 import os
 
+WDDIR = os.getenv("WDDIR")
+
+def read_simulation_params():
+    """Read simulation parameters from json file."""
+    # Read in preprocessing parameters
+    with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
+        params = json.load(json_file)
+    
+    return params
+
 class JR_Model():
 
-    def __init__(self, Iext, Ib, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, step_size=0.001, simulation_time=1, area='all'):
+    def __init__(self, params={}):
         
-        # load in all parameters
+        # load in all connectivity parameters, time constants, etc.
         self.p = Parameter()
-
-        # Simulation parameters
         self.tau = self.p.tau
         self.nPop = self.p.nPop
-        self.simulation_time = simulation_time# in s
-        self.step_size = step_size # in s
-        self.gE = gE
-        self.gI = gI
-        self.gEthal = gEthal
-        self.gIthal = gIthal
-        self.thal_connect = thal_connect
-        self.extI_cellcount = extI_cellcount
-        self.bI_cellcount = bI_cellcount
-        self.thal_cellcount = thal_cellcount
-
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
         self.sigm = self.p.sigmoid_params
+
+        # parameters that will be updated from the json file 
+        # (first initialized with default values) 
+        self.simulation_time = 2 # in s
+        self.step_size = 0.001 # in s
+        self.input_onset = 1.001
+        self.thal_connect = [0,0,0,0]
+        self.extI_cellcount = 1000
+        self.bEI = 0.7
+        self.bI_cellcount = 100
+        self.thal_cellcount = 500
+        self.bEI_thal = 0.5
+        self.g_thal = 2
+        self.input_type = 'step'
+        self.area = 'all' 
+        self.coupling_strength = 10
+        self.Ib_strength = 7
+        self.Iext_strength = 10
+        self.Iext_duration = 0.5
+
+        # update parameters based on params dicts
+        self.__dict__.update(params)
+
+        # create input array
+        Iext = self.create_Iext(self.simulation_time, self.step_size, self.input_onset, self.Iext_duration, self.Iext_strength, self.input_type)
+        Ib = self.create_Ibackground(self.simulation_time, self.step_size, self.Ib_strength)
+        self.gE = self.coupling_strength * self.bEI 
+        self.gI = self.coupling_strength * (1 - self.bEI)
+        self.gEthal = self.g_thal * self.bEI_thal
+        self.gIthal = self.g_thal * (1 - self.bEI_thal)
 
         # Synaptic kernel 
         self.H = np.ones((self.nPop, self.nPop+1))
@@ -33,13 +64,63 @@ class JR_Model():
         # define time steps 
         self.steps = np.arange(self.step_size, self.simulation_time+self.step_size, self.step_size)
 
-        # external input matrix and background input matrix
+        # extend input arrays
         self.Iext = np.tile(Iext, (self.nPop,1))
         self.Ib = np.tile(Ib, (self.nPop,1))
 
-        # the area to isolate (default is just the entire model)
-        self.area = area
+        self.filename = (
+            f"g{self.coupling_strength}_bEI{self.bEI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcount}_"
+            f"Ibcells{self.bI_cellcount}_Iextcells{self.extI_cellcount}_thalUncon_S1S2Uncon"
+        )
+
+
+    def create_Iext(self, simulation_time, step_size, input_onset, input_duration, input_strength, input_type):
+        """Creates external input."""
+
+        Iext = np.zeros(int(simulation_time / step_size))
+
+        if input_type == "step":
+            t = int(input_duration / step_size)
+            t0 = int(input_onset / step_size)
+            Iext[t0 : t0 + t] = input_strength
+        elif input_type == "background":
+            # provide input for the entire simulation duration
+            Iext[:] = input_strength
+
+        return Iext
+
+
+    def create_Ibackground(self, simulation_time, step_size, input_strength):
+        """Create Background Input"""
+        Ib = np.zeros(int(simulation_time / step_size))
+        Ib[:] = input_strength
+        return Ib
+
         
+    def save_to_yaml(self, filename):
+        
+        S = self.p.get_connectStrength()
+        P = self.p.get_connectProb()
+        C = self.p.get_cellcounts()
+        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcount, self.bI_cellcount, self.thal_cellcount)
+
+        # Convert numpy arrays to lists
+        parameters = {
+            'gE': self.gE,
+            'gI': self.gI,
+            'gEthal': self.gEthal, 
+            'gIthal': self.gIthal,
+            'S': S.tolist(),
+            'P': P.tolist(),
+            'C': C.tolist(),
+            'W': W.tolist()
+        }
+
+        # Save parameters to a YAML file
+        with open(filename + '.yaml', 'w') as file:
+            yaml.dump(parameters, file)
+
 
     def run_simulation(self):
         '''
@@ -100,11 +181,77 @@ class JR_Model():
 
         print('finished loop...')
 
-        return self.rate, self.potential
-    
+    def compute_ecds():
+        """
+
+        """
+
+    def save_results_csv(self, filedir, filename, full=False):
+        """
+        Safe the simulated data in a csv file
+        """
+
+        population_names = [
+            "E3b",
+            "PV3b",
+            "SST3b",
+            "VIP3b",
+            "E1",
+            "PV1",
+            "SST1",
+            "VIP1",
+            "E2",
+            "PV2",
+            "SST2",
+            "E3",
+            "PV3",
+            "SST3",
+            "E4",
+            "PV4",
+            "SST4",
+            "E1S2",
+            "PV1S2",
+            "SST1S2",
+            "VIP1S2",
+            "E2S2",
+            "PV2S2",
+            "SST2S2",
+            "E3S2",
+            "PV3S2",
+            "SST3S2",
+            "E4S2",
+            "PV4S2",
+            "SST4S2",
+        ]
+        cells = np.concatenate((population_names, ["ThalE", "ThalI"]))
+
+        filename = filename + ".hdf5"
+
+        # only safe every second datapoint
+        resolution_tstep = 0.01
+        print("tstep resolution", resolution_tstep)
+        rates_downsampled = self.rate[:, :: int(1000 * resolution_tstep)]
+        rates_df = pd.DataFrame(rates_downsampled.T, columns=cells)
+        rates_df.to_hdf(
+            os.path.join(filedir, filename), index=False, key="rates", mode="a"
+        )
+
+        # sum the potentials together and save them
+        potential_sum = np.sum(self.potential, axis=1)
+        potential_sum_downsampled = potential_sum[:, :: int(1000 * resolution_tstep)]
+        potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
+        potential_df.to_hdf(
+            os.path.join(filedir, filename), index=False, key="summed_potential", mode="a"
+        )
+
+        if full:
+            # save all potentials additionally
+            psp_filename = "full_" + filename
+            print('full potential file:', psp_filename)
+            write_3D_csv(os.path.join(filedir, psp_filename), self.potentials)
 
 
-    
+        
 
 
 

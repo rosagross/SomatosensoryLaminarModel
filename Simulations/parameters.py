@@ -325,7 +325,7 @@ class Parameter():
 
         # .. and also for the background input (all cells receive input except the thalamus)
         Wb = np.zeros((W_from_thal.shape[1],1))
-        Wb[:-2] = 1 * bI_cellcount # 
+        Wb[:-2] = 1 * bI_cellcount # cellcount from background input
 
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
@@ -446,29 +446,6 @@ class Parameter():
         sigmoid_params = np.vstack((sigmoid_params_A3b, sigmoid_params_S1, sigmoid_params_S2))
                                        
         return sigmoid_params
-    
-    def save_to_yaml(self, filename, gE, gI, gEthal, gIthal, thal_connect):
-        
-        S = self.get_connectStrength()
-        P = self.get_connectProb()
-        C = self.get_cellcounts()
-        W = self.get_connectivity(gE, gI, gEthal, gIthal, thal_connect)
-
-        # Convert numpy arrays to lists
-        parameters = {
-            'gE': gE,
-            'gI': gI,
-            'gEthal': gEthal, 
-            'gIthal': gIthal,
-            'S': S.tolist(),
-            'P': P.tolist(),
-            'C': C.tolist(),
-            'W': W.tolist()
-        }
-
-        # Save parameters to a YAML file
-        with open(filename + '.yaml', 'w') as file:
-            yaml.dump(parameters, file)
 
 
 # %%
