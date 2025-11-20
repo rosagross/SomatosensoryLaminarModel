@@ -3,8 +3,9 @@
 - background input in all non-thalamic populations
 - time-varying external input in thalE
 - connectivity parameters (g/bEI)
+CLASS VERSION
 """
-# %%
+# %% libraries import
 import os 
 import sys
 os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
@@ -22,190 +23,231 @@ param_path = "/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations"
 if param_path not in sys.path:
     sys.path.append(param_path)
 from parameters import Parameter
-#%%
-# Parameters:
-cells = ['E3b','PV3b','SST3b','VIP3b', # A3b
-        'E1S1', 'PV1S1', 'SST1S1', 'VIPS1', 'E2S1', 'PV2S1', 'SST2S1', 'E3S1', 'PV3S1', 'SST3S1', 'E4S1', 'PV4S1', 'SST4S1', # S1
-        'E1S2', 'PV1S2', 'SST1S2', 'VIPS2', 'E2S2', 'PV2S2', 'SST2S2', 'E3S2', 'PV3S2', 'SST3S2', 'E4S2', 'PV4S2', 'SST4S2', # S2
-        'thalE', 'thalI'] # thalamus
+import json
+# %% TODO: ???
+WDDIR = os.getenv("WDDIR")
 
-N_cells = len(cells)
-params = Parameter()
-
-# %% Input definition
-input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
-input_onset = 1.0 # in sec
-simulation_dur = 5.0
-input_duration = 1.5  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 10.0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
-backgrndI_strengths = 5.0 #[0, 5, 10, 15, 20]
-step_size=1e-3
-sampling_step_size=1e-3
-simulation_time = float(int(input_onset) + simulation_dur)
-
-# %% sigmoid parameters and dendritic time constants
-sigm = params.get_sigmoid()  #already in the correct order
-
-r = []
-v_thr = []
-m_max = []
-for row in range(N_cells):
-    r.append(sigm[row,0])      
-    v_thr.append(sigm[row,1]) 
-    m_max.append(sigm[row,2]) 
-
-tau,_ = params.get_params()           
-tau = tau[0,:]
+def read_simulation_params():
+    """Read simulation parameters from json file."""
+    # Read in preprocessing parameters
+    with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
+        params = json.load(json_file)
+    
+    return params
 
 # %%
-# Operator template for the PRO
-pro_names = ["PRO_"+ cell for cell in cells]
-rpo_names=["RPO_"+cell for cell in cells]
-# no background input:
-pro = OperatorTemplate(
-    name='PRO', path=None,
-    equations=["m_outC = m_max / (1 + exp(r*(V_thr - v)))"],
-    variables={'m_outC': 'output',
+class Complete_model():
+    def __init__(self, params={}):
+        # load in all connectivity parameters, time constants, etc.
+        self.p = Parameter()
+        self.tau = self.p.tau
+        self.nPop = self.p.nPop
+        # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
+        self.sigm = self.p.sigmoid_params
+        self.cells = ['E3b','PV3b','SST3b','VIP3b', # A3b
+        'E1S1', 'PV1S1', 'SST1S1', 'VIPS1', 'E2S1', 'PV2S1', 'SST2S1', 'E3S1', 'PV3S1', 'SST3S1', 'E4S1', 'PV4S1', 'SST4S1', # S1
+        'E1S2', 'PV1S2', 'SST1S2', 'VIPS2', 'E2S2', 'PV2S2', 'SST2S2', 'E3S2', 'PV3S2', 'SST3S2', 'E4S2', 'PV4S2', 'SST4S2', # S2
+        'thalE', 'thalI']
+        self.cells_ext = self.cells + ['BACKGROUND'] + ['G'] + ['G_THAL'] + ['BEI'] + ['BEI_THAL'] 
+        # model parameters
+        self.pro_names = ["PRO_"+ cell for cell in self.cells]
+        self.rpo_names=["RPO_"+cell for cell in self.cells]
+        self.rpo_names_extended = self.rpo_names + ['RPO_Iext']
+        self.connectivity_names = ["connectivity_"+ cell for cell in self.cells]
+
+        # SIMULATION PARAMETERS - parameters that will be updated from the json file 
+        # (first initialized with default values) 
+        self.simulation_time = 2 # in s
+        self.step_size = 0.001 # in s
+        self.sampling_step_size = 0.001 # in s
+        self.input_onset = 1.001
+        self.input_duration = 1.5
+        self.thal_connect = [0,0,0,0]
+        self.simulation_dur = 5.0
+        self.simulation_time = float(int(self.input_onset) + self.simulation_dur)
+        self.extI_cellcounts = 1000
+        self.balance_EI = 0.7
+        self.bI_cellcounts = 100
+        self.thal_cellcounts = 500
+        self.bEI_thal = 0.5
+        self.g_thal = 2
+        self.input_type = 'step'
+        self.area = 'all' 
+        self.coupling_strength = 10
+        self.Ib_strength = 7
+        self.Iext_strength = 10
+        self.Iext_duration = 0.5
+
+        # update parameters based on params dicts
+        self.__dict__.update(params)
+        # sigmoid parameters 
+        self._extract_sigmoid_params()
+        # tau parameters 
+        self._load_tau_params()
+        # connectivity parameters
+        self.connectivity_weights()
+        self.connectivity_populations()
+
+        # create the PyRates model
+        self.create_pyrates_model()
+
+    def _extract_sigmoid_params(self):
+        """Extract r, v_thr, m_max from sigmoid parameter matrix."""
+        N_cells = len(self.cells)
+        self.r = [self.sigm[row, 0] for row in range(N_cells)]
+        self.v_thr = [self.sigm[row, 1] for row in range(N_cells)]
+        self.m_max = [self.sigm[row, 2] for row in range(N_cells)]
+
+    def _load_tau_params(self):
+        """Load time constants from Parameter object."""
+        tau, _ = self.p.get_params()
+        self.tau = tau[0, :]
+    
+    def connectivity_weights(self):
+        self.W0, self.W_to_thal, self.W_from_thal, self.Wb, self.Wext = self.p.get_raw_connectivity(self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts)
+        self.W0 = np.append(self.W0, self.W_to_thal, axis=0)
+        self.W0 = np.append(self.W0, self.W_from_thal.T, axis=1)
+        self.W = np.concatenate((self.W0, self.Wb, self.Wext), axis=1)
+    
+    def connectivity_populations(self):
+        # inhibitory
+        idx_I_A3b = np.array([1,2,3])
+        idx_I_S = [1,2,3,5,6,8,9,11,12]
+        idx_I_S1 = np.array(idx_I_S)+4 
+        idx_I_S2 = np.array(idx_I_S)+17
+        self.idx_I = np.concatenate((idx_I_A3b,idx_I_S1,idx_I_S2))
+        # excitatory
+        idx_E_A3b = np.array([0])
+        idx_E_S = [0,4,7,10]
+        idx_E_S1 = np.array(idx_E_S)+4
+        idx_E_S2 = np.array(idx_E_S)+17
+        self.idx_E = np.concatenate((idx_E_A3b,idx_E_S1,idx_E_S2))
+
+    def create_pyrates_model(self):
+        "creates the complete PyRates model"
+        # Operator template for the PRO
+        # no background input:
+        N_cells = len(self.cells)
+        pro = OperatorTemplate(
+            name='PRO', path=None,
+            equations=["m_outC = m_max / (1 + exp(r*(V_thr - v)))"],
+            variables={'m_outC': 'output',
                'v': 'input',
                'r': 0.1,
                'V_thr': 35.0,
                'm_max': 70.0},
-    description="sigmoidal potential-to-rate operator")
-# background input:
-pro_bI = OperatorTemplate(
-    name='PRO_bI', path=None,
-    equations=["m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))"],
-    variables={'m_outC': 'output',
+            description="sigmoidal potential-to-rate operator")
+        # background input:
+        pro_bI = OperatorTemplate(
+        name='PRO_bI', path=None,
+        equations=["m_outC = m_max / (1 + exp(r*(V_thr - (v+v_bIn))))"],
+        variables={'m_outC': 'output',
                'v': 'input',
                'v_bIn': 'input',
                'r': 0.1,
                'V_thr': 35.0,
                'm_max': 70.0},
-    description="sigmoidal potential-to-rate operator")
+        description="sigmoidal potential-to-rate operator")
 
-pros = [
-    (   # background input: all populations except thalamus
-        deepcopy(pro_bI).update_template(name=pro_names[i], variables={'r': r[i],
-                                                 'V_thr': v_thr[i],
-                                                 'm_max': m_max[i]})
-        if i < N_cells - 2
-        # no background input: thalamus
-        else deepcopy(pro).update_template(name=pro_names[i], variables={'r': r[i],
-                                                 'V_thr': v_thr[i],
-                                                 'm_max': m_max[i]})
-    )
-    for i in range(N_cells)
-]
+        pros = [
+            (   # background input: all populations except thalamus
+                deepcopy(pro_bI).update_template(name=self.pro_names[i], variables={'r': self.r[i],
+                                                 'V_thr': self.v_thr[i],
+                                                 'm_max': self.m_max[i]})
+                if i < N_cells - 2
+                # no background input: thalamus
+                else deepcopy(pro).update_template(name=self.pro_names[i], variables={'r': self.r[i],
+                                                 'V_thr': self.v_thr[i],
+                                                 'm_max': self.m_max[i]})
+            )
+            for i in range(N_cells)
+            ]   
 
-# %% Operator template for the RPO
-rpo = OperatorTemplate(
-    name='RPO', path=None,
-    equations=['d/dt * v = i',
+        # Operator template for the RPO
+        rpo = OperatorTemplate(
+        name='RPO', path=None,
+        equations=['d/dt * v = i',
                'd/dt * i = H/tau * (m_in ) - 2 * i/tau - v/tau^2'],
-    variables={'v': 'output',
+        variables={'v': 'output',
                'i': 'variable',
                'm_in': 'input',
                'tau': 0.01,
                'H': 1.0},
-    description="excitatory rate-to-potential operator")
+        description="excitatory rate-to-potential operator")
 
-rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau[i]}) for i in range(N_cells)]
+        rpos = [deepcopy(rpo).update_template(name=self.rpo_names[i], variables={"tau": self.tau[i]}) for i in range(N_cells)]
 
-# %% Operator template for the background input --> only for the "BACKGROUND" population!
-bI_cellcount = 100 
-
-rpo_bI = OperatorTemplate(
-    name='RPO_bI', path=None,
-    equations=['d/dt * v_bI = i',
+        # Operator template for the background input --> only for the "BACKGROUND" population!
+        rpo_bI = OperatorTemplate(
+            name='RPO_bI', path=None,
+            equations=['d/dt * v_bI = i',
                'd/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v_bI/tau^2'],
-    variables={'v_bI': 'output',
+            variables={'v_bI': 'output',
                'i': 'variable',
-               'bI': f'input({backgrndI_strengths})',  # external background input
-               'bI_cellcount': bI_cellcount,
+               'bI': f'input({self.Ib_strength})',  # external background input
+               'bI_cellcount': self.bI_cellcounts,
                'tau': 0.003,
                'H': 1.0},
-    description="excitatory rate-to-potential operator-background input")
+            description="excitatory rate-to-potential operator-background input")
 
-# %% Operator template for the external input --> only for thalE!
-extI_cellcount = 1000
-
-rpo_Iext_thalE = [OperatorTemplate(
-    name='RPO_Iext', path=None,
-    equations=['d/dt * v = i',
+        # Operator template for the external input --> only for thalE!
+        rpo_Iext_thalE = [OperatorTemplate(
+        name='RPO_Iext', path=None,
+        equations=['d/dt * v = i',
                'd/dt * i = H/tau * Iext_cellcounts * (Iext) - 2 * i/tau - v/tau^2'],
-    variables={'v': 'output',
+        variables={'v': 'output',
                'i': 'variable',
                'Iext': 'input',
-               'Iext_cellcounts': extI_cellcount,
-               'tau': tau[N_cells-2],
+               'Iext_cellcounts': self.extI_cellcounts,
+               'tau': self.tau[N_cells-2],
                'H': 1.0}
-    ) 
-]
-# definition of the external input
-create_I_ext = [OperatorTemplate(
-    name="InputOp", path=None,
-    equations=[
-        # step input: A during [onset, onset+dur), else 0
-        "Iext = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))"
-    ],
-    variables={
-        "Iext": "output",
-        "t": "variable",
-        "A": input_strength,
-        "onset": input_onset/step_size,
-        "dur": input_duration/step_size
-        # TO UNCOMMENT FOR PYCOBI:
-        #"A": float(input_strength),
-        #"onset": float(input_onset),
-        #"dur": float(input_duration)
-    },
-    description="External step input"
-)]
+            ) 
+        ]
+        # definition of the external input
+        create_I_ext = [OperatorTemplate(
+            name="InputOp", path=None,
+            equations=[
+            # step input: A during [onset, onset+dur), else 0
+                "Iext = (A/2)*(1+sign(t-onset)) - (A/2)*(1+sign(t-(onset+dur)))"
+                ],
+            variables={
+                "Iext": "output",
+                "t": "variable",
+                "A": self.Iext_strength,
+                "onset": self.input_onset/self.step_size,
+                "dur": self.input_duration/self.step_size
+                # TO UNCOMMENT FOR PYCOBI:
+                #"A": float(input_strength),
+                #"onset": float(input_onset),
+                #"dur": float(input_duration)
+                },
+            description="External step input"
+            )]
+        
+        # Operators and nodes for the connectivity parameters
+        g_definition = OperatorTemplate(
+            name="g_definition",
+            equations="gC = g_input",
+            variables={"gC": "output", "g_input": f"input({float(self.coupling_strength)})"}
+        )
+        bEI_definition = OperatorTemplate(
+            name="bEI_definition",
+            equations="bEIC = bEI_input",
+            variables={"bEIC": "output", "bEI_input": f"input({float(self.balance_EI)})"}
+        )       
+        g_thal_definition = OperatorTemplate(
+            name="g_thal_definition",
+            equations="g_thalC = g_thal_input",
+            variables={"g_thalC": "output", "g_thal_input": f"input({float(self.g_thal)})"}
+        )   
+        bEI_thal_definition = OperatorTemplate(
+            name="bEI_thal_definition",
+            equations="bEI_thalC = bEI_thal_input",
+            variables={"bEI_thalC": "output", "bEI_thal_input": f"input({float(self.bEI_thal)})"}
+        )
 
-# %% Weights 
-# 'raw' weights:
-g_thal = 2
-g = 20.0
-connect_reverse_factor =  6448.0
-bEI_thal = 0.5
-bEI = 0.8
-
-thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
-
-thal_cellcount = 500
-W0, W_to_thal, W_from_thal, Wb, Wext = params.get_raw_connectivity(thal_connect, extI_cellcount, bI_cellcount, thal_cellcount)
-#W0, W_to_thal, W_from_thal, Wb, Wext = params.get_raw_connectivity(thal_connect)
-W0 = np.append(W0, W_to_thal, axis=0)
-W0 = np.append(W0, W_from_thal.T, axis=1)
-W = np.concatenate((W0, Wb, Wext), axis=1)
-#rows_A3b_thal = np.r_[:4, 30, 31]   
-#cols_A3b_thal = np.r_[:4, 30, 31]
-#W_A3b = W[rows_A3b_thal[:, None], cols_A3b_thal]
-
-# %% Nodes for the parameters
-g_definition = OperatorTemplate(
-    name="g_definition",
-    equations="gC = g_input",
-    variables={"gC": "output", "g_input": f"input({float(g)})"}
-)
-bEI_definition = OperatorTemplate(
-    name="bEI_definition",
-    equations="bEIC = bEI_input",
-    variables={"bEIC": "output", "bEI_input": f"input({float(bEI)})"}
-)
-g_thal_definition = OperatorTemplate(
-    name="g_thal_definition",
-    equations="g_thalC = g_thal_input",
-    variables={"g_thalC": "output", "g_thal_input": f"input({float(g_thal)})"}
-)
-bEI_thal_definition = OperatorTemplate(
-    name="bEI_thal_definition",
-    equations="bEI_thalC = bEI_thal_input",
-    variables={"bEI_thalC": "output", "bEI_thal_input": f"input({float(bEI_thal)})"}
-)
-# %% Connectivity operators
-connectivity_names = ["connectivity_"+ cell for cell in cells]
-connectivityE = OperatorTemplate(name="connectivityE", 
+        # Connectivity operators
+        connectivityE = OperatorTemplate(name="connectivityE", 
                            equations= "m_out = (g*bEI)*m_outC",
                            variables={
                             "m_out": "output", 
@@ -217,7 +259,7 @@ connectivityE = OperatorTemplate(name="connectivityE",
                             #"connect_reverse_factor": f"input({float(connect_reverse_factor)})"
                             }
                             )
-connectivityI = OperatorTemplate(name="connectivityI", 
+        connectivityI = OperatorTemplate(name="connectivityI", 
                            equations= "m_out = ((-g)*(1-bEI))*m_outC",
                            variables={
                             "m_out": "output", 
@@ -229,7 +271,7 @@ connectivityI = OperatorTemplate(name="connectivityI",
                             "m_outC":"input"
                             }
                             )
-connectivityE_thal = OperatorTemplate(name="connectivityE_thal", 
+        connectivityE_thal = OperatorTemplate(name="connectivityE_thal", 
                            equations= "m_out = (g_thal*bEI_thal)*m_outC",
                            variables={
                             "m_out": "output", 
@@ -241,7 +283,7 @@ connectivityE_thal = OperatorTemplate(name="connectivityE_thal",
                             "m_outC":"input"
                             }
                             )
-connectivityI_thal = OperatorTemplate(name="connectivityI_thal", 
+        connectivityI_thal = OperatorTemplate(name="connectivityI_thal", 
                            equations= "m_out = ((-g_thal)*(1-bEI_thal))*m_outC",
                            variables={
                             "m_out": "output", 
@@ -253,98 +295,78 @@ connectivityI_thal = OperatorTemplate(name="connectivityI_thal",
                             "m_outC":"input"
                             }
                             )
+        connectivity = []
+        for i in range(N_cells):
+            if i in self.idx_E:  # excitatory populations
+                connectivity.append(deepcopy(connectivityE).update_template(name=self.connectivity_names[i]))
+            elif i in self.idx_I:  # inhibitory populations
+                connectivity.append(deepcopy(connectivityI).update_template(name=self.connectivity_names[i]))
+            elif i == N_cells - 2: # thalE
+                connectivity.append(deepcopy(connectivityE_thal).update_template(name=self.connectivity_names[i]))
+            else: # thalI
+                connectivity.append(deepcopy(connectivityI_thal).update_template(name=self.connectivity_names[i]))
 
-# the connectivity operators depend on the populations (if they are excitatory/inhibitory) --> parameters.py
-# inhibitory
-idx_I_A3b = np.array([1,2,3])
-idx_I_S = [1,2,3,5,6,8,9,11,12]
-idx_I_S1 = np.array(idx_I_S)+4 
-idx_I_S2 = np.array(idx_I_S)+17
-idx_I = np.concatenate((idx_I_A3b,idx_I_S1,idx_I_S2))
-# excitatory
-idx_E_A3b = np.array([0])
-idx_E_S = [0,4,7,10]
-idx_E_S1 = np.array(idx_E_S)+4
-idx_E_S2 = np.array(idx_E_S)+17
-idx_E = np.concatenate((idx_E_A3b,idx_E_S1,idx_E_S2))
+        # Node templates
+        nodes = [
+            NodeTemplate(
+                name=self.cells_ext[i],
+                path=None,
+                operators=(
+                    ([pros[i]] + [connectivity[i]] + rpos + 
+                    (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
+                    ) if i < N_cells 
+                    #else [rpo_bI] if i == N_cells
+                    else [g_definition] if i == N_cells + 1 # G
+                    else [g_thal_definition] if i == N_cells + 2 # G_THAL
+                    else [bEI_definition] if i == N_cells + 3 # BEI
+                    else [bEI_thal_definition] if i == N_cells + 4 # BEI_THAL
+                    else [rpo_bI] # operator for the background input
+                )
+            )
+            for i in range(len(self.cells_ext))
+        ]
+        # Edges
+        edges=[]
+        # i : target 
+        for i, cell_i in enumerate(self.cells):
+            if cell_i not in ['thalE', 'thalI']:
+                edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{self.pro_names[i]}/v_bIn', None, {'weight': 1.0})) # background input
+                edges.append(('G/g_definition/gC', f'{cell_i}/{self.connectivity_names[i]}/g', None, {'weight': 1.0})) # G
+                edges.append(('BEI/bEI_definition/bEIC', f'{cell_i}/{self.connectivity_names[i]}/bEI', None, {'weight': 1.0})) # BEI
+            else:
+                edges.append(('G_THAL/g_thal_definition/g_thalC', f'{cell_i}/{self.connectivity_names[i]}/g_thal', None, {'weight': 1.0})) # G_THAL
+                edges.append(('BEI_THAL/bEI_thal_definition/bEI_thalC', f'{cell_i}/{self.connectivity_names[i]}/bEI_thal', None, {'weight': 1.0})) # BEI_THAL
+            for j, cell_j in enumerate(self.cells):
+                edges.append((f'{cell_j}/{self.connectivity_names[j]}/m_out', f'{cell_i}/{self.rpo_names[j]}/m_in', None, {'weight': self.W[i,j]}))
+                    
+        # Set up the Model Circuit 
+        self.model = CircuitTemplate(
+            name = 'model',
+            nodes = {name: node for name, node in zip(self.cells_ext, nodes)},
+            edges = edges,
+            path = None)
 
-connectivity = []
-for i in range(N_cells):
-    if i in idx_E:  # excitatory populations
-        connectivity.append(deepcopy(connectivityE).update_template(name=connectivity_names[i]))
-    elif i in idx_I:  # inhibitory populations
-        connectivity.append(deepcopy(connectivityI).update_template(name=connectivity_names[i]))
-    elif i == N_cells - 2: # thalE
-        connectivity.append(deepcopy(connectivityE_thal).update_template(name=connectivity_names[i]))
-    else: # thalI
-        connectivity.append(deepcopy(connectivityI_thal).update_template(name=connectivity_names[i]))
+        # TODO: add the optional saving to a .yaml file 
+        #circuit_to_yaml(model, "model.yaml")
 
-# %%
-# Node templates
-cells_ext = cells + ['BACKGROUND'] + ['G'] + ['G_THAL'] + ['BEI'] + ['BEI_THAL'] 
-nodes = [
-    NodeTemplate(
-        name=cells_ext[i],
-        path=None,
-        operators=(
-            ([pros[i]] + [connectivity[i]] + rpos + 
-             (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
-            ) if i < N_cells 
-            #else [rpo_bI] if i == N_cells
-            else [g_definition] if i == N_cells + 1 # G
-            else [g_thal_definition] if i == N_cells + 2 # G_THAL
-            else [bEI_definition] if i == N_cells + 3 # BEI
-            else [bEI_thal_definition] if i == N_cells + 4 # BEI_THAL
-            else [rpo_bI] # operator for the background input
-        )
-    )
-    for i in range(len(cells_ext))
-]
 
-# %% 
-# Edges
-edges=[]
-# i : target 
-for i, cell_i in enumerate(cells):
-    if cell_i not in ['thalE', 'thalI']:
-        edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{pro_names[i]}/v_bIn', None, {'weight': 1.0})) # background input
-        edges.append(('G/g_definition/gC', f'{cell_i}/{connectivity_names[i]}/g', None, {'weight': 1.0})) # G
-        edges.append(('BEI/bEI_definition/bEIC', f'{cell_i}/{connectivity_names[i]}/bEI', None, {'weight': 1.0})) # BEI
-    else:
-        edges.append(('G_THAL/g_thal_definition/g_thalC', f'{cell_i}/{connectivity_names[i]}/g_thal', None, {'weight': 1.0})) # G_THAL
-        edges.append(('BEI_THAL/bEI_thal_definition/bEI_thalC', f'{cell_i}/{connectivity_names[i]}/bEI_thal', None, {'weight': 1.0})) # BEI_THAL
-    for j, cell_j in enumerate(cells):
-        edges.append((f'{cell_j}/{connectivity_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': W[i,j]}))
-    
-# %%
-# Set up the Model Circuit 
-model = CircuitTemplate(
-    name = 'model',
-    nodes = {name: node for name, node in zip(cells_ext, nodes)},
-    edges = edges,
-    path = None)
+    def simulate(self):
+        """run the simulation"""
+        N_cells = len(self.cells)
+        outputs = {}
+        b_inputs = []
+        for i, target_cell in enumerate(self.cells):
+            if i == (N_cells-2):
+                for rpo_name_ext in self.rpo_names_extended[:N_cells+1]:
+                    outputs[f'V_{target_cell}/{rpo_name_ext}'] = f'{target_cell}/{rpo_name_ext}/v'
+            else:
+                for rpo_name in self.rpo_names[:N_cells]:
+                    outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
 
-# %%
-#circuit_to_yaml(model, "model.yaml")
-
-# %%
-# Run the simulation 
-rpo_names_extended = rpo_names + ['RPO_Iext']
-outputs = {}
-b_inputs = []
-for i, target_cell in enumerate(cells):
-    if i == (N_cells-2):
-        for rpo_name_ext in rpo_names_extended[:N_cells+1]:
-            outputs[f'V_{target_cell}/{rpo_name_ext}'] = f'{target_cell}/{rpo_name_ext}/v'
-    else:
-        for rpo_name in rpo_names[:N_cells]:
-            outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
-
-outputs['V_background/RPO_bI'] = 'BACKGROUND/RPO_bI/v_bI'
-
-results = model.run(simulation_time=simulation_time,
-                  step_size=step_size,
-                  sampling_step_size=sampling_step_size,
+        outputs['V_background/RPO_bI'] = 'BACKGROUND/RPO_bI/v_bI'
+        results = self.model.run(simulation_time=self.simulation_time,
+                  step_size=self.step_size,
+                  sampling_step_size=self.sampling_step_size,
                   outputs=outputs,
                   backend ="scipy",
                   vectorize=False,
@@ -352,44 +374,45 @@ results = model.run(simulation_time=simulation_time,
                   float_precision="float64"
                   #decorator=njit
                   )
+        all_potentials = []
+        for i, cell in enumerate(self.cells):
+            # always include rpo_names[:N_cells]
+            if i == (N_cells-2): # thalE
+                potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names_extended[:N_cells+1]]
+            else: 
+                potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names[:N_cells]]
+            # include rpo_name only if i in range(N_cells-2)
+            if i in range(N_cells-2):
+                potential_keys += [f'V_background/RPO_bI']
 
-# %% Pandas Dataframe
-all_potentials = []
+            sources = results[potential_keys]
+            all_potentials.append(np.sum(sources, axis=1))
 
-for i, cell in enumerate(cells):
-    # always include rpo_names[:N_cells]
-    if i == (N_cells-2): # thalE
-        potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names_extended[:N_cells+1]]
-    else: 
-        potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names[:N_cells]]
+        all_potentials = np.array(all_potentials).T
+        potential_df = pd.DataFrame(all_potentials, columns=self.cells)
+        
+        # rates:
+        n_timepoints, n_cells = all_potentials.shape
+        m_out_all = np.zeros((n_timepoints, n_cells))  # NumPy array, not list!
 
-    # include rpo_name only if i in range(N_cells-2)
-    if i in range(N_cells-2):
-        potential_keys += [f'V_background/RPO_bI']
+        for i, source_cell in enumerate(self.cells):
+            m_out_all[:, i] =  self.m_max[i] / (
+                1 + np.exp(self.r[i] * (self.v_thr[i] - all_potentials[:, i]))
+            )
 
-    # include rpo_names_extended[:N_cells+1] only if i == 13
-    
-    sources = results[potential_keys]
-    all_potentials.append(np.sum(sources, axis=1))
+        rates_df = pd.DataFrame(m_out_all, columns=self.cells)
 
-all_potentials = np.array(all_potentials).T
+        return potential_df, rates_df
 
-potential_df = pd.DataFrame(all_potentials, columns=cells)
 
-#potential_df.to_csv("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/simulations/a3bthal.csv") 
 
-# %% Rates 
-n_timepoints, n_cells = all_potentials.shape
-m_out_all = np.zeros((n_timepoints, n_cells))  # NumPy array, not list!
+# %% EXAMPLE 
+params = read_simulation_params()
 
-for i, source_cell in enumerate(cells):
-    m_out_all[:, i] =  m_max[i] / (
-        1 + np.exp(r[i] * (v_thr[i] - all_potentials[:, i]))
-    )
-
-rates_df = pd.DataFrame(m_out_all, columns=cells)
+# %% /data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations/simulation_parameter.json
+modello_prova = Complete_model(params)
+potential_df, rates_df = modello_prova.simulate()
 # %% plot
-
 # division into layers
 """
 layers = [potential_df.columns[:4],   # A3b 
