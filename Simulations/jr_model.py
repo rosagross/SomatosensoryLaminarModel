@@ -248,9 +248,16 @@ class JR_Model():
             # save all potentials additionally
             psp_filename = "full_" + filename
             print('full potential file:', psp_filename)
-            write_3D_csv(os.path.join(filedir, psp_filename), self.potentials)
+            self.write_3D_csv(os.path.join(filedir, psp_filename))
 
+    def write_3D_csv(self, filename):
+        """
+        Write results in form of a 3D hdf5 file.
+        """
+        dataset_name = 'full_potentials'
 
+        with h5py.File(filename, "w") as f:
+            f.create_dataset(dataset_name, data=self.potential, compression="gzip")
         
 
 

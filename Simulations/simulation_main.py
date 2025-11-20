@@ -62,7 +62,7 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [10, 20, 30]
+coupling_strengths = [10]
 input_durations = [0.5]
 backgrndI_strengths = [5,6,7]
 input_strengths = [10, 20]
@@ -85,9 +85,11 @@ for d in input_durations:
                     params['Iext_duration'] = d
                     params['Iext_strength'] = s
                     params['Ib_strength'] = sb
+
                     model = JR_Model(params)
+                    print(model.coupling_strength)
 
-
+                    
                     # simulate rates and potentials
                     start = time.time()
                     model.run_simulation()
@@ -98,13 +100,11 @@ for d in input_durations:
 
                     if save_params:
                         # safe connectivty parameter in yaml file
-                        model.save_to_yaml(os.path.join(filedir, "params" + filename))
+                        model.save_to_yaml(os.path.join(filedir, "params" + model.filename))
 
                     if save_results:
                         start = time.time()
-                        save_results_csv(
-                            rate, potential, filedir, filename, save_full_potentials
-                        )
+                        model.save_results_csv(filedir, model.filename, save_full_potentials)
                         stop = time.time()
                         duration = stop - start
                         all_durations_saving.append(duration)
@@ -113,15 +113,15 @@ for d in input_durations:
                     if plot_rates:
                         start_plot = 0
                         pf.plot_results(
-                            rate,
-                            Iext,
-                            Ib,
-                            step_size,
-                            simulation_time,
+                            model.rate,
+                            model.Iext[-2],
+                            model.Ib[0],
+                            model.step_size,
+                            simulation_dur,
                             start_plot,
                             bEI,
                             g,
-                            area,
+                            model.area,
                             d,
                             sb,
                             s,
@@ -129,17 +129,17 @@ for d in input_durations:
                         )
 
                     if plot_potentials:
-                        potential_sum = np.sum(potential, axis=1)
+                        potential_sum = np.sum(model.potential, axis=1)
                         resolution_tstep = 1e-2
                         potential_sum_downsampled = potential_sum[
                             :, :: int(1000 * resolution_tstep)
                         ]
                         pf.plot_potentials(
                             potential_sum,
-                            Iext,
-                            Ib,
-                            step_size,
-                            simulation_time,
+                            model.Iext[-2],
+                            model.Ib[0],
+                            model.step_size,
+                            simulation_dur,
                             start_plot,
                             figure_dir,
                             bEI,
@@ -151,11 +151,11 @@ for d in input_durations:
 
                     if plot_all_potentials:
                         pf.plot_all_potentials(
-                            potential,
-                            Iext,
-                            Ib,
-                            step_size,
-                            simulation_time,
+                            model.potential,
+                            model.Iext[-2],
+                            model.Ib[0],
+                            model.step_size,
+                            simulation_dur,
                             start_plot,
                         )
 
@@ -165,6 +165,4 @@ for d in input_durations:
 
 print("Mean Simulation duration: ", np.mean(all_durations))
 print("Mean Saving duration: ", np.mean(all_durations_saving))
-
-return potential, rate
 
