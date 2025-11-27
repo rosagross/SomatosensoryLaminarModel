@@ -18,7 +18,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import time
 import csv
-from jr_model import JR_Model, read_simulation_params
+from somato_model import SomatoModel, read_simulation_params
+from somato_model_pyrates import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 
 # %%
@@ -64,8 +65,8 @@ if not os.path.exists(filedir):
 # set parameters to loop over 
 coupling_strengths = [10]
 input_durations = [0.5]
-backgrndI_strengths = [5,6,7]
-input_strengths = [10, 20]
+backgrndI_strengths = [5]#,6,7]
+input_strengths = [10]
 balance_EI = [0.6]
 
 # %%
@@ -86,7 +87,7 @@ for d in input_durations:
                     params['Iext_strength'] = s
                     params['Ib_strength'] = sb
 
-                    model = JR_Model(params)
+                    model = SomatoModel(params)
                     print(model.coupling_strength)
 
                     
@@ -166,3 +167,5 @@ for d in input_durations:
 print("Mean Simulation duration: ", np.mean(all_durations))
 print("Mean Saving duration: ", np.mean(all_durations_saving))
 
+
+# %%

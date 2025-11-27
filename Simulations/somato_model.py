@@ -17,7 +17,7 @@ def read_simulation_params():
     
     return params
 
-class JR_Model():
+class SomatoModel():
 
     def __init__(self, params={}):
         
