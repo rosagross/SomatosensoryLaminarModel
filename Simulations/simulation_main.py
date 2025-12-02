@@ -43,8 +43,6 @@ def parse_params():
 
     return g
 
-
-
 # Assign variables from loaded parameters
 params = read_simulation_params()
 input_onset = params['input_onset']
@@ -64,9 +62,9 @@ if not os.path.exists(filedir):
 
 # set parameters to loop over 
 coupling_strengths = [10]
-input_durations = [0.5]
-backgrndI_strengths = [5]#,6,7]
-input_strengths = [10]
+input_durations = [1]
+backgrndI_strengths = [5] #,6,7]
+input_strengths = [15]
 balance_EI = [0.6]
 
 # %%
@@ -88,20 +86,34 @@ for d in input_durations:
                     params['Ib_strength'] = sb
 
                     model = SomatoModel(params)
-                    print(model.coupling_strength)
-
+                    #model = SomatoModelPyrates(params)
                     
                     # simulate rates and potentials
                     start = time.time()
-                    model.run_simulation()
+                    model.simulate()
                     stop = time.time()
                     duration = stop - start
                     all_durations.append(duration)
                     print("Simulation duration (in s):", duration)
 
-                    if save_params:
-                        # safe connectivty parameter in yaml file
-                        model.save_to_yaml(os.path.join(filedir, "params" + model.filename))
+                    # print important parameters
+                    print(model.simulation_dur)
+                    print(model.step_size)
+                    print(model.input_onset) 
+                    print(model.thal_connect) 
+                    print(model.extI_cellcounts) 
+                    print(model.balance_EI) 
+                    print(model.bI_cellcounts) 
+                    print(model.thal_cellcounts) 
+                    print(model.bEI_thal) 
+                    print(model.g_thal) 
+                    print(model.input_type) 
+                    print(model.area) 
+                    print(model.coupling_strength) 
+                    print(model.Ib_strength) 
+                    print(model.Iext_strength) 
+                    print(model.Iext_duration) 
+
 
                     if save_results:
                         start = time.time()

@@ -30,14 +30,14 @@ class SomatoModel():
 
         # parameters that will be updated from the json file 
         # (first initialized with default values) 
-        self.simulation_time = 2 # in s
+        self.simulation_dur = 2 # in s
         self.step_size = 0.001 # in s
         self.input_onset = 1.001
         self.thal_connect = [0,0,0,0]
-        self.extI_cellcount = 1000
-        self.bEI = 0.7
-        self.bI_cellcount = 100
-        self.thal_cellcount = 500
+        self.extI_cellcounts = 1000
+        self.balance_EI = 0.7
+        self.bI_cellcounts = 100
+        self.thal_cellcounts = 500
         self.bEI_thal = 0.5
         self.g_thal = 2
         self.input_type = 'step'
@@ -51,10 +51,10 @@ class SomatoModel():
         self.__dict__.update(params)
 
         # create input array
-        Iext = self.create_Iext(self.simulation_time, self.step_size, self.input_onset, self.Iext_duration, self.Iext_strength, self.input_type)
-        Ib = self.create_Ibackground(self.simulation_time, self.step_size, self.Ib_strength)
-        self.gE = self.coupling_strength * self.bEI 
-        self.gI = self.coupling_strength * (1 - self.bEI)
+        Iext = self.create_Iext()
+        Ib = self.create_Ibackground()
+        self.gE = self.coupling_strength * self.balance_EI 
+        self.gI = self.coupling_strength * (1 - self.balance_EI)
         self.gEthal = self.g_thal * self.bEI_thal
         self.gIthal = self.g_thal * (1 - self.bEI_thal)
 
@@ -62,39 +62,39 @@ class SomatoModel():
         self.H = np.ones((self.nPop, self.nPop+1))
 
         # define time steps 
-        self.steps = np.arange(self.step_size, self.simulation_time+self.step_size, self.step_size)
+        self.steps = np.arange(self.step_size, self.simulation_dur+self.step_size, self.step_size)
 
         # extend input arrays
         self.Iext = np.tile(Iext, (self.nPop,1))
         self.Ib = np.tile(Ib, (self.nPop,1))
 
         self.filename = (
-            f"g{self.coupling_strength}_bEI{self.bEI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
-            f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcount}_"
-            f"Ibcells{self.bI_cellcount}_Iextcells{self.extI_cellcount}_thalUncon_S1S2Uncon"
+            f"g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
+            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_thalUncon_S1S2Uncon"
         )
 
 
-    def create_Iext(self, simulation_time, step_size, input_onset, input_duration, input_strength, input_type):
+    def create_Iext(self):
         """Creates external input."""
 
-        Iext = np.zeros(int(simulation_time / step_size))
+        Iext = np.zeros(int(self.simulation_dur / self.step_size))
 
-        if input_type == "step":
-            t = int(input_duration / step_size)
-            t0 = int(input_onset / step_size)
-            Iext[t0 : t0 + t] = input_strength
-        elif input_type == "background":
+        if self.input_type == "step":
+            t = int(self.Iext_duration / self.step_size)
+            t0 = int(self.input_onset / self.step_size)
+            Iext[t0 : t0 + t] = self.Iext_strength
+        elif self.input_type == "background":
             # provide input for the entire simulation duration
-            Iext[:] = input_strength
+            Iext[:] = self.Iext_strength
 
         return Iext
 
 
-    def create_Ibackground(self, simulation_time, step_size, input_strength):
+    def create_Ibackground(self):
         """Create Background Input"""
-        Ib = np.zeros(int(simulation_time / step_size))
-        Ib[:] = input_strength
+        Ib = np.zeros(int(self.simulation_dur / self.step_size))
+        Ib[:] = self.Iext_strength
         return Ib
 
         
@@ -103,7 +103,7 @@ class SomatoModel():
         S = self.p.get_connectStrength()
         P = self.p.get_connectProb()
         C = self.p.get_cellcounts()
-        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcount, self.bI_cellcount, self.thal_cellcount)
+        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts)
 
         # Convert numpy arrays to lists
         parameters = {
@@ -122,7 +122,7 @@ class SomatoModel():
             yaml.dump(parameters, file)
 
 
-    def run_simulation(self):
+    def simulate(self):
         '''
         Simulation loop
         '''
@@ -137,7 +137,7 @@ class SomatoModel():
         self.u_t = np.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
 
         # Weight matrix [to x from]
-        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcount, self.bI_cellcount, self.thal_cellcount, area=self.area) 
+        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
 
         last_step = self.steps[-1] 
 
@@ -182,16 +182,14 @@ class SomatoModel():
         print('finished loop...')
 
     def compute_ecds():
-        """
+        raise NotImplementedError
 
-        """
-
-    def save_results_csv(self, filedir, filename, full=False):
+    def save_results_csv(self, filedir, filename, full=False, save_params=False):
         """
         Safe the simulated data in a csv file
         """
 
-        population_names = [
+        cells = [
             "E3b",
             "PV3b",
             "SST3b",
@@ -222,8 +220,10 @@ class SomatoModel():
             "E4S2",
             "PV4S2",
             "SST4S2",
+            "ThalE", 
+            "ThalI"
         ]
-        cells = np.concatenate((population_names, ["ThalE", "ThalI"]))
+        cells = np.array(cells)
 
         filename = filename + ".hdf5"
 
@@ -249,6 +249,11 @@ class SomatoModel():
             psp_filename = "full_" + filename
             print('full potential file:', psp_filename)
             self.write_3D_csv(os.path.join(filedir, psp_filename))
+
+        if save_params:
+            # safe connectivty parameter in yaml file
+            self.save_to_yaml(os.path.join(filedir, "params" + self.filename))
+
 
     def write_3D_csv(self, filename):
         """

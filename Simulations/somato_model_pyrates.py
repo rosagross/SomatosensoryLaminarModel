@@ -15,6 +15,7 @@ from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, Circu
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+import h5py
 import pandas as pd
 from pprint import pprint
 from parameters import Parameter
@@ -42,7 +43,7 @@ class SomatoModelPyrates():
         self.cells = ['E3b','PV3b','SST3b','VIP3b', # A3b
         'E1S1', 'PV1S1', 'SST1S1', 'VIPS1', 'E2S1', 'PV2S1', 'SST2S1', 'E3S1', 'PV3S1', 'SST3S1', 'E4S1', 'PV4S1', 'SST4S1', # S1
         'E1S2', 'PV1S2', 'SST1S2', 'VIPS2', 'E2S2', 'PV2S2', 'SST2S2', 'E3S2', 'PV3S2', 'SST3S2', 'E4S2', 'PV4S2', 'SST4S2', # S2
-        'thalE', 'thalI']
+        'ThalE', 'ThalI']
         self.cells_ext = self.cells + ['BACKGROUND'] + ['G'] + ['G_THAL'] + ['BEI'] + ['BEI_THAL'] 
         # model parameters
         self.pro_names = ["PRO_"+ cell for cell in self.cells]
@@ -52,14 +53,12 @@ class SomatoModelPyrates():
 
         # SIMULATION PARAMETERS - parameters that will be updated from the json file 
         # (first initialized with default values) 
-        self.simulation_time = 2 # in s
+        self.simulation_dur = 2 # in s
         self.step_size = 0.001 # in s
         self.sampling_step_size = 0.001 # in s
         self.input_onset = 1.001
-        self.input_duration = 1.5
         self.thal_connect = [0,0,0,0]
         self.simulation_dur = 5.0
-        self.simulation_time = float(int(self.input_onset) + self.simulation_dur)
         self.extI_cellcounts = 1000
         self.balance_EI = 0.7
         self.bI_cellcounts = 100
@@ -75,6 +74,7 @@ class SomatoModelPyrates():
 
         # update parameters based on params dicts
         self.__dict__.update(params)
+
         # sigmoid parameters 
         self._extract_sigmoid_params()
         # tau parameters 
@@ -85,6 +85,13 @@ class SomatoModelPyrates():
 
         # create the PyRates model
         self.create_pyrates_model()
+
+        # define filename for saving results
+        self.filename = (
+            f"g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
+            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_PYRATES"
+        )
 
     def _extract_sigmoid_params(self):
         """Extract r, v_thr, m_max from sigmoid parameter matrix."""
@@ -117,6 +124,35 @@ class SomatoModelPyrates():
         idx_E_S1 = np.array(idx_E_S)+4
         idx_E_S2 = np.array(idx_E_S)+17
         self.idx_E = np.concatenate((idx_E_A3b,idx_E_S1,idx_E_S2))
+
+
+    def create_Iext(self):
+        """
+        Creates external input.
+        THIS IS ONLY FOR PLOTTING REASONS. The actual input is computed via operators.
+        """
+
+        Iext = np.zeros(int(self.simulation_dur / self.step_size))
+
+        if self.input_type == "step":
+            t = int(self.Iext_duration / self.step_size)
+            t0 = int(self.input_onset / self.step_size)
+            Iext[t0 : t0 + t] = self.Iext_strength
+        elif self.input_type == "background":
+            # provide input for the entire simulation duration
+            Iext[:] = self.Iext_strength
+
+        return Iext
+
+    def create_Ibackground(self):
+        """
+        Create Background Input
+        THIS IS ONLY FOR PLOTTING REASONS. The actual input is computed via operators.
+        """
+        
+        Ib = np.zeros(int(self.simulation_dur / self.step_size))
+        Ib[:] = self.Iext_strength
+        return Ib
 
     def create_pyrates_model(self):
         "creates the complete PyRates model"
@@ -185,6 +221,10 @@ class SomatoModelPyrates():
                'H': 1.0},
             description="excitatory rate-to-potential operator-background input")
 
+        # also create an Ib array for plotting later
+        Ib = self.create_Ibackground()
+        self.Ib = np.tile(Ib, (self.nPop,1))
+
         # Operator template for the external input --> only for thalE!
         rpo_Iext_thalE = [OperatorTemplate(
         name='RPO_Iext', path=None,
@@ -210,14 +250,18 @@ class SomatoModelPyrates():
                 "t": "variable",
                 "A": self.Iext_strength,
                 "onset": self.input_onset/self.step_size,
-                "dur": self.input_duration/self.step_size
+                "dur": self.Iext_duration/self.step_size
                 # TO UNCOMMENT FOR PYCOBI:
                 #"A": float(input_strength),
                 #"onset": float(input_onset),
-                #"dur": float(input_duration)
+                #"dur": float(self.Iext_duration)
                 },
             description="External step input"
             )]
+
+        # also create Iext array for later plotting 
+        Iext = self.create_Iext()
+        self.Iext = np.tile(Iext, (self.nPop,1))
         
         # Operators and nodes for the connectivity parameters
         g_definition = OperatorTemplate(
@@ -324,7 +368,7 @@ class SomatoModelPyrates():
         edges=[]
         # i : target 
         for i, cell_i in enumerate(self.cells):
-            if cell_i not in ['thalE', 'thalI']:
+            if cell_i not in ['ThalE', 'ThalI']:
                 edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{self.pro_names[i]}/v_bIn', None, {'weight': 1.0})) # background input
                 edges.append(('G/g_definition/gC', f'{cell_i}/{self.connectivity_names[i]}/g', None, {'weight': 1.0})) # G
                 edges.append(('BEI/bEI_definition/bEIC', f'{cell_i}/{self.connectivity_names[i]}/bEI', None, {'weight': 1.0})) # BEI
@@ -359,7 +403,7 @@ class SomatoModelPyrates():
                     outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
 
         outputs['V_background/RPO_bI'] = 'BACKGROUND/RPO_bI/v_bI'
-        results = self.model.run(simulation_time=self.simulation_time,
+        results = self.model.run(simulation_time=self.simulation_dur,
                   step_size=self.step_size,
                   sampling_step_size=self.sampling_step_size,
                   outputs=outputs,
@@ -367,37 +411,57 @@ class SomatoModelPyrates():
                   vectorize=False,
                   clear=False,
                   float_precision="float64"
-                  #decorator=njit
                   )
         all_potentials = []
         for i, cell in enumerate(self.cells):
-            # always include rpo_names[:N_cells]
-            if i == (N_cells-2): # thalE
-                potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names_extended[:N_cells+1]]
+                
+            # ThalE and ThalI do not receive background input
+            if cell in ['ThalE', 'ThalI']:   
+                # thalE receives external input from RPO_Iext
+                if cell == 'ThalE': 
+                    potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names_extended]
+                    sources = results[potential_keys]
+                    
+                    # append background input potential as zero array
+                    sources = np.array(sources)
+                    zero_array = np.zeros((sources.shape[0], 1))
+                    sources = np.hstack((sources, zero_array))
+                else:
+                    potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names]
+                    sources = results[potential_keys]
+                    zero_array = np.zeros((sources.shape[0], 1))
+                    # append background input potential and external input as zero array
+                    sources = np.hstack((sources, zero_array))
+                    sources = np.hstack((sources, zero_array))  
+            
             else: 
-                potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names[:N_cells]]
-            # include rpo_name only if i in range(N_cells-2)
-            if i in range(N_cells-2):
+                potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names]
                 potential_keys += [f'V_background/RPO_bI']
+                sources = results[potential_keys]
 
-            sources = results[potential_keys]
-            all_potentials.append(np.sum(sources, axis=1))
+                # append external input potential as zero array
+                sources = np.array(sources)
+                zero_array = np.zeros(((sources.shape[0]),1))
+                sources = np.hstack((sources, zero_array))
 
-        all_potentials = np.array(all_potentials).T
-        potential_df = pd.DataFrame(all_potentials, columns=self.cells)
-        
+            all_potentials.append(sources)
+
+        all_potentials = np.array(all_potentials)
+        all_potentials = np.rollaxis(all_potentials, 2, 1) # shape: target cells x source cells x timepoints
+
         # rates:
-        n_timepoints, n_cells = all_potentials.shape
-        m_out_all = np.zeros((n_timepoints, n_cells))  # NumPy array, not list!
+        summed_potentials = np.sum(all_potentials, axis=1)
 
-        for i, source_cell in enumerate(self.cells):
-            m_out_all[:, i] =  self.m_max[i] / (
-                1 + np.exp(self.r[i] * (self.v_thr[i] - all_potentials[:, i]))
+        n_cells, n_timepoints  = summed_potentials.shape
+        m_out_all = np.zeros((n_cells, n_timepoints))  # NumPy array, not list!
+
+        for i, _ in enumerate(self.cells):
+            m_out_all[i, :] =  self.m_max[i] / (
+                1 + np.exp(self.r[i] * (self.v_thr[i] - summed_potentials[i, :]))
             )
 
-        rates_df = pd.DataFrame(m_out_all, columns=self.cells)
-
-        return potential_df, rates_df
+        self.potential = all_potentials
+        self.rate = m_out_all
 
 
     def circuit_to_yaml(self, circuit: CircuitTemplate, path: str):
@@ -416,88 +480,48 @@ class SomatoModelPyrates():
         dump_to_yaml(circuit, path=path)
         print(f"CircuitTemplate successfully saved to {path}")
 
-# %% EXAMPLE 
-"""
-params = read_simulation_params()
 
-# %% /data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations/simulation_parameter.json
-modello_prova = SomatoModelPyrates(params)
-potential_df, rates_df = modello_prova.simulate()
-# %% plot
-# division into layers
-"""
-layers = [potential_df.columns[:4],   # A3b 
-          potential_df.columns[4:17],  # S1
-          potential_df.columns[17:30],  # S2
-          potential_df.columns[30:32] # thal
-         ]
-"""
-layers = [ # i_ext + bckgrd
-    ["E1S1","E2S1","E3S1","E4S1"],
-    ["E1S2","E2S2","E3S2","E4S2"],
-    ["thalE","thalI"], # thalamus
-    ["PV1S1","PV2S1","PV3S1","PV4S1"],
-    ["PV1S2","PV2S2","PV3S2","PV4S2"],
-    potential_df.columns[:4], # A3b
-    ["SST1S1","SST2S1","SST3S1","SST4S1"],
-    ["SST1S2","SST2S2","SST3S2","SST4S2"],
-    ["VIPS1"],
-    ["VIPS2"]
-]
+    def save_results_csv(self, filedir, filename, full=False):
+        """
+        Safe the simulated data in a csv file
+        """
 
-"""fig, axes = plt.subplots(2, 2, figsize=(14, 10))  """
-fig, axes = plt.subplots(4, 3, figsize=(18, 16))
-axes = axes.flatten()
-for ax, cols in zip(axes, layers):
-    labels_with_final = [f"{col} ({potential_df[col].iloc[-1]:.6f})" for col in cols]
-    # Plot and override legend labels
-    potential_df[cols].plot(ax=ax, legend=False)  # suppress default legend
-    ax.legend(labels_with_final, loc="best")
-    ax.set_ylabel("[mV]")
-    ax.set_xlabel("samples")
-    ax.set_title(", ".join(cols))
-#axes[-1].set_visible(False)
-fig.suptitle("Potentials", fontsize=20, fontweight='bold')
-plt.tight_layout(rect=[0, 0, 1, 0.95])
-plt.show()
+        filename = filename + ".hdf5"
 
-# %% plot - rates
+        # only safe every second datapoint
+        resolution_tstep = 0.01
+        print("tstep resolution", resolution_tstep)
+        rates_downsampled = self.rate[:, :: int(1000 * resolution_tstep)]
+        # TODO: double check if the potential array needs to be transposed 
+        rates_df = pd.DataFrame(rates_downsampled.T, columns=self.cells)
+        rates_df.to_hdf(
+            os.path.join(filedir, filename), index=False, key="rates", mode="a"
+        )
 
-# division into layers
-"""
-layers = [rates_df.columns[:4],   # A3b 
-          rates_df.columns[4:17],  # S1
-          potential_df.columns[17:30],  # S2
-          potential_df.columns[30:32] # thal
-         ]
-"""
-layers = [ # i_ext + bckgrd
-    ["E1S1","E2S1","E3S1","E4S1"],
-    ["E1S2","E2S2","E3S2","E4S2"],
-    ["thalE","thalI"], # thalamus
-    ["PV1S1","PV2S1","PV3S1","PV4S1"],
-    ["PV1S2","PV2S2","PV3S2","PV4S2"],
-    rates_df.columns[:4], # A3b
-    ["SST1S1","SST2S1","SST3S1","SST4S1"],
-    ["SST1S2","SST2S2","SST3S2","SST4S2"],
-    ["VIPS1"],
-    ["VIPS2"]
-]
-#fig, axes = plt.subplots(2, 2, figsize=(14, 10))  # 2x2 grid
-fig, axes = plt.subplots(4, 3, figsize=(18, 16))
-axes = axes.flatten()
+        # sum the potentials together and save them
+        potential_sum = np.sum(self.potential, axis=1)
+        potential_sum_downsampled = potential_sum[:, :: int(1000 * resolution_tstep)]
+        potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=self.cells)
+        potential_df.to_hdf(
+            os.path.join(filedir, filename), index=False, key="summed_potential", mode="a"
+        )
 
-for ax, cols in zip(axes, layers):
-    labels_with_final = [f"{col} ({rates_df[col].iloc[-1]:.6f})" for col in cols]
-    
-    rates_df[cols].plot(ax=ax,legend=False)
-    ax.set_title(", ".join(cols))  # show which cols are in this subplot
-    ax.legend(labels_with_final, loc="best")
-    ax.set_ylabel("[Hz]")
-    ax.set_xlabel("samples")
-    
-#axes[-1].set_visible(False)
-fig.suptitle("Rates", fontsize=20, fontweight='bold')
-plt.tight_layout(rect=[0, 0, 1, 0.95])
-plt.show() 
-"""
+        if full:
+            # save all potentials additionally
+            psp_filename = "full_" + filename
+            print('full potential file:', psp_filename)
+            self.write_3D_csv(os.path.join(filedir, psp_filename))
+
+
+    def write_3D_csv(self, filename):
+        """
+        Write results in form of a 3D hdf5 file.
+        """
+        dataset_name = 'full_potentials'
+
+        with h5py.File(filename, "w") as f:
+            f.create_dataset(dataset_name, data=self.potential, compression="gzip")
+        
+# TODOs:
+# - after simulation we assign the attributes rate and potential to the class. The attribute "model.potential" should be a numpy array of 3 dimensions 
+# - in "save_results" also implement to save the connectivity parameter
