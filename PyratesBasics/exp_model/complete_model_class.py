@@ -7,8 +7,10 @@ CLASS VERSION
 """
 # %% libraries import
 import os 
+WDDIR = os.getenv("WDDIR")
+SIMDIR = os.getenv("SIMDIR")
+os.chdir(os.path.join(WDDIR,"PyratesBasics","exp_model")) 
 import sys
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, CircuitTemplate
 from copy import deepcopy
 #from parameters import Parameter
@@ -16,17 +18,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from numba import njit
-from yaml_saving import circuit_to_yaml
+#from yaml_saving import circuit_to_yaml
 from pprint import pprint
 ## import dei parametri
-param_path = "/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations"
+param_path = os.path.join(WDDIR,"Simulations")
+
 if param_path not in sys.path:
     sys.path.append(param_path)
 from parameters import Parameter
 import json
-# %% TODO: ???
-WDDIR = os.getenv("WDDIR")
-
+# %% 
 def read_simulation_params():
     """Read simulation parameters from json file."""
     # Read in preprocessing parameters
@@ -36,7 +37,7 @@ def read_simulation_params():
     return params
 
 # %%
-class Complete_model():
+class SomatoModelPyrates():
     def __init__(self, params={}):
         # load in all connectivity parameters, time constants, etc.
         self.p = Parameter()
@@ -61,7 +62,7 @@ class Complete_model():
         self.step_size = 0.001 # in s
         self.sampling_step_size = 0.001 # in s
         self.input_onset = 1.001
-        self.input_duration = 1.5
+        #self.input_duration = 1.5
         self.thal_connect = [0,0,0,0]
         self.simulation_dur = 5.0
         self.simulation_time = float(int(self.input_onset) + self.simulation_dur)
@@ -89,6 +90,13 @@ class Complete_model():
         self.connectivity_populations()
 
         # create the PyRates model
+        #self.create_pyrates_model()
+        self.create_operators()
+        self.create_background_input()
+        self.create_external_input()
+        self.create_connectivity_operators()
+        self.create_nodes()
+        self.create_edges()
         self.create_pyrates_model()
 
     def _extract_sigmoid_params(self):
@@ -123,8 +131,8 @@ class Complete_model():
         idx_E_S2 = np.array(idx_E_S)+17
         self.idx_E = np.concatenate((idx_E_A3b,idx_E_S1,idx_E_S2))
 
-    def create_pyrates_model(self):
-        "creates the complete PyRates model"
+    def create_operators(self):
+        "creates the operators for the PyRates model"
         # Operator template for the PRO
         # no background input:
         N_cells = len(self.cells)
@@ -176,7 +184,10 @@ class Complete_model():
         description="excitatory rate-to-potential operator")
 
         rpos = [deepcopy(rpo).update_template(name=self.rpo_names[i], variables={"tau": self.tau[i]}) for i in range(N_cells)]
+        self.pros = pros
+        self.rpos = rpos
 
+    def create_background_input(self):
         # Operator template for the background input --> only for the "BACKGROUND" population!
         rpo_bI = OperatorTemplate(
             name='RPO_bI', path=None,
@@ -189,8 +200,11 @@ class Complete_model():
                'tau': 0.003,
                'H': 1.0},
             description="excitatory rate-to-potential operator-background input")
+        self.rpo_bI = rpo_bI
 
+    def create_external_input(self):
         # Operator template for the external input --> only for thalE!
+        N_cells = len(self.cells)
         rpo_Iext_thalE = [OperatorTemplate(
         name='RPO_Iext', path=None,
         equations=['d/dt * v = i',
@@ -215,7 +229,7 @@ class Complete_model():
                 "t": "variable",
                 "A": self.Iext_strength,
                 "onset": self.input_onset/self.step_size,
-                "dur": self.input_duration/self.step_size
+                "dur": self.Iext_duration/self.step_size
                 # TO UNCOMMENT FOR PYCOBI:
                 #"A": float(input_strength),
                 #"onset": float(input_onset),
@@ -223,7 +237,10 @@ class Complete_model():
                 },
             description="External step input"
             )]
-        
+        self.rpo_Iext_thalE = rpo_Iext_thalE 
+        self.create_I_ext = create_I_ext
+
+    def create_connectivity_operators(self):
         # Operators and nodes for the connectivity parameters
         g_definition = OperatorTemplate(
             name="g_definition",
@@ -296,6 +313,7 @@ class Complete_model():
                             }
                             )
         connectivity = []
+        N_cells = len(self.cells)
         for i in range(N_cells):
             if i in self.idx_E:  # excitatory populations
                 connectivity.append(deepcopy(connectivityE).update_template(name=self.connectivity_names[i]))
@@ -306,25 +324,36 @@ class Complete_model():
             else: # thalI
                 connectivity.append(deepcopy(connectivityI_thal).update_template(name=self.connectivity_names[i]))
 
+        self.g_definition = g_definition
+        self.bEI_definition = bEI_definition
+        self.g_thal_definition = g_thal_definition
+        self.bEI_thal_definition = bEI_thal_definition
+        self.connectivity = connectivity
+
+    def create_nodes(self):
+        N_cells = len(self.cells)
         # Node templates
         nodes = [
             NodeTemplate(
                 name=self.cells_ext[i],
                 path=None,
                 operators=(
-                    ([pros[i]] + [connectivity[i]] + rpos + 
-                    (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
+                    ([self.pros[i]] + [self.connectivity[i]] + self.rpos + 
+                    (self.rpo_Iext_thalE + self.create_I_ext if i == N_cells - 2 else [])
                     ) if i < N_cells 
                     #else [rpo_bI] if i == N_cells
-                    else [g_definition] if i == N_cells + 1 # G
-                    else [g_thal_definition] if i == N_cells + 2 # G_THAL
-                    else [bEI_definition] if i == N_cells + 3 # BEI
-                    else [bEI_thal_definition] if i == N_cells + 4 # BEI_THAL
-                    else [rpo_bI] # operator for the background input
+                    else [self.g_definition] if i == N_cells + 1 # G
+                    else [self.g_thal_definition] if i == N_cells + 2 # G_THAL
+                    else [self.bEI_definition] if i == N_cells + 3 # BEI
+                    else [self.bEI_thal_definition] if i == N_cells + 4 # BEI_THAL
+                    else [self.rpo_bI] # operator for the background input
                 )
             )
             for i in range(len(self.cells_ext))
         ]
+        self.nodes = nodes
+    
+    def create_edges(self):
         # Edges
         edges=[]
         # i : target 
@@ -338,16 +367,34 @@ class Complete_model():
                 edges.append(('BEI_THAL/bEI_thal_definition/bEI_thalC', f'{cell_i}/{self.connectivity_names[i]}/bEI_thal', None, {'weight': 1.0})) # BEI_THAL
             for j, cell_j in enumerate(self.cells):
                 edges.append((f'{cell_j}/{self.connectivity_names[j]}/m_out', f'{cell_i}/{self.rpo_names[j]}/m_in', None, {'weight': self.W[i,j]}))
-                    
+        self.edges = edges
+
+    def create_pyrates_model(self):                
         # Set up the Model Circuit 
         self.model = CircuitTemplate(
             name = 'model',
-            nodes = {name: node for name, node in zip(self.cells_ext, nodes)},
-            edges = edges,
+            nodes = {name: node for name, node in zip(self.cells_ext, self.nodes)},
+            edges = self.edges,
             path = None)
 
-        # TODO: add the optional saving to a .yaml file 
-        #circuit_to_yaml(model, "model.yaml")
+    def circuit_to_yaml(self,path):
+        """
+        Save a Pyrates CircuitTemplate to YAML safely, converting NumPy types to Python types.
+        """
+        from ruamel.yaml import YAML
+        from pyrates.frontend.template import CircuitTemplate
+        from pyrates.frontend.fileio.yaml import dump_to_yaml
+        # Patch ruamel.yaml to handle numpy scalars
+        yaml = YAML()
+        def represent_numpy_scalar(dumper, data):
+            return dumper.represent_float(float(data))
+        yaml.representer.add_representer(np.float64, represent_numpy_scalar)
+        yaml.representer.add_representer(np.float32, represent_numpy_scalar)
+        yaml.representer.add_representer(np.int32, lambda d, x: d.represent_int(int(x)))
+        yaml.representer.add_representer(np.int64, lambda d, x: d.represent_int(int(x)))
+
+        dump_to_yaml(self.model, path=path)
+        print(f"CircuitTemplate successfully saved to {path}")
 
 
     def simulate(self):
@@ -407,10 +454,13 @@ class Complete_model():
 
 
 # %% EXAMPLE 
+yaml_output = '/data/p_02989/Modelling/mecozzi_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model_yaml/modello_prova.yaml'
 params = read_simulation_params()
 
 # %% /data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations/simulation_parameter.json
-modello_prova = Complete_model(params)
+modello_prova = SomatoModelPyrates(params)
+modello_prova.circuit_to_yaml(yaml_output)
+#modello_prova.circuit_to_yaml()
 potential_df, rates_df = modello_prova.simulate()
 # %% plot
 # division into layers
