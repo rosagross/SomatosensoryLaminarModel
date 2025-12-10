@@ -94,7 +94,7 @@ class SomatoModel():
     def create_Ibackground(self):
         """Create Background Input"""
         Ib = np.zeros(int(self.simulation_dur / self.step_size))
-        Ib[:] = self.Iext_strength
+        Ib[:] = self.Ib_strength
         return Ib
 
         

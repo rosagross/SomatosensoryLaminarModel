@@ -61,11 +61,11 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [10]
-input_durations = [1]
+coupling_strengths = [9.354]
+input_durations = [0]
 backgrndI_strengths = [5] #,6,7]
-input_strengths = [15]
-balance_EI = [0.6]
+input_strengths = [0]
+balance_EI = [0.4]
 
 # %%
 for d in input_durations:
@@ -85,8 +85,8 @@ for d in input_durations:
                     params['Iext_strength'] = s
                     params['Ib_strength'] = sb
 
-                    model = SomatoModel(params)
-                    #model = SomatoModelPyrates(params)
+                    #model = SomatoModel(params)
+                    model = SomatoModelPyrates(params)
                     
                     # simulate rates and potentials
                     start = time.time()
@@ -97,18 +97,18 @@ for d in input_durations:
                     print("Simulation duration (in s):", duration)
 
                     # print important parameters
-                    print(model.simulation_dur)
-                    print(model.step_size)
-                    print(model.input_onset) 
-                    print(model.thal_connect) 
-                    print(model.extI_cellcounts) 
-                    print(model.balance_EI) 
-                    print(model.bI_cellcounts) 
-                    print(model.thal_cellcounts) 
-                    print(model.bEI_thal) 
-                    print(model.g_thal) 
-                    print(model.input_type) 
-                    print(model.area) 
+                    print('simulation_dur', model.simulation_dur)
+                    print('step_size', model.step_size)
+                    print('input_onset', model.input_onset) 
+                    print('thal_connect', model.thal_connect) 
+                    print('extI_cellcounts', model.extI_cellcounts) 
+                    print('balance_EI', model.balance_EI) 
+                    print('bI_cellcounts', model.bI_cellcounts) 
+                    print('thal_cellcounts', model.thal_cellcounts) 
+                    print('bEI_thal', model.bEI_thal) 
+                    print('g_thal', model.g_thal) 
+                    print('input_type', model.input_type) 
+                    print('area', model.area) 
                     print(model.coupling_strength) 
                     print(model.Ib_strength) 
                     print(model.Iext_strength) 
