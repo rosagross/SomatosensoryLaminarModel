@@ -11,4 +11,4 @@ Simulations/__pycache__/*.pyc
 PyratesBasics/exp_model/simulations/*.csv
 PyratesBasics/exp_model/fort.*
 Figures
-bat/start.sh
+bat/start.shcore
