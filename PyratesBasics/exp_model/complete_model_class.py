@@ -452,8 +452,9 @@ class SomatoModelPyrates():
         return potential_df, rates_df
 
 
-
-# %% EXAMPLE 
+# %% 
+"""
+EXAMPLE 
 yaml_output = '/data/p_02989/Modelling/mecozzi_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model_yaml/modello_prova.yaml'
 params = read_simulation_params()
 
@@ -464,13 +465,13 @@ modello_prova.circuit_to_yaml(yaml_output)
 potential_df, rates_df = modello_prova.simulate()
 # %% plot
 # division into layers
-"""
+
 layers = [potential_df.columns[:4],   # A3b 
           potential_df.columns[4:17],  # S1
           potential_df.columns[17:30],  # S2
           potential_df.columns[30:32] # thal
          ]
-"""
+
 layers = [ # i_ext + bckgrd
     ["E1S1","E2S1","E3S1","E4S1"],
     ["E1S2","E2S2","E3S2","E4S2"],
@@ -484,7 +485,7 @@ layers = [ # i_ext + bckgrd
     ["VIPS2"]
 ]
 
-"""fig, axes = plt.subplots(2, 2, figsize=(14, 10))  """
+fig, axes = plt.subplots(2, 2, figsize=(14, 10)) 
 fig, axes = plt.subplots(4, 3, figsize=(18, 16))
 axes = axes.flatten()
 for ax, cols in zip(axes, layers):
@@ -503,13 +504,13 @@ plt.show()
 # %% plot - rates
 
 # division into layers
-"""
+
 layers = [rates_df.columns[:4],   # A3b 
           rates_df.columns[4:17],  # S1
           potential_df.columns[17:30],  # S2
           potential_df.columns[30:32] # thal
          ]
-"""
+
 layers = [ # i_ext + bckgrd
     ["E1S1","E2S1","E3S1","E4S1"],
     ["E1S2","E2S2","E3S2","E4S2"],
@@ -539,5 +540,5 @@ for ax, cols in zip(axes, layers):
 fig.suptitle("Rates", fontsize=20, fontweight='bold')
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.show() 
-
+"""
 # %%
