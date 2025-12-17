@@ -2,12 +2,16 @@
 """ Complete PyRates model with the parameters from "parameters.py" and definitions compatible with PyCobi continuations. 
 - background input in all non-thalamic populations
 - time-varying external input in thalE
-- connectivity parameters (g/bEI)
+- connectivity parameters (g/bEI) 
 """
-# %%
+
 import os 
 import sys
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+
+WDDIR = os.getenv("WDDIR")
+SIMDIR = os.getenv("SIMDIR")
+os.chdir(os.path.join(WDDIR,"PyratesBasics","exp_model")) 
+
 from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, CircuitTemplate
 from copy import deepcopy
 #from parameters import Parameter
@@ -18,10 +22,11 @@ from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
 ## import dei parametri
-param_path = "/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations"
+param_path = os.path.join(WDDIR,"Simulations")
 if param_path not in sys.path:
     sys.path.append(param_path)
 from parameters import Parameter
+
 #%%
 # Parameters:
 cells = ['E3b','PV3b','SST3b','VIP3b', # A3b

@@ -41,7 +41,7 @@ step_size=somat_model.step_size
 sampling_step_size=somat_model.sampling_step_size
 
 # %%
-param_grid = {'background_input': np.array([0, 5, 10, 15, 20, 50, 100, 200])} # values to "sweep" (defined as dictionary)  / the name is not related to the PyRates definition
+param_grid = {'background_input': np.array([0, 5, 7])} # values to "sweep" (defined as dictionary)  / the name is not related to the PyRates definition
 param_map = {
     'background_input': {
         'vars': ['BACKGROUND/RPO_bI/bI'],
@@ -80,10 +80,13 @@ results, results_map = grid_search(circuit_template=pmdl,
                                    inputs = None, # the input is inside the model
                                    outputs=outputs,
                                    backend="scipy",
-                                   permute_grid=True
+                                   permute_grid=True,
+                                   vectorize=False,
+                                   float_precision="float64"
                                    #solver="euler",
                                    #cutoff=cutoff
                                    )
+
 # structure of "results": nested Pandas Dataframe with a multi-level column index
 # 1) outputs requested in "grid_search"
 # 2) simulation keys (parameters sweep runs)
@@ -170,5 +173,66 @@ for row_axes, key in zip(axes, results_map.index):
 fig.suptitle(f"Potentials: {par_name1}", fontsize=20, fontweight='bold')
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.show()
+
+# %%
+
+results_grid1 = results.loc[:, idx[:, 'model_0']]
+results_grid2 = results.loc[:, idx[:, 'model_1']]
+results_grid3 = results.loc[:, idx[:, 'model_2']]
+
+# read in simulations from class
+results_class0 = pd.read_csv(os.path.join(param_path, 'simulation_results_class_pyrates.csv'))  
+results_class5 = pd.read_csv(os.path.join(param_path, 'simulation_results_class_pyrates_b5.csv'))  
+results_class7 = pd.read_csv(os.path.join(param_path, 'simulation_results_class_pyrates_b7.csv'))  
+
+# compare results from grid search with class simulations
+results_grid1.columns = list(outputs.keys())
+results_grid2.columns = list(outputs.keys())
+results_grid3.columns = list(outputs.keys())
+
+# %%
+diff_class_grid0 = pd.DataFrame(
+    results_class0.to_numpy() - results_grid1.to_numpy(),
+    index=results_grid2.index,
+    columns=results_grid2.columns
+)
+
+plt.plot(diff_class_grid0['V_E3b/RPO_E3b'])
+plt.plot(diff_class_grid0['V_E3b/RPO_PV3b'])
+plt.plot(diff_class_grid0['V_E3b/RPO_SST3b'])
+
+# %%
+diff_class_grid5 = pd.DataFrame(
+    results_class5.to_numpy() - results_grid2.to_numpy(),
+    index=results_grid1.index,
+    columns=results_grid1.columns
+)
+
+plt.plot(diff_class_grid5['V_E3b/RPO_E3b'])
+plt.plot(diff_class_grid5['V_E3b/RPO_PV3b'])
+plt.plot(diff_class_grid5['V_E3b/RPO_SST3b'])
+
+# %%
+diff_class_grid7 = pd.DataFrame(
+    results_class7.to_numpy() - results_grid3.to_numpy(),
+    index=results_grid2.index,
+    columns=results_grid2.columns
+)
+
+plt.plot(diff_class_grid7['V_E3b/RPO_E3b'])
+plt.plot(diff_class_grid7['V_E3b/RPO_PV3b'])
+plt.plot(diff_class_grid7['V_E3b/RPO_SST3b'])
+
+# %%
+
+diff_grid_grid = pd.DataFrame(
+    results_grid1.to_numpy() - results_grid2.to_numpy(),
+    index=results_grid1.index,
+    columns=results_grid1.columns
+)
+
+plt.plot(diff_grid_grid['V_E3b/RPO_E3b'])
+plt.plot(diff_grid_grid['V_E3b/RPO_PV3b'])
+plt.plot(diff_grid_grid['V_E3b/RPO_SST3b'])
 
 # %%

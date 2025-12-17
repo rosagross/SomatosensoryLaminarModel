@@ -1,16 +1,17 @@
 # %%
-""" Complete PyRates model with the parameters from "parameters.py" and definitions compatible with PyCobi continuations. 
+''' Complete PyRates model with the parameters from "parameters.py" and definitions compatible with PyCobi continuations. 
 - background input in all non-thalamic populations
 - time-varying external input in thalE
 - connectivity parameters (g/bEI)
 CLASS VERSION
-"""
-# %% libraries import
+'''
+# libraries import
 import os 
 WDDIR = os.getenv("WDDIR")
 SIMDIR = os.getenv("SIMDIR")
 os.chdir(os.path.join(WDDIR,"PyratesBasics","exp_model")) 
 import sys
+# %%
 from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, CircuitTemplate
 from copy import deepcopy
 #from parameters import Parameter
@@ -421,6 +422,9 @@ class SomatoModelPyrates():
                   float_precision="float64"
                   #decorator=njit
                   )
+
+        results.to_csv(os.path.join(param_path, 'simulation_results_class_pyrates_b7.csv'), index=False)  
+
         all_potentials = []
         for i, cell in enumerate(self.cells):
             # always include rpo_names[:N_cells]
@@ -453,8 +457,8 @@ class SomatoModelPyrates():
 
 
 # %% 
-"""
-EXAMPLE 
+# EXAMPLE 
+'''
 yaml_output = '/data/p_02989/Modelling/mecozzi_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model_yaml/modello_prova.yaml'
 params = read_simulation_params()
 
@@ -540,5 +544,6 @@ for ax, cols in zip(axes, layers):
 fig.suptitle("Rates", fontsize=20, fontweight='bold')
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.show() 
-"""
+
 # %%
+'''
