@@ -22,6 +22,8 @@ if param_path not in sys.path:
     sys.path.append(param_path)
 from parameters import Parameter
 import json
+
+
 # %%  TODO: can I import this directly from the other code?
 def read_simulation_params():
     """Read simulation parameters from json file."""
@@ -30,13 +32,14 @@ def read_simulation_params():
         params = json.load(json_file)
     
     return params
+
 # %% model creation (class)
 params = read_simulation_params()
 somat_model = SomatoModelPyrates(params)
 pmdl = somat_model.model # PyRates model
 
 # %% Simulation parameters
-simulation_time=somat_model.simulation_time
+results_class0=somat_model.simulation_time
 step_size=somat_model.step_size
 sampling_step_size=somat_model.sampling_step_size
 

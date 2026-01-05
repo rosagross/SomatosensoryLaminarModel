@@ -12,13 +12,12 @@ PRO_E3b:
 connectivity_E3b:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 RPO_E3b:
   base: OperatorTemplate
   equations:
@@ -422,12 +421,11 @@ PRO_PV3b:
 connectivity_PV3b:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV3b:
   base: NodeTemplate
@@ -480,12 +478,11 @@ PRO_SST3b:
 connectivity_SST3b:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST3b:
   base: NodeTemplate
@@ -538,12 +535,11 @@ PRO_VIP3b:
 connectivity_VIP3b:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 VIP3b:
   base: NodeTemplate
@@ -596,13 +592,12 @@ PRO_E1S1:
 connectivity_E1S1:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 E1S1:
   base: NodeTemplate
   operators:
@@ -654,12 +649,11 @@ PRO_PV1S1:
 connectivity_PV1S1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV1S1:
   base: NodeTemplate
@@ -712,12 +706,11 @@ PRO_SST1S1:
 connectivity_SST1S1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST1S1:
   base: NodeTemplate
@@ -770,12 +763,11 @@ PRO_VIPS1:
 connectivity_VIPS1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 VIPS1:
   base: NodeTemplate
@@ -828,13 +820,12 @@ PRO_E2S1:
 connectivity_E2S1:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 E2S1:
   base: NodeTemplate
   operators:
@@ -886,12 +877,11 @@ PRO_PV2S1:
 connectivity_PV2S1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV2S1:
   base: NodeTemplate
@@ -944,12 +934,11 @@ PRO_SST2S1:
 connectivity_SST2S1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST2S1:
   base: NodeTemplate
@@ -1002,13 +991,12 @@ PRO_E3S1:
 connectivity_E3S1:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 E3S1:
   base: NodeTemplate
   operators:
@@ -1060,12 +1048,11 @@ PRO_PV3S1:
 connectivity_PV3S1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV3S1:
   base: NodeTemplate
@@ -1118,12 +1105,11 @@ PRO_SST3S1:
 connectivity_SST3S1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST3S1:
   base: NodeTemplate
@@ -1176,13 +1162,12 @@ PRO_E4S1:
 connectivity_E4S1:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 E4S1:
   base: NodeTemplate
   operators:
@@ -1234,12 +1219,11 @@ PRO_PV4S1:
 connectivity_PV4S1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV4S1:
   base: NodeTemplate
@@ -1292,12 +1276,11 @@ PRO_SST4S1:
 connectivity_SST4S1:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST4S1:
   base: NodeTemplate
@@ -1350,13 +1333,12 @@ PRO_E1S2:
 connectivity_E1S2:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 E1S2:
   base: NodeTemplate
   operators:
@@ -1408,12 +1390,11 @@ PRO_PV1S2:
 connectivity_PV1S2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV1S2:
   base: NodeTemplate
@@ -1466,12 +1447,11 @@ PRO_SST1S2:
 connectivity_SST1S2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST1S2:
   base: NodeTemplate
@@ -1524,12 +1504,11 @@ PRO_VIPS2:
 connectivity_VIPS2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 VIPS2:
   base: NodeTemplate
@@ -1582,13 +1561,12 @@ PRO_E2S2:
 connectivity_E2S2:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 E2S2:
   base: NodeTemplate
   operators:
@@ -1640,12 +1618,11 @@ PRO_PV2S2:
 connectivity_PV2S2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV2S2:
   base: NodeTemplate
@@ -1698,12 +1675,11 @@ PRO_SST2S2:
 connectivity_SST2S2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST2S2:
   base: NodeTemplate
@@ -1756,13 +1732,12 @@ PRO_E3S2:
 connectivity_E3S2:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 E3S2:
   base: NodeTemplate
   operators:
@@ -1814,12 +1789,11 @@ PRO_PV3S2:
 connectivity_PV3S2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV3S2:
   base: NodeTemplate
@@ -1872,12 +1846,11 @@ PRO_SST3S2:
 connectivity_SST3S2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST3S2:
   base: NodeTemplate
@@ -1930,13 +1903,12 @@ PRO_E4S2:
 connectivity_E4S2:
   base: OperatorTemplate
   equations:
-  - m_out = (g*bEI/connect_reverse_factor)*m_outC
+  - m_out = (g*bEI)*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
     m_outC: input
-    connect_reverse_factor: input(6448.0)
 E4S2:
   base: NodeTemplate
   operators:
@@ -1988,12 +1960,11 @@ PRO_PV4S2:
 connectivity_PV4S2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 PV4S2:
   base: NodeTemplate
@@ -2046,12 +2017,11 @@ PRO_SST4S2:
 connectivity_SST4S2:
   base: OperatorTemplate
   equations:
-  - m_out = ((-g)*(1-bEI)/connect_reverse_factor)*m_outC
+  - m_out = ((-g)*(1-bEI))*m_outC
   variables:
     m_out: output
     g: input
     bEI: input
-    connect_reverse_factor: input(6448.0)
     m_outC: input
 SST4S2:
   base: NodeTemplate
@@ -2113,11 +2083,12 @@ RPO_Iext:
   base: OperatorTemplate
   equations:
   - d/dt * v = i
-  - d/dt * i = H/tau * (Iext) - 2 * i/tau - v/tau^2
+  - d/dt * i = H/tau * Iext_cellcounts * (Iext) - 2 * i/tau - v/tau^2
   variables:
     v: output
     i: variable
     Iext: input
+    Iext_cellcounts: 1000
     tau: 0.003
     H: 1.0
 InputOp:
@@ -2127,9 +2098,9 @@ InputOp:
   variables:
     Iext: output
     t: variable
-    A: 0.0
+    A: 0
     onset: 1000.0
-    dur: 1000.0
+    dur: 0.0
 thalE:
   base: NodeTemplate
   operators:
@@ -2229,11 +2200,12 @@ RPO_bI:
   base: OperatorTemplate
   equations:
   - d/dt * v_bI = i
-  - d/dt * i = H/tau * (bI) - 2 * i/tau - v_bI/tau^2
+  - d/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v_bI/tau^2
   variables:
     v_bI: output
     i: variable
-    bI: input(0.0)
+    bI: input(0)
+    bI_cellcount: 100
     tau: 0.003
     H: 1.0
 BACKGROUND:
@@ -2246,7 +2218,7 @@ g_definition:
   - gC = g_input
   variables:
     gC: output
-    g_input: input(100.0)
+    g_input: input(10.0)
 G:
   base: NodeTemplate
   operators:
@@ -2257,7 +2229,7 @@ g_thal_definition:
   - g_thalC = g_thal_input
   variables:
     g_thalC: output
-    g_thal_input: input(100.0)
+    g_thal_input: input(2.0)
 G_THAL:
   base: NodeTemplate
   operators:
@@ -2341,7 +2313,7 @@ model:
   - - E3b/connectivity_E3b/m_out
     - E3b/RPO_E3b/m_in
     - 
-    - weight: 53.61853519164955
+    - weight: 53.61853519164954
   - - PV3b/connectivity_PV3b/m_out
     - E3b/RPO_PV3b/m_in
     - 
@@ -2461,7 +2433,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E3b/RPO_thalE/m_in
     - 
-    - weight: 571.71583
+    - weight: 198.695
   - - thalI/connectivity_thalI/m_out
     - E3b/RPO_thalI/m_in
     - 
@@ -2485,11 +2457,11 @@ model:
   - - PV3b/connectivity_PV3b/m_out
     - PV3b/RPO_PV3b/m_in
     - 
-    - weight: 7.405289065743944
+    - weight: 7.405289065743945
   - - SST3b/connectivity_SST3b/m_out
     - PV3b/RPO_SST3b/m_in
     - 
-    - weight: 5.908537795623368
+    - weight: 5.908537795623369
   - - VIP3b/connectivity_VIP3b/m_out
     - PV3b/RPO_VIP3b/m_in
     - 
@@ -2497,7 +2469,7 @@ model:
   - - E1S1/connectivity_E1S1/m_out
     - PV3b/RPO_E1S1/m_in
     - 
-    - weight: 105.80064779411764
+    - weight: 105.80064779411767
   - - PV1S1/connectivity_PV1S1/m_out
     - PV3b/RPO_PV1S1/m_in
     - 
@@ -2601,7 +2573,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV3b/RPO_thalE/m_in
     - 
-    - weight: 35.69699
+    - weight: 198.695
   - - thalI/connectivity_thalI/m_out
     - PV3b/RPO_thalI/m_in
     - 
@@ -2673,11 +2645,11 @@ model:
   - - SST3S1/connectivity_SST3S1/m_out
     - SST3b/RPO_SST3S1/m_in
     - 
-    - weight: 1.638430034129693
+    - weight: 1.6384300341296931
   - - E4S1/connectivity_E4S1/m_out
     - SST3b/RPO_E4S1/m_in
     - 
-    - weight: 15.772505119453925
+    - weight: 15.772505119453928
   - - PV4S1/connectivity_PV4S1/m_out
     - SST3b/RPO_PV4S1/m_in
     - 
@@ -2741,7 +2713,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - SST3b/RPO_thalE/m_in
     - 
-    - weight: 2.3520000000000003
+    - weight: 24.5
   - - thalI/connectivity_thalI/m_out
     - SST3b/RPO_thalI/m_in
     - 
@@ -3021,7 +2993,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E1S1/RPO_thalE/m_in
     - 
-    - weight: 41.09806400000001
+    - weight: 12.152000000000001
   - - thalI/connectivity_thalI/m_out
     - E1S1/RPO_thalI/m_in
     - 
@@ -3041,7 +3013,7 @@ model:
   - - E3b/connectivity_E3b/m_out
     - PV1S1/RPO_E3b/m_in
     - 
-    - weight: 109.03315532286214
+    - weight: 109.03315532286213
   - - PV3b/connectivity_PV3b/m_out
     - PV1S1/RPO_PV3b/m_in
     - 
@@ -3161,7 +3133,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV1S1/RPO_thalE/m_in
     - 
-    - weight: 2.1873600000000004
+    - weight: 12.152000000000001
   - - thalI/connectivity_thalI/m_out
     - PV1S1/RPO_thalI/m_in
     - 
@@ -3185,7 +3157,7 @@ model:
   - - PV3b/connectivity_PV3b/m_out
     - SST1S1/RPO_PV3b/m_in
     - 
-    - weight: 7.22259117647059
+    - weight: 7.222591176470589
   - - SST3b/connectivity_SST3b/m_out
     - SST1S1/RPO_SST3b/m_in
     - 
@@ -3469,7 +3441,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - E2S1/RPO_SST3b/m_in
     - 
-    - weight: 4.973105802047783
+    - weight: 4.973105802047782
   - - VIP3b/connectivity_VIP3b/m_out
     - E2S1/RPO_VIP3b/m_in
     - 
@@ -3581,7 +3553,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E2S1/RPO_thalE/m_in
     - 
-    - weight: 259.66080000000005
+    - weight: 78.4
   - - thalI/connectivity_thalI/m_out
     - E2S1/RPO_thalI/m_in
     - 
@@ -3721,7 +3693,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV2S1/RPO_thalE/m_in
     - 
-    - weight: 13.328000000000001
+    - weight: 78.4
   - - thalI/connectivity_thalI/m_out
     - PV2S1/RPO_thalI/m_in
     - 
@@ -3861,7 +3833,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - SST2S1/RPO_thalE/m_in
     - 
-    - weight: 1.8816000000000004
+    - weight: 19.6
   - - thalI/connectivity_thalI/m_out
     - SST2S1/RPO_thalI/m_in
     - 
@@ -4001,7 +3973,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E3S1/RPO_thalE/m_in
     - 
-    - weight: 111.17316
+    - weight: 50.764
   - - thalI/connectivity_thalI/m_out
     - E3S1/RPO_thalI/m_in
     - 
@@ -4029,7 +4001,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - PV3S1/RPO_SST3b/m_in
     - 
-    - weight: 9.841327645051194
+    - weight: 9.841327645051196
   - - VIP3b/connectivity_VIP3b/m_out
     - PV3S1/RPO_VIP3b/m_in
     - 
@@ -4141,7 +4113,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV3S1/RPO_thalE/m_in
     - 
-    - weight: 11.066552000000001
+    - weight: 50.764
   - - thalI/connectivity_thalI/m_out
     - PV3S1/RPO_thalI/m_in
     - 
@@ -4421,7 +4393,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E4S1/RPO_thalE/m_in
     - 
-    - weight: 45.44064
+    - weight: 17.64
   - - thalI/connectivity_thalI/m_out
     - E4S1/RPO_thalI/m_in
     - 
@@ -4441,7 +4413,7 @@ model:
   - - E3b/connectivity_E3b/m_out
     - PV4S1/RPO_E3b/m_in
     - 
-    - weight: 118.9701142670157
+    - weight: 118.97011426701572
   - - PV3b/connectivity_PV3b/m_out
     - PV4S1/RPO_PV3b/m_in
     - 
@@ -4561,7 +4533,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV4S1/RPO_thalE/m_in
     - 
-    - weight: 1.9756799999999999
+    - weight: 17.64
   - - thalI/connectivity_thalI/m_out
     - PV4S1/RPO_thalI/m_in
     - 
@@ -4841,7 +4813,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E1S2/RPO_thalE/m_in
     - 
-    - weight: 8.219612800000002
+    - weight: 2.4304000000000006
   - - thalI/connectivity_thalI/m_out
     - E1S2/RPO_thalI/m_in
     - 
@@ -4981,7 +4953,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV1S2/RPO_thalE/m_in
     - 
-    - weight: 0.4374720000000001
+    - weight: 2.4304000000000006
   - - thalI/connectivity_thalI/m_out
     - PV1S2/RPO_thalI/m_in
     - 
@@ -5401,7 +5373,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E2S2/RPO_thalE/m_in
     - 
-    - weight: 51.93216000000001
+    - weight: 15.680000000000001
   - - thalI/connectivity_thalI/m_out
     - E2S2/RPO_thalI/m_in
     - 
@@ -5541,7 +5513,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV2S2/RPO_thalE/m_in
     - 
-    - weight: 2.6656000000000004
+    - weight: 15.680000000000001
   - - thalI/connectivity_thalI/m_out
     - PV2S2/RPO_thalI/m_in
     - 
@@ -5681,7 +5653,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - SST2S2/RPO_thalE/m_in
     - 
-    - weight: 0.3763200000000001
+    - weight: 3.9200000000000004
   - - thalI/connectivity_thalI/m_out
     - SST2S2/RPO_thalI/m_in
     - 
@@ -5821,7 +5793,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E3S2/RPO_thalE/m_in
     - 
-    - weight: 22.234632
+    - weight: 10.152800000000001
   - - thalI/connectivity_thalI/m_out
     - E3S2/RPO_thalI/m_in
     - 
@@ -5961,7 +5933,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV3S2/RPO_thalE/m_in
     - 
-    - weight: 2.2133104000000006
+    - weight: 10.152800000000001
   - - thalI/connectivity_thalI/m_out
     - PV3S2/RPO_thalI/m_in
     - 
@@ -6241,7 +6213,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - E4S2/RPO_thalE/m_in
     - 
-    - weight: 9.088128000000001
+    - weight: 3.5280000000000005
   - - thalI/connectivity_thalI/m_out
     - E4S2/RPO_thalI/m_in
     - 
@@ -6381,7 +6353,7 @@ model:
   - - thalE/connectivity_thalE/m_out
     - PV4S2/RPO_thalE/m_in
     - 
-    - weight: 0.395136
+    - weight: 3.5280000000000005
   - - thalI/connectivity_thalI/m_out
     - PV4S2/RPO_thalI/m_in
     - 
