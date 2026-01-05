@@ -61,11 +61,11 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [9.354]
+coupling_strengths = [10.0]
 input_durations = [0]
-backgrndI_strengths = [5] #,6,7]
+backgrndI_strengths = [0, 7] #,6,7]
 input_strengths = [0]
-balance_EI = [0.4]
+balance_EI = [0.5]
 
 # %%
 for d in input_durations:
@@ -85,8 +85,8 @@ for d in input_durations:
                     params['Iext_strength'] = s
                     params['Ib_strength'] = sb
 
-                    #model = SomatoModel(params)
-                    model = SomatoModelPyrates(params)
+                    model = SomatoModel(params)
+                    #model = SomatoModelPyrates(params)
                     
                     # simulate rates and potentials
                     start = time.time()

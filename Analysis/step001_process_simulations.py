@@ -80,7 +80,7 @@ for d in input_durations:
                     df = pd.DataFrame()
                     
                     # read data 
-                    rates_df, potentials_df, _ = load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, output_dir)
+                    rates_df, potentials_df, filename = load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, sim_dir)
 
                     # compute characteristics
                     compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)

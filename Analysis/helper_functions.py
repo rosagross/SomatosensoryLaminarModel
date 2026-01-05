@@ -308,14 +308,18 @@ def load_parameters(WDDIR):
         params = json.load(json_file)
     return params
 
-def load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, output_dir):
+def load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False):
     """ Read simulation data """
     # read in firing rates in data matrix (datapoints x populations)
-    filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
-    rates_df = pd.read_hdf(os.path.join(output_dir, filename), key='rates')
+    if pyrates:
+        filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_PYRATES.hdf5"
+    else:    
+        filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
+
+    rates_df = pd.read_hdf(os.path.join(data_dir, filename), key='rates')
     
     # read in potentials in data matrix (datapoints x populations)
-    potentials_df = pd.read_hdf(os.path.join(output_dir, filename), key='summed_potential')
+    potentials_df = pd.read_hdf(os.path.join(data_dir, filename), key='summed_potential')
 
     return rates_df, potentials_df, filename
 
