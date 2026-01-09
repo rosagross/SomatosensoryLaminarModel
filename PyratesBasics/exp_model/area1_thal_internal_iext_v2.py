@@ -1,15 +1,23 @@
 # %%
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+os.chdir("/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
-from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
 from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
+
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+param_path = os.path.join(WDDIR, 'Simulations')
+
+if param_path not in sys.path:
+    sys.path.append(param_path)
+from parameters import Parameter
 
 #%%
 # Parameters:
@@ -24,11 +32,11 @@ input_type = "step" # other options are "step", "baseline" (equals input strengt
 input_onset = 1 # in sec
 simulation_dur = 1 
 input_duration = 0.5  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 50 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+input_strength = 100 #[0, 50, 300, 500] #np.arange(0, 500, 100)
 backgrndI_strengths = 0 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
-simulation_time = int(input_onset) + simulation_dur
+simulation_time = 2 #int(input_onset) + simulation_dur
 
 # %%
 sigmoid_params = params.get_sigmoid() #already in the correct order
@@ -54,21 +62,26 @@ tau_a1_thal = np.hstack((tau[0, 4:17], tau[0, -2:]))
 
 # %%
 bEI = 0.5
-connect_reverse_factor =  6448 
-g = 100.0 # (g)
-gE = g * bEI /connect_reverse_factor
-gI = g * (1 - bEI) /connect_reverse_factor
-gEthal = 0
-gIthal = 0
+g = 10.0 # (g)
+gE = g * bEI
+gI = g * (1 - bEI)
+g_thal = 2
+bEI_thal = 0.5
+gEthal = g_thal * bEI_thal
+gIthal = g_thal * (1 - bEI_thal)
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
+extI_cellcounts = 1000
+bI_cellcounts = 100
+thal_cellcounts = 500
 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='all') 
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, extI_cellcounts, bI_cellcounts, thal_cellcounts, area='all') 
 
 # selecting the region --> A1: FROM THE 5TH ELEMENT TO THE 17TH (INCLUDED) 
 # in python the results include the start index but excludes the end index
 rows = np.r_[4:17, 30, 31]
 cols = np.r_[4:17, 30, 31]
 W_A1_thal = W[np.ix_(rows, cols)]
+
 """
 W[-2:,-4:-2] (within thalamus connectivity)
 W[-2:,4:-4] (A1 to thalamus connectivity)

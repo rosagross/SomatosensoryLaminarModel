@@ -1,15 +1,23 @@
 # %%
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+os.chdir("/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
-from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import sys
 from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
+
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+param_path = os.path.join(WDDIR, 'Simulations')
+
+if param_path not in sys.path:
+    sys.path.append(param_path)
+from parameters import Parameter
 
 #%%
 # Parameters:

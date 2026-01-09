@@ -35,10 +35,10 @@ class SomatoModel():
         self.input_onset = 1.001
         self.thal_connect = [0,0,0,0]
         self.extI_cellcounts = 1000
-        self.balance_EI = 0.7
+        self.balance_EI = 0 #0.7
         self.bI_cellcounts = 100
         self.thal_cellcounts = 500
-        self.bEI_thal = 0.5
+        self.bEI_thal = 0 #0.5
         self.g_thal = 2
         self.input_type = 'step'
         self.area = 'all' 

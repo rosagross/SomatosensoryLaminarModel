@@ -238,6 +238,7 @@ class SomatoModelPyrates():
                'H': 1.0}
             ) 
         ]
+        
         # definition of the external input
         create_I_ext = [OperatorTemplate(
             name="InputOp", path=None,

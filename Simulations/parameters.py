@@ -298,6 +298,7 @@ class Parameter():
         PS_from_thal_S1 = np.multiply(P_thalToS1, S_thalToS1)
         cell_count_thal = thal_cellcount # it is 230 in Jiang et al. 2023 but for us it might be different!
         W_from_thal_S1 = np.multiply(PS_from_thal_S1, cell_count_thal)
+        #W_from_thal_S1 = np.zeros((2,13))
 
         # now that we have the connectivity from- and to thalamus and S1/S2,
         # we can collapse it to get input array to area 3b 
@@ -306,6 +307,7 @@ class Parameter():
         W_A3bThal_S = np.sum(W_from_thal_S1[:,idx_S1_S], axis=1)
         W_A3bThal_V = np.sum(W_from_thal_S1[:,idx_S1_V], axis=1)
         W_A3bThal = np.vstack((W_A3bThal_E, W_A3bThal_P, W_A3bThal_S, W_A3bThal_V))
+        #W_A3bThal = np.zeros((4,2))
 
         # adjust input from thalamus to S1 (should be slightly weaker compared to A3b)
         W_from_thal_S1 = W_from_thal_S1 * 0.8

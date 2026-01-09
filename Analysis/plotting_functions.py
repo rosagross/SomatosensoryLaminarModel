@@ -2,8 +2,10 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import numpy as np
 import matplotlib.cm as cm 
 from matplotlib.colors import ListedColormap, Normalize, BoundaryNorm
+from plotting_style import figure_style
 
 def bEImulti_fingerprint_IextDurVsStr(data_df, g, bEIs, Ib_str, population, thalamus_source, figure_dir):
     '''
@@ -277,3 +279,172 @@ def inputStrengthOnminMaxpotential(data_df, Iext_str, Ib_str, bEI, population, p
     plt.savefig(os.path.join(figure_dir, f'FixedPoint_potential_{potential_measure}_Iextstr{Iext_str}_Ibstr{Ib_str}_bEI{bEI}_pop{population}_tauVisual_{thalamus_source}.pdf'), bbox_inches='tight')
     plt.show()
 
+def plot_axis(axs, steps, start_plot, rates, idx_rates):
+    axs.plot(steps[start_plot:], rates[idx_rates].T[start_plot:], linewidth=1)
+
+def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels):
+    """ Plot population rates for given labels and indices."""
+    legend_list = []
+    for i, idx in enumerate(idxs_pop):
+        plot_axis(axs_op, steps, start_plot, rates, idx)
+        legend_list.append(f'{labels[i]} {np.round(rates[idx].T[-1], 6)}')
+
+    axs_op.legend(legend_list, loc='upper right')
+
+def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, bEI, g, d, sb, s, figure_dir):
+    steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
+    fig, axs = plt.subplots(4, 3, figsize=(15, 15))  # Set figure size
+    figure_style()
+
+    # external input 
+    axs_extI = axs[0][0]
+    axs_extI.plot(steps[start_plot:], Iext[start_plot:], label='Iext rate')
+    axs_extI.plot(steps[start_plot:], Ib[start_plot:], label='Ib rate')
+    axs_extI.legend(title='')
+    axs_extI.set_ylabel('Hz')
+    # thalamus
+    axs_thal = axs[1][0]
+    axs_thal.plot(steps[start_plot:], rates[-2:-1].T[start_plot:], color='purple')
+    axs_thal.plot(steps[start_plot:], rates[-1:].T[start_plot:], color='grey')
+    axs_thal.legend(['Thalamus E', 'Thalamus I'])
+    axs_thal.set_ylabel('Hz')
+
+    # area 3b
+    axsA3b = axs[2][0]
+    axsA3b.plot(steps[start_plot:], rates[:4].T[start_plot:], linewidth=1)
+    axsA3b.legend([f'E {np.round(rates[0].T[-1], 6)}', f'PV {np.round(rates[1].T[-1], 6)}', f'SOM {np.round(rates[2].T[-1], 6)}', f'VIP {np.round(rates[3].T[-1], 6)}'])
+    axsA3b.set_ylabel('Hz')
+
+    # plot results for the S1 column 
+    idxs_E = np.array([0+4, 4+4, 7+4, 10+4]) # indices of E populations in S1
+    labels_pops = [['E1', 'E2', 'E3', 'E4'], ['PV1', 'PV2', 'PV3', 'PV4'], ['SST1', 'SST2', 'SST3', 'SST4'], ['VIP1']]
+    
+    # loop over populations for S1 and S2
+    for i, labels in enumerate(labels_pops):
+        if i<3:
+            axs_pop = axs[i][1]
+            plot_population_rates(axs_pop, idxs_E+i, rates, steps, start_plot, labels)
+        else:
+            # VIP
+            axsVIPS1 = axs[i][1]
+            axsVIPS1.plot(steps[start_plot:], rates[3+4].T[start_plot:], linewidth=1)
+            axsVIPS1.legend([f'VIP1 {np.round(rates[3+4].T[-1], 6)}'])
+
+        # plot results S2
+        nr_pops = 13 # number of pops in S1
+        if i<3:
+            axs_pop = axs[i][2]
+            plot_population_rates(axs_pop, idxs_E+i+nr_pops, rates, steps, start_plot, labels)
+        else:
+            # VIP
+            axsVIPS2 = axs[i][2]
+            axsVIPS2.plot(steps[start_plot:], rates[3+nr_pops].T[start_plot:], linewidth=1)
+            axsVIPS2.legend([f'VIP1 {np.round(rates[3+nr_pops].T[-1], 6)}'])
+    
+    # Hide extra figure cell in col 0
+    axs[3, 0].axis("off")
+    
+    # set x-axis label for bottom row
+    for ax in axs[3, :]:
+        ax.set_xlabel('Time (ms)')
+    axs[2, 0].set_xlabel('Time (ms)')
+
+    # set titles for each subplot
+    fig.suptitle('Population Rates')
+    axs[0][0].set_title('External input')
+    axs[1][0].set_title('Thalamus')
+    axs[2][0].set_title('Area 3b')
+    axs[0][1].set_title('Area 1 (S1)')
+    axs[0][2].set_title('Area S2')
+
+    #annotate_fig(f'bEI={np.round(bEI, 4)}, g={np.round(g, 4)}, area={area}')
+    sns.despine(trim=True)
+    plt.tight_layout() 
+    plt.legend()
+    figdir = os.path.join(figure_dir, 'single_simulations')
+    if not os.path.exists(figdir):
+        os.makedirs(figdir)
+
+    #plt.savefig(os.path.join(figdir, f'population_rates_bEI-{bEI}_g-{g}_area-{area}_Iextdur-{d}_Iextstr-{s}_Ibstr-{sb}.pdf'), dpi=300)
+    #plt.show()
+
+def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot, figdir, bEI, g, d, sb, s, area='all'):
+    """
+    Plot population potentials for different areas and layers.
+    Parameters:
+    potentials : np.ndarray
+    Iext : np.ndarray
+        external input array
+    Ib : np.ndarray
+        background input array  
+    step_size : float
+    simulation_time : float
+    start_plot : int
+    figdir : str
+    bEI : float
+        EI balance
+    g : float
+        Coupling strength
+    d : float
+        External input duration
+    sb : float
+        Background input strength
+    s : float   
+        External input strength 
+    area : str
+        Area to plot ('all' or only 'A1')
+    """
+    steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
+
+    if area=='all':
+
+        # Layout: 4 rows (max 4 layers), 3 columns (3 areas)
+        fig, axes = plt.subplots(4, 3, figsize=(14, 10), sharex=True, sharey=False)
+        axes = np.array(axes)
+
+        # --- Column 1: Area 3b + Thalamus stacked ---
+        axes[0, 0].plot(potentials[:4].T)
+        axes[0, 0].legend(['E', 'PV', 'SOM', 'VIP'])
+        axes[0, 0].legend([f'E {np.round(potentials[0, -1], 6)}', f'PV {np.round(potentials[1, -1], 6)}', f'SOM {np.round(potentials[2, -1], 6)}', f'VIP {np.round(potentials[3, -1], 6)}'], loc='upper right')
+        axes[0, 0].set_title("Area 3b")
+        axes[0, 0].set_ylabel('mV')
+
+        axes[1, 0].plot(potentials[30:].T)
+        axes[1, 0].set_title("Thalamus")
+
+        # Hide extra rows in col 1 (since only 2 plots)
+        for r in range(2, 4):
+            axes[r, 0].axis("off")
+
+        # --- Column 2: Area 1 layers ---
+        area_1_layers = [[4,5,6,7],[8,9,10],[11,12,13],[14,15,16]]
+        pop_names = ['E', 'PV', 'SOM', 'VIP']
+        for i, layer_idx in enumerate(area_1_layers):
+            axes[i, 1].plot(potentials[layer_idx].T)
+            axes[i, 1].set_title(f"Area 1 - Layer {i+1}")
+            axes[i, 1].set_ylabel('mV')
+            if len(layer_idx)==4:
+                axes[i, 1].legend([f'E {np.round(potentials[layer_idx[0], -1], 6)}', f'PV {np.round(potentials[layer_idx[1], -1], 6)}', f'SOM {np.round(potentials[layer_idx[2], -1], 6)}', f'VIP {np.round(potentials[layer_idx[3], -1], 6)}'], loc='upper right')
+            else:
+                axes[i, 1].legend([f'E {np.round(potentials[layer_idx[0], -1], 6)}', f'PV {np.round(potentials[layer_idx[1], -1], 6)}', f'SOM {np.round(potentials[layer_idx[2], -1], 6)}'], loc='upper right')
+
+
+        # --- Column 3: Area S2 layers ---
+        area_s2_layers = [[17,18,19,20],[21,22,23],[24,25,26],[27,28,29]]
+        for i, layer_idx in enumerate(area_s2_layers):
+            axes[i, 2].plot(potentials[layer_idx].T)
+            axes[i, 2].set_ylabel('mV')
+            axes[i, 2].set_title(f"Area S2 - Layer {i+1}")
+            if len(layer_idx)==4:
+                axes[i, 2].legend([f'E {np.round(potentials[layer_idx[0], -1], 6)}', f'PV {np.round(potentials[layer_idx[1], -1], 6)}', f'SOM {np.round(potentials[layer_idx[2], -1], 6)}', f'VIP {np.round(potentials[layer_idx[3], -1], 6)}'], loc='upper right')
+            else:
+                axes[i, 2].legend([f'E {np.round(potentials[layer_idx[0], -1], 6)}', f'PV {np.round(potentials[layer_idx[1], -1], 6)}', f'SOM {np.round(potentials[layer_idx[2], -1], 6)}'], loc='upper right')
+
+
+        plt.tight_layout()
+        figdir = os.path.join(figdir, 'single_simulations')
+        if not os.path.exists(figdir):
+            os.makedirs(figdir)
+        plt.savefig(os.path.join(figdir, f'population_potentials_bEI-{bEI}_g-{g}_area-{area}_Iextdur-{d}_Iextstr-{s}_Ibstr-{sb}.pdf'), dpi=300)
+        #plt.show()
+            

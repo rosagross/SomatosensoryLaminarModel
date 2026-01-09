@@ -659,43 +659,43 @@ area_1_thal_iext:
   - - E1/PRO_E1/m_out
     - E1/RPO_E1/m_in
     - 
-    - weight: 0.6589078008684864
+    - weight: 424.86375000000004
   - - PV1/PRO_PV1/m_out
     - E1/RPO_PV1/m_in
     - 
-    - weight: -0.18912841191066998
+    - weight: -121.95
   - - SST1/PRO_SST1/m_out
     - E1/RPO_SST1/m_in
     - 
-    - weight: -0.16066997518610424
+    - weight: -103.60000000000001
   - - VIP/PRO_VIP/m_out
     - E1/RPO_VIP/m_in
     - 
-    - weight: -0.02834212158808933
+    - weight: -18.275
   - - E2/PRO_E2/m_out
     - E1/RPO_E2/m_in
     - 
-    - weight: 0.7062655086848635
+    - weight: 455.4
   - - PV2/PRO_PV2/m_out
     - E1/RPO_PV2/m_in
     - 
-    - weight: -0.013182382133995037
+    - weight: -8.5
   - - SST2/PRO_SST2/m_out
     - E1/RPO_SST2/m_in
     - 
-    - weight: -0.01674937965260546
+    - weight: -10.8
   - - E3/PRO_E3/m_out
     - E1/RPO_E3/m_in
     - 
-    - weight: 0.05094602977667494
+    - weight: 32.85
   - - PV3/PRO_PV3/m_out
     - E1/RPO_PV3/m_in
     - 
-    - weight: -0.0008452233250620348
+    - weight: -0.545
   - - SST3/PRO_SST3/m_out
     - E1/RPO_SST3/m_in
     - 
-    - weight: -0.012213089330024815
+    - weight: -7.875
   - - E4/PRO_E4/m_out
     - E1/RPO_E4/m_in
     - 
@@ -711,79 +711,79 @@ area_1_thal_iext:
   - - thalE/PRO_thalE/m_out
     - E1/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 12.152000000000001
   - - thalI/PRO_thalI/m_out
     - E1/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - PV1/RPO_E1/m_in
     - 
-    - weight: 2.8028167648883375
+    - weight: 1807.2562500000001
   - - PV1/PRO_PV1/m_out
     - PV1/RPO_PV1/m_in
     - 
-    - weight: -0.22192928039702234
+    - weight: -143.1
   - - SST1/PRO_SST1/m_out
     - PV1/RPO_SST1/m_in
     - 
-    - weight: -0.06771091811414393
+    - weight: -43.660000000000004
   - - VIP/PRO_VIP/m_out
     - PV1/RPO_VIP/m_in
     - 
-    - weight: -0.03625155086848635
+    - weight: -23.375
   - - E2/PRO_E2/m_out
     - PV1/RPO_E2/m_in
     - 
-    - weight: 0.06163771712158809
+    - weight: 39.744
   - - PV2/PRO_PV2/m_out
     - PV1/RPO_PV2/m_in
     - 
-    - weight: -0.011205024813895783
+    - weight: -7.2250000000000005
   - - SST2/PRO_SST2/m_out
     - PV1/RPO_SST2/m_in
     - 
-    - weight: -0.011910669975186104
+    - weight: -7.68
   - - E3/PRO_E3/m_out
     - PV1/RPO_E3/m_in
     - 
-    - weight: 0.002122751240694789
+    - weight: 1.36875
   - - PV3/PRO_PV3/m_out
     - PV1/RPO_PV3/m_in
     - 
-    - weight: -0.0008452233250620348
+    - weight: -0.545
   - - SST3/PRO_SST3/m_out
     - PV1/RPO_SST3/m_in
     - 
-    - weight: -0.011398883374689825
+    - weight: -7.349999999999999
   - - E4/PRO_E4/m_out
     - PV1/RPO_E4/m_in
     - 
-    - weight: 0.000499379652605459
+    - weight: 0.322
   - - PV4/PRO_PV4/m_out
     - PV1/RPO_PV4/m_in
     - 
-    - weight: -4.3424317617866005e-05
+    - weight: -0.028
   - - SST4/PRO_SST4/m_out
     - PV1/RPO_SST4/m_in
     - 
-    - weight: -0.0030707196029776678
+    - weight: -1.98
   - - thalE/PRO_thalE/m_out
     - PV1/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 12.152000000000001
   - - thalI/PRO_thalI/m_out
     - PV1/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - SST1/RPO_E1/m_in
     - 
-    - weight: 1.5931800558312657
+    - weight: 1027.2825
   - - PV1/PRO_PV1/m_out
     - SST1/RPO_PV1/m_in
     - 
-    - weight: -0.20308622828784123
+    - weight: -130.95000000000002
   - - SST1/PRO_SST1/m_out
     - SST1/RPO_SST1/m_in
     - 
@@ -791,31 +791,31 @@ area_1_thal_iext:
   - - VIP/PRO_VIP/m_out
     - SST1/RPO_VIP/m_in
     - 
-    - weight: -0.17862127791563276
+    - weight: -115.175
   - - E2/PRO_E2/m_out
     - SST1/RPO_E2/m_in
     - 
-    - weight: 0.02568238213399504
+    - weight: 16.560000000000002
   - - PV2/PRO_PV2/m_out
     - SST1/RPO_PV2/m_in
     - 
-    - weight: -0.007909429280397022
+    - weight: -5.1
   - - SST2/PRO_SST2/m_out
     - SST1/RPO_SST2/m_in
     - 
-    - weight: -0.016377171215880896
+    - weight: -10.56
   - - E3/PRO_E3/m_out
     - SST1/RPO_E3/m_in
     - 
-    - weight: 0.0012736507444168733
+    - weight: 0.8212499999999999
   - - PV3/PRO_PV3/m_out
     - SST1/RPO_PV3/m_in
     - 
-    - weight: -0.0008452233250620348
+    - weight: -0.545
   - - SST3/PRO_SST3/m_out
     - SST1/RPO_SST3/m_in
     - 
-    - weight: -0.01709832506203474
+    - weight: -11.025
   - - E4/PRO_E4/m_out
     - SST1/RPO_E4/m_in
     - 
@@ -835,47 +835,47 @@ area_1_thal_iext:
   - - thalI/PRO_thalI/m_out
     - SST1/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - VIP/RPO_E1/m_in
     - 
-    - weight: 0.5245037220843672
+    - weight: 338.2
   - - PV1/PRO_PV1/m_out
     - VIP/RPO_PV1/m_in
     - 
-    - weight: -0.14376550868486354
+    - weight: -92.70000000000002
   - - SST1/PRO_SST1/m_out
     - VIP/RPO_SST1/m_in
     - 
-    - weight: -0.2656792803970223
+    - weight: -171.31
   - - VIP/PRO_VIP/m_out
     - VIP/RPO_VIP/m_in
     - 
-    - weight: -0.04152450372208437
+    - weight: -26.775000000000002
   - - E2/PRO_E2/m_out
     - VIP/RPO_E2/m_in
     - 
-    - weight: 0.007704714640198511
+    - weight: 4.968
   - - PV2/PRO_PV2/m_out
     - VIP/RPO_PV2/m_in
     - 
-    - weight: -0.006591191066997518
+    - weight: -4.25
   - - SST2/PRO_SST2/m_out
     - VIP/RPO_SST2/m_in
     - 
-    - weight: -0.006327543424317619
+    - weight: -4.08
   - - E3/PRO_E3/m_out
     - VIP/RPO_E3/m_in
     - 
-    - weight: 0.00042455024813895783
+    - weight: 0.27375
   - - PV3/PRO_PV3/m_out
     - VIP/RPO_PV3/m_in
     - 
-    - weight: -0.0008452233250620348
+    - weight: -0.545
   - - SST3/PRO_SST3/m_out
     - VIP/RPO_SST3/m_in
     - 
-    - weight: -0.004885235732009926
+    - weight: -3.15
   - - E4/PRO_E4/m_out
     - VIP/RPO_E4/m_in
     - 
@@ -883,11 +883,11 @@ area_1_thal_iext:
   - - PV4/PRO_PV4/m_out
     - VIP/RPO_PV4/m_in
     - 
-    - weight: -8.684863523573201e-05
+    - weight: -0.056
   - - SST4/PRO_SST4/m_out
     - VIP/RPO_SST4/m_in
     - 
-    - weight: -0.00255893300248139
+    - weight: -1.6500000000000001
   - - thalE/PRO_thalE/m_out
     - VIP/RPO_thalE/m_in
     - 
@@ -895,47 +895,47 @@ area_1_thal_iext:
   - - thalI/PRO_thalI/m_out
     - VIP/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - E2/RPO_E1/m_in
     - 
-    - weight: 0.08523185483870968
+    - weight: 54.9575
   - - PV1/PRO_PV1/m_out
     - E2/RPO_PV1/m_in
     - 
-    - weight: -0.024426178660049633
+    - weight: -15.750000000000002
   - - SST1/PRO_SST1/m_out
     - E2/RPO_SST1/m_in
     - 
-    - weight: -0.03385545905707196
+    - weight: -21.830000000000002
   - - VIP/PRO_VIP/m_out
     - E2/RPO_VIP/m_in
     - 
-    - weight: -0.04613833746898263
+    - weight: -29.75
   - - E2/PRO_E2/m_out
     - E2/RPO_E2/m_in
     - 
-    - weight: 2.0213318858560796
+    - weight: 1303.3548
   - - PV2/PRO_PV2/m_out
     - E2/RPO_PV2/m_in
     - 
-    - weight: -0.2465105459057072
+    - weight: -158.95
   - - SST2/PRO_SST2/m_out
     - E2/RPO_SST2/m_in
     - 
-    - weight: -0.07369727047146403
+    - weight: -47.52000000000001
   - - E3/PRO_E3/m_out
     - E2/RPO_E3/m_in
     - 
-    - weight: 0.02547301488833747
+    - weight: 16.425
   - - PV3/PRO_PV3/m_out
     - E2/RPO_PV3/m_in
     - 
-    - weight: -0.02366625310173697
+    - weight: -15.259999999999998
   - - SST3/PRO_SST3/m_out
     - E2/RPO_SST3/m_in
     - 
-    - weight: -0.042338709677419366
+    - weight: -27.300000000000004
   - - E4/PRO_E4/m_out
     - E2/RPO_E4/m_in
     - 
@@ -943,311 +943,311 @@ area_1_thal_iext:
   - - PV4/PRO_PV4/m_out
     - E2/RPO_PV4/m_in
     - 
-    - weight: -0.0008684863523573202
+    - weight: -0.56
   - - SST4/PRO_SST4/m_out
     - E2/RPO_SST4/m_in
     - 
-    - weight: -0.012282878411910671
+    - weight: -7.92
   - - thalE/PRO_thalE/m_out
     - E2/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 78.4
   - - thalI/PRO_thalI/m_out
     - E2/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - PV2/RPO_E1/m_in
     - 
-    - weight: 0.23602667493796528
+    - weight: 152.19
   - - PV1/PRO_PV1/m_out
     - PV2/RPO_PV1/m_in
     - 
-    - weight: -0.011166253101736972
+    - weight: -7.199999999999999
   - - SST1/PRO_SST1/m_out
     - PV2/RPO_SST1/m_in
     - 
-    - weight: -0.013197890818858561
+    - weight: -8.51
   - - VIP/PRO_VIP/m_out
     - PV2/RPO_VIP/m_in
     - 
-    - weight: -0.03493331265508685
+    - weight: -22.525
   - - E2/PRO_E2/m_out
     - PV2/RPO_E2/m_in
     - 
-    - weight: 7.203908188585607
+    - weight: 4645.079999999999
   - - PV2/PRO_PV2/m_out
     - PV2/RPO_PV2/m_in
     - 
-    - weight: -0.18982630272952858
+    - weight: -122.40000000000002
   - - SST2/PRO_SST2/m_out
     - PV2/RPO_SST2/m_in
     - 
-    - weight: -0.13511166253101736
+    - weight: -87.12
   - - E3/PRO_E3/m_out
     - PV2/RPO_E3/m_in
     - 
-    - weight: 0.038209522332506206
+    - weight: 24.637500000000003
   - - PV3/PRO_PV3/m_out
     - PV2/RPO_PV3/m_in
     - 
-    - weight: -0.02366625310173697
+    - weight: -15.259999999999998
   - - SST3/PRO_SST3/m_out
     - PV2/RPO_SST3/m_in
     - 
-    - weight: -0.038267679900744415
+    - weight: -24.674999999999997
   - - E4/PRO_E4/m_out
     - PV2/RPO_E4/m_in
     - 
-    - weight: 0.0049937965260545905
+    - weight: 3.22
   - - PV4/PRO_PV4/m_out
     - PV2/RPO_PV4/m_in
     - 
-    - weight: -0.0013027295285359803
+    - weight: -0.8400000000000001
   - - SST4/PRO_SST4/m_out
     - PV2/RPO_SST4/m_in
     - 
-    - weight: -0.009212158808933004
+    - weight: -5.940000000000001
   - - thalE/PRO_thalE/m_out
     - PV2/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 78.4
   - - thalI/PRO_thalI/m_out
     - PV2/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - SST2/RPO_E1/m_in
     - 
-    - weight: 0.23602667493796528
+    - weight: 152.19
   - - PV1/PRO_PV1/m_out
     - SST2/RPO_PV1/m_in
     - 
-    - weight: -0.012562034739454095
+    - weight: -8.100000000000001
   - - SST1/PRO_SST1/m_out
     - SST2/RPO_SST1/m_in
     - 
-    - weight: -0.013771712158808933
+    - weight: -8.88
   - - VIP/PRO_VIP/m_out
     - SST2/RPO_VIP/m_in
     - 
-    - weight: -0.03229683622828784
+    - weight: -20.825
   - - E2/PRO_E2/m_out
     - SST2/RPO_E2/m_in
     - 
-    - weight: 1.2199131513647643
+    - weight: 786.5999999999999
   - - PV2/PRO_PV2/m_out
     - SST2/RPO_PV2/m_in
     - 
-    - weight: -0.21882754342431765
+    - weight: -141.10000000000002
   - - SST2/PRO_SST2/m_out
     - SST2/RPO_SST2/m_in
     - 
-    - weight: -0.0008486352357320099
+    - weight: -0.5472
   - - E3/PRO_E3/m_out
     - SST2/RPO_E3/m_in
     - 
-    - weight: 0.038209522332506206
+    - weight: 24.637500000000003
   - - PV3/PRO_PV3/m_out
     - SST2/RPO_PV3/m_in
     - 
-    - weight: -0.027047146401985113
+    - weight: -17.44
   - - SST3/PRO_SST3/m_out
     - SST2/RPO_SST3/m_in
     - 
-    - weight: -0.038267679900744415
+    - weight: -24.674999999999997
   - - E4/PRO_E4/m_out
     - SST2/RPO_E4/m_in
     - 
-    - weight: 0.009987593052109181
+    - weight: 6.44
   - - PV4/PRO_PV4/m_out
     - SST2/RPO_PV4/m_in
     - 
-    - weight: -0.0008684863523573202
+    - weight: -0.56
   - - SST4/PRO_SST4/m_out
     - SST2/RPO_SST4/m_in
     - 
-    - weight: -0.011771091811414393
+    - weight: -7.59
   - - thalE/PRO_thalE/m_out
     - SST2/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 19.6
   - - thalI/PRO_thalI/m_out
     - SST2/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - E3/RPO_E1/m_in
     - 
-    - weight: 0.5638415012406948
+    - weight: 363.56499999999994
   - - PV1/PRO_PV1/m_out
     - E3/RPO_PV1/m_in
     - 
-    - weight: -0.029311414392059556
+    - weight: -18.900000000000002
   - - SST1/PRO_SST1/m_out
     - E3/RPO_SST1/m_in
     - 
-    - weight: -0.053939205955334996
+    - weight: -34.78
   - - VIP/PRO_VIP/m_out
     - E3/RPO_VIP/m_in
     - 
-    - weight: -0.04086538461538462
+    - weight: -26.35
   - - E2/PRO_E2/m_out
     - E3/RPO_E2/m_in
     - 
-    - weight: 0.6703101736972704
+    - weight: 432.21599999999995
   - - PV2/PRO_PV2/m_out
     - E3/RPO_PV2/m_in
     - 
-    - weight: -0.0507521712158809
+    - weight: -32.725
   - - SST2/PRO_SST2/m_out
     - E3/RPO_SST2/m_in
     - 
-    - weight: -0.01074937965260546
+    - weight: -6.9312
   - - E3/PRO_E3/m_out
     - E3/RPO_E3/m_in
     - 
-    - weight: 0.665694789081886
+    - weight: 429.24000000000007
   - - PV3/PRO_PV3/m_out
     - E3/RPO_PV3/m_in
     - 
-    - weight: -0.3347084367245658
+    - weight: -215.82
   - - SST3/PRO_SST3/m_out
     - E3/RPO_SST3/m_in
     - 
-    - weight: -0.12294509925558313
+    - weight: -79.27499999999999
   - - E4/PRO_E4/m_out
     - E3/RPO_E4/m_in
     - 
-    - weight: 0.04993796526054591
+    - weight: 32.2
   - - PV4/PRO_PV4/m_out
     - E3/RPO_PV4/m_in
     - 
-    - weight: -0.007816377171215881
+    - weight: -5.04
   - - SST4/PRO_SST4/m_out
     - E3/RPO_SST4/m_in
     - 
-    - weight: -0.026101116625310172
+    - weight: -16.83
   - - thalE/PRO_thalE/m_out
     - E3/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 50.764
   - - thalI/PRO_thalI/m_out
     - E3/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - PV3/RPO_E1/m_in
     - 
-    - weight: 0.05572852047146403
+    - weight: 35.93375
   - - PV1/PRO_PV1/m_out
     - PV3/RPO_PV1/m_in
     - 
-    - weight: -0.0034894540942928044
+    - weight: -2.25
   - - SST1/PRO_SST1/m_out
     - PV3/RPO_SST1/m_in
     - 
-    - weight: -0.006312034739454095
+    - weight: -4.07
   - - VIP/PRO_VIP/m_out
     - PV3/RPO_VIP/m_in
     - 
-    - weight: -0.012523263027295286
+    - weight: -8.075
   - - E2/PRO_E2/m_out
     - PV3/RPO_E2/m_in
     - 
-    - weight: 0.11236042183622831
+    - weight: 72.45000000000002
   - - PV2/PRO_PV2/m_out
     - PV3/RPO_PV2/m_in
     - 
-    - weight: -0.019773573200992555
+    - weight: -12.75
   - - SST2/PRO_SST2/m_out
     - PV3/RPO_SST2/m_in
     - 
-    - weight: -0.008560794044665013
+    - weight: -5.5200000000000005
   - - E3/PRO_E3/m_out
     - PV3/RPO_E3/m_in
     - 
-    - weight: 0.8406094913151365
+    - weight: 542.025
   - - PV3/PRO_PV3/m_out
     - PV3/RPO_PV3/m_in
     - 
-    - weight: -0.20792493796526057
+    - weight: -134.07000000000002
   - - SST3/PRO_SST3/m_out
     - PV3/RPO_SST3/m_in
     - 
-    - weight: -0.19622363523573205
+    - weight: -126.52500000000002
   - - E4/PRO_E4/m_out
     - PV3/RPO_E4/m_in
     - 
-    - weight: 0.009987593052109181
+    - weight: 6.44
   - - PV4/PRO_PV4/m_out
     - PV3/RPO_PV4/m_in
     - 
-    - weight: -0.005645161290322581
+    - weight: -3.6400000000000006
   - - SST4/PRO_SST4/m_out
     - PV3/RPO_SST4/m_in
     - 
-    - weight: -0.013306451612903229
+    - weight: -8.580000000000002
   - - thalE/PRO_thalE/m_out
     - PV3/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 50.764
   - - thalI/PRO_thalI/m_out
     - PV3/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - SST3/RPO_E1/m_in
     - 
-    - weight: 0.05245037220843673
+    - weight: 33.82
   - - PV1/PRO_PV1/m_out
     - SST3/RPO_PV1/m_in
     - 
-    - weight: -0.002791563275434243
+    - weight: -1.7999999999999998
   - - SST1/PRO_SST1/m_out
     - SST3/RPO_SST1/m_in
     - 
-    - weight: -0.0057382133995037225
+    - weight: -3.7
   - - VIP/PRO_VIP/m_out
     - SST3/RPO_VIP/m_in
     - 
-    - weight: -0.012523263027295286
+    - weight: -8.075
   - - E2/PRO_E2/m_out
     - SST3/RPO_E2/m_in
     - 
-    - weight: 0.12199131513647643
+    - weight: 78.66
   - - PV2/PRO_PV2/m_out
     - SST3/RPO_PV2/m_in
     - 
-    - weight: -0.019773573200992555
+    - weight: -12.75
   - - SST2/PRO_SST2/m_out
     - SST3/RPO_SST2/m_in
     - 
-    - weight: -0.009305210918114145
+    - weight: -6.000000000000001
   - - E3/PRO_E3/m_out
     - SST3/RPO_E3/m_in
     - 
-    - weight: 0.4351640043424318
+    - weight: 280.59375
   - - PV3/PRO_PV3/m_out
     - SST3/RPO_PV3/m_in
     - 
-    - weight: -0.2628644540942928
+    - weight: -169.495
   - - SST3/PRO_SST3/m_out
     - SST3/RPO_SST3/m_in
     - 
-    - weight: -0.004885235732009926
+    - weight: -3.15
   - - E4/PRO_E4/m_out
     - SST3/RPO_E4/m_in
     - 
-    - weight: 0.014981389578163772
+    - weight: 9.66
   - - PV4/PRO_PV4/m_out
     - SST3/RPO_PV4/m_in
     - 
-    - weight: -0.0021712158808933004
+    - weight: -1.4000000000000001
   - - SST4/PRO_SST4/m_out
     - SST3/RPO_SST4/m_in
     - 
-    - weight: -0.016377171215880896
+    - weight: -10.56
   - - thalE/PRO_thalE/m_out
     - SST3/RPO_thalE/m_in
     - 
@@ -1255,7 +1255,7 @@ area_1_thal_iext:
   - - thalI/PRO_thalI/m_out
     - SST3/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - E4/RPO_E1/m_in
     - 
@@ -1263,91 +1263,91 @@ area_1_thal_iext:
   - - PV1/PRO_PV1/m_out
     - E4/RPO_PV1/m_in
     - 
-    - weight: -0.0013957816377171215
+    - weight: -0.8999999999999999
   - - SST1/PRO_SST1/m_out
     - E4/RPO_SST1/m_in
     - 
-    - weight: -0.0017214640198511167
+    - weight: -1.11
   - - VIP/PRO_VIP/m_out
     - E4/RPO_VIP/m_in
     - 
-    - weight: -0.005272952853598015
+    - weight: -3.4000000000000004
   - - E2/PRO_E2/m_out
     - E4/RPO_E2/m_in
     - 
-    - weight: 0.11171836228287842
+    - weight: 72.036
   - - PV2/PRO_PV2/m_out
     - E4/RPO_PV2/m_in
     - 
-    - weight: -0.009886786600496278
+    - weight: -6.375
   - - SST2/PRO_SST2/m_out
     - E4/RPO_SST2/m_in
     - 
-    - weight: -0.0037220843672456576
+    - weight: -2.4
   - - E3/PRO_E3/m_out
     - E4/RPO_E3/m_in
     - 
-    - weight: 0.16982009925558314
+    - weight: 109.50000000000001
   - - PV3/PRO_PV3/m_out
     - E4/RPO_PV3/m_in
     - 
-    - weight: -0.01605924317617866
+    - weight: -10.354999999999999
   - - SST3/PRO_SST3/m_out
     - E4/RPO_SST3/m_in
     - 
-    - weight: -0.013841501240694791
+    - weight: -8.925
   - - E4/PRO_E4/m_out
     - E4/RPO_E4/m_in
     - 
-    - weight: 0.15730459057071963
+    - weight: 101.43
   - - PV4/PRO_PV4/m_out
     - E4/RPO_PV4/m_in
     - 
-    - weight: -0.3439205955334988
+    - weight: -221.76000000000002
   - - SST4/PRO_SST4/m_out
     - E4/RPO_SST4/m_in
     - 
-    - weight: -0.07727977667493796
+    - weight: -49.83
   - - thalE/PRO_thalE/m_out
     - E4/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 17.64
   - - thalI/PRO_thalI/m_out
     - E4/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - PV4/RPO_E1/m_in
     - 
-    - weight: 0.009834444789081888
+    - weight: 6.3412500000000005
   - - PV1/PRO_PV1/m_out
     - PV4/RPO_PV1/m_in
     - 
-    - weight: -6.978908188585609e-05
+    - weight: -0.045000000000000005
   - - SST1/PRO_SST1/m_out
     - PV4/RPO_SST1/m_in
     - 
-    - weight: -0.00011476426799007446
+    - weight: -0.07400000000000001
   - - VIP/PRO_VIP/m_out
     - PV4/RPO_VIP/m_in
     - 
-    - weight: -0.0013182382133995038
+    - weight: -0.8500000000000001
   - - E2/PRO_E2/m_out
     - PV4/RPO_E2/m_in
     - 
-    - weight: 0.016051488833746897
+    - weight: 10.35
   - - PV2/PRO_PV2/m_out
     - PV4/RPO_PV2/m_in
     - 
-    - weight: -0.0013182382133995038
+    - weight: -0.8500000000000001
   - - SST2/PRO_SST2/m_out
     - PV4/RPO_SST2/m_in
     - 
-    - weight: -0.00018610421836228288
+    - weight: -0.12
   - - E3/PRO_E3/m_out
     - PV4/RPO_E3/m_in
     - 
-    - weight: 0.1358560794044665
+    - weight: 87.6
   - - PV3/PRO_PV3/m_out
     - PV4/RPO_PV3/m_in
     - 
@@ -1355,31 +1355,31 @@ area_1_thal_iext:
   - - SST3/PRO_SST3/m_out
     - PV4/RPO_SST3/m_in
     - 
-    - weight: -0.002442617866004963
+    - weight: -1.575
   - - E4/PRO_E4/m_out
     - PV4/RPO_E4/m_in
     - 
-    - weight: 3.955086848635236
+    - weight: 2550.24
   - - PV4/PRO_PV4/m_out
     - PV4/RPO_PV4/m_in
     - 
-    - weight: -0.10682382133995039
+    - weight: -68.88000000000001
   - - SST4/PRO_SST4/m_out
     - PV4/RPO_SST4/m_in
     - 
-    - weight: -0.12334057071960298
+    - weight: -79.53
   - - thalE/PRO_thalE/m_out
     - PV4/RPO_thalE/m_in
     - 
-    - weight: 0.0
+    - weight: 17.64
   - - thalI/PRO_thalI/m_out
     - PV4/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - SST4/RPO_E1/m_in
     - 
-    - weight: 0.006556296526054591
+    - weight: 4.2275
   - - PV1/PRO_PV1/m_out
     - SST4/RPO_PV1/m_in
     - 
@@ -1387,27 +1387,27 @@ area_1_thal_iext:
   - - SST1/PRO_SST1/m_out
     - SST4/RPO_SST1/m_in
     - 
-    - weight: -0.00011476426799007446
+    - weight: -0.07400000000000001
   - - VIP/PRO_VIP/m_out
     - SST4/RPO_VIP/m_in
     - 
-    - weight: -0.0006591191066997519
+    - weight: -0.42500000000000004
   - - E2/PRO_E2/m_out
     - SST4/RPO_E2/m_in
     - 
-    - weight: 0.016051488833746897
+    - weight: 10.35
   - - PV2/PRO_PV2/m_out
     - SST4/RPO_PV2/m_in
     - 
-    - weight: -0.0013182382133995038
+    - weight: -0.8500000000000001
   - - SST2/PRO_SST2/m_out
     - SST4/RPO_SST2/m_in
     - 
-    - weight: -0.00014888337468982633
+    - weight: -0.096
   - - E3/PRO_E3/m_out
     - SST4/RPO_E3/m_in
     - 
-    - weight: 0.03184126861042184
+    - weight: 20.53125
   - - PV3/PRO_PV3/m_out
     - SST4/RPO_PV3/m_in
     - 
@@ -1415,19 +1415,19 @@ area_1_thal_iext:
   - - SST3/PRO_SST3/m_out
     - SST4/RPO_SST3/m_in
     - 
-    - weight: -0.0016284119106699752
+    - weight: -1.05
   - - E4/PRO_E4/m_out
     - SST4/RPO_E4/m_in
     - 
-    - weight: 0.5118641439205956
+    - weight: 330.05
   - - PV4/PRO_PV4/m_out
     - SST4/RPO_PV4/m_in
     - 
-    - weight: -0.2700992555831266
+    - weight: -174.16
   - - SST4/PRO_SST4/m_out
     - SST4/RPO_SST4/m_in
     - 
-    - weight: -0.0030707196029776678
+    - weight: -1.98
   - - thalE/PRO_thalE/m_out
     - SST4/RPO_thalE/m_in
     - 
@@ -1435,7 +1435,7 @@ area_1_thal_iext:
   - - thalI/PRO_thalI/m_out
     - SST4/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - thalE/RPO_E1/m_in
     - 
@@ -1443,15 +1443,15 @@ area_1_thal_iext:
   - - PV1/PRO_PV1/m_out
     - thalE/RPO_PV1/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - SST1/PRO_SST1/m_out
     - thalE/RPO_SST1/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - VIP/PRO_VIP/m_out
     - thalE/RPO_VIP/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E2/PRO_E2/m_out
     - thalE/RPO_E2/m_in
     - 
@@ -1459,11 +1459,11 @@ area_1_thal_iext:
   - - PV2/PRO_PV2/m_out
     - thalE/RPO_PV2/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - SST2/PRO_SST2/m_out
     - thalE/RPO_SST2/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E3/PRO_E3/m_out
     - thalE/RPO_E3/m_in
     - 
@@ -1471,11 +1471,11 @@ area_1_thal_iext:
   - - PV3/PRO_PV3/m_out
     - thalE/RPO_PV3/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - SST3/PRO_SST3/m_out
     - thalE/RPO_SST3/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E4/PRO_E4/m_out
     - thalE/RPO_E4/m_in
     - 
@@ -1483,11 +1483,11 @@ area_1_thal_iext:
   - - PV4/PRO_PV4/m_out
     - thalE/RPO_PV4/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - SST4/PRO_SST4/m_out
     - thalE/RPO_SST4/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - thalE/PRO_thalE/m_out
     - thalE/RPO_thalE/m_in
     - 
@@ -1495,7 +1495,7 @@ area_1_thal_iext:
   - - thalI/PRO_thalI/m_out
     - thalE/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E1/PRO_E1/m_out
     - thalI/RPO_E1/m_in
     - 
@@ -1503,15 +1503,15 @@ area_1_thal_iext:
   - - PV1/PRO_PV1/m_out
     - thalI/RPO_PV1/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - SST1/PRO_SST1/m_out
     - thalI/RPO_SST1/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - VIP/PRO_VIP/m_out
     - thalI/RPO_VIP/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E2/PRO_E2/m_out
     - thalI/RPO_E2/m_in
     - 
@@ -1519,11 +1519,11 @@ area_1_thal_iext:
   - - PV2/PRO_PV2/m_out
     - thalI/RPO_PV2/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - SST2/PRO_SST2/m_out
     - thalI/RPO_SST2/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E3/PRO_E3/m_out
     - thalI/RPO_E3/m_in
     - 
@@ -1531,11 +1531,11 @@ area_1_thal_iext:
   - - PV3/PRO_PV3/m_out
     - thalI/RPO_PV3/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - SST3/PRO_SST3/m_out
     - thalI/RPO_SST3/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - E4/PRO_E4/m_out
     - thalI/RPO_E4/m_in
     - 
@@ -1543,11 +1543,11 @@ area_1_thal_iext:
   - - PV4/PRO_PV4/m_out
     - thalI/RPO_PV4/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - SST4/PRO_SST4/m_out
     - thalI/RPO_SST4/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0
   - - thalE/PRO_thalE/m_out
     - thalI/RPO_thalE/m_in
     - 
@@ -1555,4 +1555,4 @@ area_1_thal_iext:
   - - thalI/PRO_thalI/m_out
     - thalI/RPO_thalI/m_in
     - 
-    - weight: 0.0
+    - weight: -0.0

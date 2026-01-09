@@ -1,15 +1,24 @@
 # %%
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+os.chdir("/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
-from parameters import Parameter
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
+
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+param_path = os.path.join(WDDIR, 'Simulations')
+
+if param_path not in sys.path:
+    sys.path.append(param_path)
+from parameters import Parameter
+
 #%%
 # Parameters:
 cells = ['E3b','PV3b','SST3b','VIP3b','thalE', 'thalI'] # taken from the weights matrix
@@ -35,15 +44,19 @@ tau_a3b_thal = np.hstack((tau[0, :4], tau[0, -2:]))
 
 # %% weights
 bEI = 0.5
-connect_reverse_factor =  6448 
-g = 100.0 # (g)
-gE = g * bEI /connect_reverse_factor
-gI = g * (1 - bEI) /connect_reverse_factor
-gEthal = 0  
-gIthal = 0
+g = 10.0 # (g)
+gE = g * bEI
+gI = g * (1 - bEI)
+g_thal = 2
+bEI_thal = 0.5
+gEthal = g_thal * bEI_thal
+gIthal = g_thal * (1 - bEI_thal)
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
+extI_cellcounts = 1000
+bI_cellcounts = 100
+thal_cellcounts = 500
 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='all') 
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, extI_cellcounts, bI_cellcounts, thal_cellcounts, area='all') 
 
 # selecting the region: 
 # in python the results include the start index but excludes the end index
@@ -122,11 +135,11 @@ for target_cell in cells:
         outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
 
 results = area_a3b_thal.run(simulation_time=2.0,
-                  step_size=1e-4,
-                  sampling_step_size=1e-4,
+                  step_size=1e-3,
+                  sampling_step_size=1e-3,
                   outputs=outputs,
                   backend='default',
-                  vectorize=True,
+                  vectorize=False,
                   clear=False,
                   float_precision="float64",
                   decorator=njit
@@ -141,7 +154,7 @@ all_potentials = np.array(all_potentials).T # shape: samples x populations
 
 potential_df = pd.DataFrame(all_potentials, columns=cells)
 
-#potential_df.to_csv("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/simulations/a3bthal.csv") 
+#potential_df.to_csv('pyrates_ThalA3b_bEI0.5_g10_bthal2_bEIthal0_thalcellcount500_test.csv', index=False) 
 
 # %% plot
 
@@ -157,9 +170,12 @@ fig, axes = plt.subplots(1, 2, figsize=(14, 10))
 axes = axes.flatten()
 
 for ax, cols in zip(axes, layers):
-    potential_df[cols].plot(ax=ax)
-    ax.set_title(", ".join(cols))  # show which cols are in this subplot
-    ax.legend(loc="best")
+    legend_list = []
+    for cell in cols:
+        potential_df[cell].plot(ax=ax)
+        legend_list.append(f'{cell} {np.round(potential_df[cell].iloc[-1],10)}')
+
+    ax.legend(legend_list, loc="best")
 
 plt.tight_layout()
 plt.show()

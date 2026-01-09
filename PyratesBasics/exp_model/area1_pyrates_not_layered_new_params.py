@@ -1,15 +1,23 @@
 # %%
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+import sys
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
-from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
+
+
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+param_path = os.path.join(WDDIR, 'Simulations')
+
+if param_path not in sys.path:
+    sys.path.append(param_path)
+from parameters import Parameter
 
 #%%
 # Parameters:
@@ -43,15 +51,19 @@ tau_a1 = tau[0, 4:17]
 
 # %%
 bEI = 0.5
-connect_reverse_factor =  6448 
-g = 100.0 # (g)
-gE = g * bEI /connect_reverse_factor
-gI = g * (1 - bEI) /connect_reverse_factor
-gEthal = 0
-gIthal = 0
+g = 10.0 # (g)
+gE = g * bEI
+gI = g * (1 - bEI)
+g_thal = 2
+bEI_thal = 0.5
+gEthal = g_thal * bEI_thal
+gIthal = g_thal * (1 - bEI_thal)
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
+extI_cellcounts = 1000
+bI_cellcounts = 100
+thal_cellcounts = 500
 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='all') 
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, extI_cellcounts, bI_cellcounts, thal_cellcounts, area='all') 
 
 # selecting the region --> A1: FROM THE 5TH ELEMENT TO THE 17TH (INCLUDED) 
 # in python the results include the start index but excludes the end index
@@ -156,7 +168,7 @@ all_potentials = np.array(all_potentials).T # shape: samples x populations
 
 potential_df = pd.DataFrame(all_potentials, columns=cells)
 
-# potential_df.to_csv("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/simulations/area_1.csv") 
+potential_df.to_csv("pyrates_area1_test.csv", index=False) 
 
 # %% Rates 
 n_timepoints, n_cells = all_potentials.shape

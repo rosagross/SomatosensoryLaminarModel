@@ -16,11 +16,16 @@ import numpy as np
 import pandas as pd
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
-## import dei parametri
-param_path = "/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/Simulations"
+
+# import parameter
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+param_path = os.path.join(WDDIR, 'Simulations')
+
 if param_path not in sys.path:
     sys.path.append(param_path)
 from parameters import Parameter
+
 #%%
 # Parameters:
 cells = ['E3b','PV3b','SST3b','VIP3b', # A3b

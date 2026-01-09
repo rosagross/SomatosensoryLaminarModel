@@ -54,18 +54,19 @@ plot_rates = params['plot_rates']
 plot_potentials = params['plot_potentials']
 plot_all_potentials = params['plot_all_potentials']
 jax_mode = params['jax_mode']
-filedir = params['filedir']
 
+# specify output directory
 filedir = os.path.join(SIMDIR, 'simulation_results')
 if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [10.0]
+coupling_strengths = [10]
+backgrndI_strengths = [0] #,6,7]
 input_durations = [0]
-backgrndI_strengths = [0, 7] #,6,7]
 input_strengths = [0]
-balance_EI = [0.5]
+balance_EI = [0]
+area = 'all'
 
 # %%
 for d in input_durations:
@@ -84,9 +85,17 @@ for d in input_durations:
                     params['Iext_duration'] = d
                     params['Iext_strength'] = s
                     params['Ib_strength'] = sb
+                    params['area'] = area
 
-                    model = SomatoModel(params)
-                    #model = SomatoModelPyrates(params)
+                    # additional parameters (that are usually fixed)
+                    params['g_thal'] = 0
+                    params['bEI_thal'] = 0
+                    params['extI_cellcounts'] = 0
+                    params['bI_cellcounts'] = 0
+                    params['thal_cellcounts'] = 0
+
+                    #model = SomatoModel(params)
+                    model = SomatoModelPyrates(params)
                     
                     # simulate rates and potentials
                     start = time.time()

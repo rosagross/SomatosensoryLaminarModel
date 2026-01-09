@@ -52,13 +52,13 @@ df_P = pd.DataFrame(P, index=population_names[4:], columns=population_names[4:])
 C = params.get_cellcounts()
 df_C = pd.DataFrame(C, index=population_names[4:])
 # Total Connectivity
-g_thal = 1
-bEI_thal = 0.5
-gEthal = 1 # g_thal * bEI_thal 
-gIthal = 1 # g_thal * (1 - bEI_thal) 
+g_thal = 2
+bEI_thal = 1
+gEthal = g_thal * bEI_thal 
+gIthal = g_thal * (1 - bEI_thal) 
 thal_connect = [0, 0, 0, 0] 
 gE, gI = [1, 1]
-area = 'all'
+area = 'ThalA1'
 extI_cellcounts = 1
 bI_cellcounts = 1   
 thal_cellcount = 500  # it is 230 in Jiang et al. 2023 but for us might differ!

@@ -1,15 +1,24 @@
 # %%
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/model_definitions""") 
+os.chdir("/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
-from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-#from numba import njit
+import sys
+from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
+
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+param_path = os.path.join(WDDIR, 'Simulations')
+
+if param_path not in sys.path:
+    sys.path.append(param_path)
+from parameters import Parameter
+
 
 #%%
 # Parameters:
@@ -22,13 +31,12 @@ params = Parameter()
 
 input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
 input_onset = 1.001 # in sec
-simulation_dur = 1 
-input_duration = 0.5  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 50 #[0, 50, 300, 500] #np.arange(0, 500, 100)
-backgrndI_strengths = 5 #[0, 5, 10, 15, 20]
+input_duration = 0  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+input_strength = 0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+backgrndI_strengths = 0 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
-simulation_time = int(input_onset) + simulation_dur
+simulation_time = 2
 
 # %%
 sigmoid_params = params.get_sigmoid() #already in the correct order
@@ -54,15 +62,19 @@ tau_a1_thal = np.hstack((tau[0, 4:17], tau[0, -2:]))
 
 # %%
 bEI = 0.5
-connect_reverse_factor =  6448 
-g = 100.0 # (g)
-gE = g * bEI /connect_reverse_factor
-gI = g * (1 - bEI) /connect_reverse_factor
-gEthal = 0
-gIthal = 0
+g = 10.0 # (g)
+gE = g * bEI
+gI = g * (1 - bEI)
+g_thal = 2
+bEI_thal = 1
+gEthal = g_thal * bEI_thal
+gIthal = g_thal * (1 - bEI_thal)
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
+extI_cellcounts = 1000
+bI_cellcounts = 100
+thal_cellcounts = 500
 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect) 
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, extI_cellcounts, bI_cellcounts, thal_cellcounts, area='ThalA1') 
 
 # selecting the region --> A1: FROM THE 5TH ELEMENT TO THE 17TH (INCLUDED) 
 # in python the results include the start index but excludes the end index
@@ -112,10 +124,11 @@ rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau_a
 rpo_bI = OperatorTemplate(
     name='RPO_bI', path=None,
     equations=['d/dt * v = i',
-               'd/dt * i = H/tau * (bI) - 2 * i/tau - v/tau^2'],
+               'd/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
                'bI': f'input({backgrndI_strengths})',  # external background input
+               'bI_cellcount': bI_cellcounts,
                'tau': 0.003,
                'H': 1.0},
     description="excitatory rate-to-potential operator")
@@ -125,10 +138,11 @@ rpo_bI = OperatorTemplate(
 rpo_Iext_thalE = [OperatorTemplate(
     name='RPO_Iext', path=None,
     equations=['d/dt * v = i',
-               'd/dt * i = H/tau * (Iext) - 2 * i/tau - v/tau^2'],
+               'd/dt * i = H/tau * extI_cellcounts * (Iext) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
                'Iext': 'input',
+               'extI_cellcounts': extI_cellcounts,
                'tau': tau_a1_thal[13],
                'H': 1.0}
     ) 
@@ -256,25 +270,22 @@ results = area_1_thal_bI_iext.run(simulation_time=simulation_time,
                   vectorize=True,
                   clear=False,
                   float_precision="float64"
-                  #decorator=njit
                   )
 
 # %% Pandas Dataframe
 all_potentials = []
 
 for i, cell in enumerate(cells):
-    # always include rpo_names[:N_cells]
+    # include rpo_names_extended[:N_cells+1] only if i == 13
     if i == 13:
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names_extended[:N_cells+1]]
+    # always include rpo_names[:N_cells]
     else: 
         potential_keys = [f'V_{cell}/{rpo}' for rpo in rpo_names[:N_cells]]
 
     # include rpo_name only if i in range(N_cells-2)
     if i in range(N_cells-2):
         potential_keys += [f'V_{cell}/RPO_bI']
-
-    # include rpo_names_extended[:N_cells+1] only if i == 13
-    
 
     sources = results[potential_keys]
     all_potentials.append(np.sum(sources, axis=1))
@@ -284,7 +295,7 @@ all_potentials = np.array(all_potentials).T  # shape: samples x populations
 
 potential_df = pd.DataFrame(all_potentials, columns=cells)
 
-# potential_df.to_csv("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/simulations/area_1_thal.csv") 
+potential_df.to_csv("pyrates_ThalA1_bEI0.5_g10_gthal2_bEIthal1_thalcellcount500_test.csv", index=False) 
 
 
 # %% Rates 
