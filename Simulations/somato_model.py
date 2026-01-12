@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import pandas as pd
 import h5py
 import yaml
@@ -69,7 +70,7 @@ class SomatoModel():
         self.Ib = np.tile(Ib, (self.nPop,1))
 
         self.filename = (
-            f"g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"gthal{self.g_thal}_bEIthal{self.bEI_thal}_g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
             f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_thalUncon_S1S2Uncon"
         )
@@ -120,6 +121,17 @@ class SomatoModel():
         # Save parameters to a YAML file
         with open(filename + '.yaml', 'w') as file:
             yaml.dump(parameters, file)
+
+    def plot_W_heatmap(self):
+        """
+        Plot heatmap of connectivity matrix
+        """
+        
+        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
+        rows = np.r_[:30, -2, -1]
+        cols = np.r_[:30, -4, -3]
+        W_all = W[np.ix_(rows, cols)]
+        sns.heatmap(W_all, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
 
     def simulate(self):

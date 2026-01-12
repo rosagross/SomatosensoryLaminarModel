@@ -312,9 +312,9 @@ def load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cell
     """ Read simulation data """
     # read in firing rates in data matrix (datapoints x populations)
     if pyrates:
-        filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_PYRATES.hdf5"
+        filename = f"gthal2_bEIthal0.5_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_PYRATES.hdf5"
     else:    
-        filename = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
+        filename = f"gthal2_bEIthal0.5_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
 
     rates_df = pd.read_hdf(os.path.join(data_dir, filename), key='rates')
     
@@ -325,7 +325,7 @@ def load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cell
 
 def load_derivative(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir):
     """ load the characteristics/processed data of one simulation """
-    deriv_file = f"g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon_processed.csv"
+    deriv_file = f"gthal2_bEIthal0.5_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon_processed.csv"
     deriv_df = pd.read_csv(os.path.join(deriv_dir, deriv_file))
     return deriv_df
 

@@ -722,7 +722,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - E1/RPO_thalE/m_in
     - 
-    - weight: 24.304000000000002
+    - weight: 607.6
   - - thalI/PRO_thalI/m_out
     - E1/RPO_thalI/m_in
     - 
@@ -782,7 +782,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - PV1/RPO_thalE/m_in
     - 
-    - weight: 24.304000000000002
+    - weight: 607.6
   - - thalI/PRO_thalI/m_out
     - PV1/RPO_thalI/m_in
     - 
@@ -962,7 +962,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - E2/RPO_thalE/m_in
     - 
-    - weight: 156.8
+    - weight: 3920.0000000000005
   - - thalI/PRO_thalI/m_out
     - E2/RPO_thalI/m_in
     - 
@@ -1022,7 +1022,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - PV2/RPO_thalE/m_in
     - 
-    - weight: 156.8
+    - weight: 3920.0000000000005
   - - thalI/PRO_thalI/m_out
     - PV2/RPO_thalI/m_in
     - 
@@ -1082,7 +1082,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - SST2/RPO_thalE/m_in
     - 
-    - weight: 39.2
+    - weight: 980.0000000000001
   - - thalI/PRO_thalI/m_out
     - SST2/RPO_thalI/m_in
     - 
@@ -1142,7 +1142,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - E3/RPO_thalE/m_in
     - 
-    - weight: 101.528
+    - weight: 2538.2000000000003
   - - thalI/PRO_thalI/m_out
     - E3/RPO_thalI/m_in
     - 
@@ -1202,7 +1202,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - PV3/RPO_thalE/m_in
     - 
-    - weight: 101.528
+    - weight: 2538.2000000000003
   - - thalI/PRO_thalI/m_out
     - PV3/RPO_thalI/m_in
     - 
@@ -1322,7 +1322,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - E4/RPO_thalE/m_in
     - 
-    - weight: 35.28
+    - weight: 882.0
   - - thalI/PRO_thalI/m_out
     - E4/RPO_thalI/m_in
     - 
@@ -1382,7 +1382,7 @@ area_1_thal_bI_iext:
   - - thalE/PRO_thalE/m_out
     - PV4/RPO_thalE/m_in
     - 
-    - weight: 35.28
+    - weight: 882.0
   - - thalI/PRO_thalI/m_out
     - PV4/RPO_thalI/m_in
     - 

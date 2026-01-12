@@ -229,12 +229,12 @@ class Parameter():
                             np.vstack((W_A3bA3b_ES, W_A3bA3b_PS, W_A3bA3b_SS, W_A3bA3b_VS)),
                             np.vstack((W_A3bA3b_EV, W_A3bA3b_PV, W_A3bA3b_SV, W_A3bA3b_VV))))
         
-        #W_A3bA3b = np.zeros((4, 4))
+        W_A3bA3b = np.zeros((4, 4))
         
         # ... from  area 3b to S1
         # this means we have to fuse the source populations together
         W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
-        #W_S1A3b = np.zeros((13, 4))
+        W_S1A3b = np.zeros((13, 4))
  
         # ... from S1 to area 3b
         # we need to compress the target populations 
@@ -329,6 +329,13 @@ class Parameter():
         Wb = np.zeros((W_from_thal.shape[1],1))
         Wb[:-2] = 1 * bI_cellcount # cellcount from background input
 
+        # build a matrix out of ones!
+        W0 = np.ones((30,30)) * 10
+        W0[:,:4] = 0
+        W_to_thal = np.ones((2,30)) * 10 
+        W_from_thal = np.ones((2,32)) * 10
+
+
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
 
@@ -351,8 +358,8 @@ class Parameter():
         # scale the coupling strength
         W0[:,idx_I] = W0[:,idx_I] * -gI # negative weight for inhibitory connections
         W0[:,idx_E] = W0[:,idx_E] * gE
-        W_to_thal[:,idx_I] = W_to_thal[:,idx_I] * -gIthal
-        W_to_thal[:,idx_E] = W_to_thal[:,idx_E] * gEthal
+        W_to_thal[:,idx_I] = W_to_thal[:,idx_I] * -gI
+        W_to_thal[:,idx_E] = W_to_thal[:,idx_E] * gE
         W_from_thal[0,:] = W_from_thal[0,:] * gEthal
         # weight the inhibitory popultaion (from the reticular nucleus in the thalamus) as negative
         W_from_thal[1,:] = W_from_thal[1,:] * -gIthal

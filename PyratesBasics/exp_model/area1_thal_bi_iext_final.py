@@ -10,6 +10,7 @@ import sys
 from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
+import seaborn as sns
 
 SIMDIR = os.getenv("SIMDIR")
 WDDIR = os.getenv("WDDIR")
@@ -57,7 +58,6 @@ tau_a1_thal = np.hstack((tau[0, 4:17], tau[0, -2:]))
 # default order of the taus: E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
 #tau_order = ['E1', 'E2', 'E3', 'E4', 'PV1', 'PV2', 'PV3', 'PV4', 'SST1', 'SST2', 'SST3', 'SST4', 'VIP']
 #indices = [tau_order.index(c) for c in cells]
-
 #tau_a1 = tau[indices]
 
 # %%
@@ -66,7 +66,7 @@ g = 10.0 # (g)
 gE = g * bEI
 gI = g * (1 - bEI)
 g_thal = 2
-bEI_thal = 1
+bEI_thal = 0.5
 gEthal = g_thal * bEI_thal
 gIthal = g_thal * (1 - bEI_thal)
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
@@ -81,6 +81,12 @@ W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, extI_cellcount
 rows = np.r_[4:17, -2, -1]
 cols = np.r_[4:17, -4, -3]
 W_A1_thal = W[np.ix_(rows, cols)]
+
+
+df_W_A1_thal = pd.DataFrame(W_A1_thal, columns=cells)
+sns.heatmap(df_W_A1_thal, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
+
+
 
 """
 W[-2:,-4:-2] (within thalamus connectivity)
@@ -157,11 +163,12 @@ create_I_ext = [OperatorTemplate(
         "Iext": "output",
         "t": "variable",
         "A": input_strength,
-        "onset": input_onset/step_size,
-        "dur": input_duration/step_size
+        "onset": int(input_onset/step_size),
+        "dur": int(input_duration/step_size)
     },
     description="External step input"
 )]
+
 # %%
 # Node templates
 nodes = [
@@ -183,7 +190,7 @@ edges=[]
 for i, cell_i in enumerate(cells):
     # j : source
     for j, cell_j in enumerate(cells):
-        edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': W_A1_thal[i,j]}))
+        edges.append((f'{cell_j}/{pro_names[j]}/m_out', f'{cell_i}/{rpo_names[j]}/m_in', None, {'weight': 1.0})) #W_A1_thal[i,j]}))
 
 # Set up the Model Circuit 
 area_1_thal_bI_iext = CircuitTemplate(
@@ -209,7 +216,7 @@ for node_name, node in area_1_thal_bI.nodes.items():
 # %% save PyRates model template in a yaml file
 #area_1.get_run_func(func_name='area_1', file_name='area_12', step_size=1e-4, auto=True, backend='python', solver='scipy',vectorize=False, float_precision='float64')
 
-circuit_to_yaml(area_1_thal_bI_iext, "area_1_thal_bI_iext.yaml")
+#circuit_to_yaml(area_1_thal_bI_iext, "area_1_thal_bI_iext.yaml")
 
 rpo_names_extended = rpo_names + ['RPO_Iext']
 # %%
@@ -267,8 +274,8 @@ results = area_1_thal_bI_iext.run(simulation_time=simulation_time,
                   # },
                   outputs=outputs,
                   backend ="scipy",
-                  vectorize=True,
-                  clear=False,
+                  vectorize=False,
+                  #clear=False,
                   float_precision="float64"
                   )
 
@@ -295,7 +302,7 @@ all_potentials = np.array(all_potentials).T  # shape: samples x populations
 
 potential_df = pd.DataFrame(all_potentials, columns=cells)
 
-potential_df.to_csv("pyrates_ThalA1_bEI0.5_g10_gthal2_bEIthal1_thalcellcount500_test.csv", index=False) 
+#potential_df.to_csv("pyrates_ThalA1_bEI0.5_g10_gthal2_bEIthal0.5_thalcellcount500_Iext0_Idur0_bI0_test.csv", index=False) 
 
 
 # %% Rates 

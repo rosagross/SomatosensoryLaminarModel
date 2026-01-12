@@ -61,16 +61,15 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [10]
+coupling_strengths = [1]
 backgrndI_strengths = [0] #,6,7]
 input_durations = [0]
 input_strengths = [0]
-balance_EI = [0]
+balance_EI = [1]
 area = 'all'
 
 # %%
 for d in input_durations:
-    simulation_time = int(input_onset) + simulation_dur
     for sb in backgrndI_strengths:
         for s in input_strengths:
             # arrays to store simulation duration
@@ -90,13 +89,14 @@ for d in input_durations:
                     # additional parameters (that are usually fixed)
                     params['g_thal'] = 0
                     params['bEI_thal'] = 0
-                    params['extI_cellcounts'] = 0
-                    params['bI_cellcounts'] = 0
-                    params['thal_cellcounts'] = 0
+                    params['extI_cellcounts'] = 1000
+                    params['bI_cellcounts'] = 100
+                    params['thal_cellcounts'] = 500
 
                     #model = SomatoModel(params)
+                    #model.plot_W_heatmap()
                     model = SomatoModelPyrates(params)
-                    
+
                     # simulate rates and potentials
                     start = time.time()
                     model.simulate()

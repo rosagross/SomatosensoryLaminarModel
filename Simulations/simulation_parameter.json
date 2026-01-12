@@ -1,6 +1,6 @@
 {
     "save_params": false,
-    "save_results": false,
+    "save_results": true,
     "save_full_potentials": false,
     "plot_rates": true,
     "plot_potentials": true,
@@ -19,7 +19,7 @@
     "simulation_dur": 2,
     "Iext_duration": 0,
     "Iext_strength": 0,
-    "Ib_strength": 5,
+    "Ib_strength": 0,
     "thal_connect": [
         0,
         0,

@@ -88,7 +88,7 @@ class SomatoModelPyrates():
 
         # define filename for saving results
         self.filename = (
-            f"g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"gthal{self.g_thal}_bEIthal{self.bEI_thal}_g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
             f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_PYRATES"
         )
@@ -110,6 +110,10 @@ class SomatoModelPyrates():
         self.W0 = np.append(self.W0, self.W_to_thal, axis=0)
         self.W0 = np.append(self.W0, self.W_from_thal.T, axis=1)
         self.W = np.concatenate((self.W0, self.Wb, self.Wext), axis=1)
+        
+        import seaborn as sns
+        sns.heatmap(self.W)
+
     
     def connectivity_populations(self):
         # inhibitory
@@ -118,6 +122,7 @@ class SomatoModelPyrates():
         idx_I_S1 = np.array(idx_I_S)+4 
         idx_I_S2 = np.array(idx_I_S)+17
         self.idx_I = np.concatenate((idx_I_A3b,idx_I_S1,idx_I_S2))
+        
         # excitatory
         idx_E_A3b = np.array([0])
         idx_E_S = [0,4,7,10]
@@ -410,7 +415,6 @@ class SomatoModelPyrates():
                   outputs=outputs,
                   backend ="scipy",
                   vectorize=False,
-                  clear=False,
                   float_precision="float64"
                   )
         all_potentials = []
@@ -490,7 +494,7 @@ class SomatoModelPyrates():
         filename = filename + ".hdf5"
 
         # only safe every second datapoint
-        resolution_tstep = 0.01
+        resolution_tstep = 0.001
         print("tstep resolution", resolution_tstep)
         rates_downsampled = self.rate[:, :: int(1000 * resolution_tstep)]
         # TODO: double check if the potential array needs to be transposed 
