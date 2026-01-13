@@ -11,7 +11,6 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "cwd": "/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/pycobi_prova/"
         }
     ]
 }

@@ -16,7 +16,7 @@
     "filedir": "/data/p_02989/Modelling/output_test/",
     "input_type": "step",
     "input_onset": 1.001,
-    "simulation_dur": 2,
+    "simulation_dur": 1,
     "Iext_duration": 0,
     "Iext_strength": 0,
     "Ib_strength": 0,
