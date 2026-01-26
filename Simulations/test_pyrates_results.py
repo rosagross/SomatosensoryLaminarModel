@@ -22,6 +22,8 @@ import plotting_functions as pf
 
 SIMDIR = os.getenv("SIMDIR")
 WDDIR = os.getenv("WDDIR")
+SIMDIR =  "/data/p_02989/Modelling/output_grossmannr/" #os.getenv("WDDIR")
+WDDIR = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/"
 param_path = os.path.join(WDDIR, 'Simulations')
 figure_dir = os.path.join(SIMDIR, "Figures")
 
@@ -172,7 +174,7 @@ def test_pyrates_ThalA1():
     # extract results for area A3b and thal
     rate = model.rate
     potential_sum = np.sum(model.potential, axis=1)
-    potential_A1 = np.concat((potential_sum[4:17], potential_sum[-2:])).T
+    potential_A1 = np.concat((potential_sum[4:4], potential_sum[-2:])).T
 
     # load pyrates results
     potential_sum_pyrates = pd.read_csv(os.path.join(param_path, 'test_data', test_filename), index_col=False)
@@ -210,7 +212,7 @@ def test_complete_python_model():
 
     params = read_simulation_params()
 
-    test_cases = [[1, 1, 0, 0, 0, 0, 0, 1000, 100, 500]] # tens!
+    test_cases = [[10, 0.5, 0, 0, 0, 0, 0, 1000, 100, 500]] # tens!
                   #[0, 0, 0, 0, 0, 0, 0, 1000, 100, 500], # fine
                   #[10, 0, 0, 0, 0, 0, 0, 1000, 100, 500], # fine
                   #[10, 1, 0, 0, 0, 0, 0, 1000, 100, 500], # error
@@ -244,9 +246,12 @@ def test_complete_python_model():
 
         rate = model.rate
         potential_sum_python = np.sum(model.potential, axis=1).T
+        A3bS1 = potential_sum_python[:,:4]
+        thalamus = potential_sum_python[:,30:32]
+        potential_sum_python = np.hstack((A3bS1, thalamus))
 
         # load pyrates results
-        test_filename = f'TENSA3b_gthal{case[5]}_bEIthal{case[6]}_g{case[0]}_bEI{case[1]}_Ib{case[4]}_Iextd{case[2]}_stepIexts{case[3]}_Ionset1.001_thalcells500_Ibcells100_Iextcells1000_PYRATES.hdf5'
+        test_filename = f'A3b_gthal{case[5]}_bEIthal{case[6]}_g{case[0]}_bEI{case[1]}_Ib{case[4]}_Iextd{case[2]}_stepIexts{case[3]}_Ionset1.001_thalcells500_Ibcells100_Iextcells1000_PYRATES.hdf5'
         potential_sum_pyrates = pd.read_hdf(os.path.join(param_path, 'test_data', test_filename), key='summed_potential')
 
         # difference 
@@ -287,12 +292,12 @@ def test_complete_python_model():
         columns=potential_sum_pyrates.columns
         )
 
-        for cell in cells[-2:]:
-            plt.plot(pyrates_df[cell], label=f'{cell} - pyrates')
+        for cell in cells[:4]:
+            plt.plot(pyrates_df[cell], label=f'{cell} - pyrates, {np.round(pyrates_df[cell].iloc[-1], 7)}')
         plt.legend()
         plt.show()
 
-        for cell in cells[-2:]:
+        for cell in cells[:4]:
             plt.plot(python_df[cell], label=cell)
         plt.legend()
         plt.show()

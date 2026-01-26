@@ -19,12 +19,14 @@ import pandas as pd
 import time
 import csv
 from somato_model import SomatoModel, read_simulation_params
-from somato_model_pyrates import SomatoModelPyrates, read_simulation_params
+from somato_model_pyrates_no_conn_operators_A3bS1 import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 
 # %%
 SIMDIR = os.getenv("SIMDIR")
 WDDIR = os.getenv("WDDIR")
+#SIMDIR =  "/data/p_02989/Modelling/output_grossmannr/" #os.getenv("WDDIR")
+#WDDIR = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/"
 figure_dir = os.path.join(SIMDIR, "Figures")
 
 # %%   
@@ -61,12 +63,12 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [1]
-backgrndI_strengths = [0] #,6,7]
+coupling_strengths = [100, 120, 140, 160]
+backgrndI_strengths = [40, 60, 80] #,6,7]
 input_durations = [0]
 input_strengths = [0]
-balance_EI = [1]
-area = 'all'
+balance_EI = [0.8, 0.82, 0.84, 0.86]
+area = 'ThalA3b'
 
 # %%
 for d in input_durations:
@@ -93,9 +95,9 @@ for d in input_durations:
                     params['bI_cellcounts'] = 100
                     params['thal_cellcounts'] = 500
 
-                    #model = SomatoModel(params)
+                    model = SomatoModel(params)
                     #model.plot_W_heatmap()
-                    model = SomatoModelPyrates(params)
+                    #model = SomatoModelPyrates(params)
 
                     # simulate rates and potentials
                     start = time.time()

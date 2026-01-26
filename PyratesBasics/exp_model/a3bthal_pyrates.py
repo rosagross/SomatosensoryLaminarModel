@@ -1,18 +1,20 @@
 # %%
 import os 
 os.chdir("/data/hu_grossmannr/Desktop/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+SIMDIR =  "/data/p_02989/Modelling/output_grossmannr/" #os.getenv("WDDIR")
+WDDIR = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/" #os.getenv("SIMDIR")
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from numba import njit
+#from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
 
-SIMDIR = os.getenv("SIMDIR")
-WDDIR = os.getenv("WDDIR")
+#SIMDIR = os.getenv("SIMDIR")
+#WDDIR = os.getenv("WDDIR")
 param_path = os.path.join(WDDIR, 'Simulations')
 
 if param_path not in sys.path:
@@ -134,16 +136,14 @@ for target_cell in cells:
     for rpo_name in rpo_names[:N_cells]:
         outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
 
-results = area_a3b_thal.run(simulation_time=2.0,
+results = area_a3b_thal.run(simulation_time=1.0,
                   step_size=1e-3,
                   sampling_step_size=1e-3,
                   outputs=outputs,
                   backend='default',
                   vectorize=False,
                   clear=False,
-                  float_precision="float64",
-                  decorator=njit
-                  )
+                  float_precision="float64"                  )
 
 # %% Pandas Dataframe
 all_potentials = []

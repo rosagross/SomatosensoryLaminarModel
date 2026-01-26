@@ -1,15 +1,24 @@
 # %%
 import os 
-os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+import sys
+#os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
+SIMDIR =  "/data/p_02989/Modelling/output_grossmannr/" #os.getenv("WDDIR")
+WDDIR = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/" #os.getenv("SIMDIR")
 from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
 from copy import deepcopy
-from parameters import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from numba import njit
 from yaml_saving import circuit_to_yaml
 from pprint import pprint
+
+param_path = os.path.join(WDDIR,"Simulations")
+
+if param_path not in sys.path:
+    sys.path.append(param_path)
+from parameters import Parameter
+import json
+
 #%%
 # Parameters:
 cells = ['E3b','PV3b','SST3b','VIP3b','thalE', 'thalI'] # taken from the weights matrix
@@ -22,12 +31,12 @@ params = Parameter()
 input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
 input_onset = 1.0 # in sec
 simulation_dur = 2.0
-input_duration = 1.0  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 0.0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
-backgrndI_strengths = 5 #[0, 5, 10, 15, 20]
+input_duration = 0  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+input_strength = 0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+backgrndI_strengths = 0 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
-simulation_time = float(int(input_onset) + simulation_dur)
+simulation_time = 1 # float(int(input_onset) + simulation_dur)
 
 # %% sigmoid parameters
 sigmoid_params = params.get_sigmoid()  #already in the correct order
@@ -46,18 +55,20 @@ tau,_ = params.get_params()
 tau_a3b_thal = np.hstack((tau[0, :4], tau[0, -2:]))
 
 # %% weights
-g_thal = 200
-g = 100
-connect_reverse_factor =  6448
-bEI_thal = 0.5
 bEI = 0.5
-gE = g * bEI /connect_reverse_factor
-gI = g * (1 - bEI) /connect_reverse_factor
-gEthal = g_thal * bEI_thal /connect_reverse_factor
-gIthal = g_thal * (1 - bEI_thal) /connect_reverse_factor
+g = 10.0 # (g)
+gE = g * bEI
+gI = g * (1 - bEI)
+g_thal = 2
+bEI_thal = 0.5
+gEthal = g_thal * bEI_thal
+gIthal = g_thal * (1 - bEI_thal)
 thal_connect = (0, 0, 0, 0)  # tEE, tEI, tIE, tII
+extI_cellcounts = 1000
+bI_cellcounts = 100
+thal_cellcounts = 500
 
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, area='all') 
+W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, extI_cellcounts, bI_cellcounts, thal_cellcounts, area='all') 
 
 # selecting the region: 
 # in python the results include the start index but excludes the end index
@@ -234,8 +245,7 @@ for i, cell in enumerate(cells):
 all_potentials = np.array(all_potentials).T
 
 potential_df = pd.DataFrame(all_potentials, columns=cells)
-
-#potential_df.to_csv("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/simulations/a3bthal.csv") 
+potential_df.to_csv("a3bthal.csv") 
 
 # %% Rates 
 n_timepoints, n_cells = all_potentials.shape

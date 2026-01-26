@@ -60,9 +60,9 @@ input_strengths = params['input_strengths']
 backgroundI_strengths = params['backgrndI_strengths']
 
 # sampling parameters
-step_size = 0.01
+step_size = 0.01 # of saving, not of simulation!
 sample_delay_immediate = 0.3
-sample_delay_late = 1 # when to start the long term behaviour "window"
+sample_delay_late = 0.5 # when to start the long term behaviour "window"
 input_onset = 1.001
 sample_dur = 0.3
 offset=0.1 # offset : time in s between baseline sampling and start of input 
