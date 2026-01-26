@@ -16,26 +16,28 @@ class Parameter():
     def get_params(self):
 
         # nr. of populations
-        nPopA3b = 4 # E2, PV2, SOM2 
-        nPopS1 = 13 #  
-        nPopS2 = 13 # 
+        nPopA3b = 4 # E, PV, SST, VIP
+        nPopS1 = 13 # 4*E, 4*PV, 4*SST, 1*VIP
+        nPopS2 = 13 # 4*E, 4*PV, 4*SST, 1*VIP
         nPopThal = 2 # one forward excitatory and one inhibitory feedback neuron
         nPopTotal = nPopS1+nPopS2+nPopA3b+nPopThal
+
         # SYNAPTIC DECAY (depends on the connection type excitatory/inhibitory)
-        # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
-        #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
-        #tau = np.tile(np.array([5.2, 5.2, 5.9, 5.9, 3, 3, 3.8, 3.8, 11.2, 11.2, 11.1, 11.1, 10.4])*1e-3, (nPop+1,1)) 
-        # Visual cortex values
+        # Based on visual cortex values
         # the last two values are used for the external input and background input
-        # with nPopTotal = 28 the shape of tau should be (28, 32) 
-        
+        # with nPopTotal = 32 the shape of tau should be (32, 32) 
         # order: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 
         tauA3b = np.tile(np.array([6,3,20,15])*1e-3, (nPopTotal,1)) # sec
         tauS1 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20])*1e-3, (nPopTotal,1)) # sec
         tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
-        # TODO: MEMBRANE CONSTANT (NOTE: this value depends on post synaptic neuron whereas the synaptic decay depends on the presynapse)
+        # Alternative, old values for tau
+        # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
+        #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
+        #tau = np.tile(np.array([5.2, 5.2, 5.9, 5.9, 3, 3, 3.8, 3.8, 11.2, 11.2, 11.1, 11.1, 10.4])*1e-3, (nPop+1,1)) 
+
+        # TODO: MEMBRANE CONSTANT (NOTE: this value depends on post-synaptic neuron whereas the synaptic decay depends on the pre-synapse)
         
         return tau, nPopTotal
 
@@ -43,9 +45,7 @@ class Parameter():
 
         # Connection probabilies
         # Targets in rows, sources in columns 
-        # Area 3b: E2, PV2, SST2
-        
-        #P_A3b = np.array([[9.9, 37.4, 19.8],[37.4, 28.8, 36.3],[19., 33.2,  1.2]])*1e-2 
+        # Values for area 3b are merged values from S1 (after already computed W = P*S*C)
         
         # E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (Thalamus is added later!)
         P_S1 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
@@ -76,17 +76,12 @@ class Parameter():
                     [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, 39.6, 24.6, 24.1],
                     [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
         
-        # E population projects to S1 layer 4 E and PV 
-        #P_A3btoS1 = np.array([[0,0,0],[0,0,0],[0,0,0],[0,0,0],
-        #                        [100,0,0],[50,0,0],[0,0,0],
-        #                        [0,0,0],[0,0,0],[0,0,0],
-        #                        [0,0,0],[0,0,0],[0,0,0]])*1e-2
         
-        #P_A3btoS2 = np.zeros((13,3)) 
-        P_S1toS2 = np.zeros((13,13)) # TODO: implement S1 to S2 connection! 
         # forward connections: S1 Layer 5, E3 --> S2 layer 4 E2 
-        P_S2toS1 = np.zeros((13,13)) # TODO: implement feedback from S2 to S1
+        P_S1toS2 = np.zeros((13,13)) # TODO: implement S1 to S2 connection! 
+        
         # feedback connections: S2 Layer 5, E3 --> S2 layer 4 E2 
+        P_S2toS1 = np.zeros((13,13)) # TODO: implement feedback from S2 to S1
 
         P_toS1 = np.hstack((P_S1, P_S2toS1))
         P_toS2 = np.hstack((P_S1toS2, P_S2))
@@ -96,11 +91,11 @@ class Parameter():
 
 
     def get_connectStrength(self):
-
-        # Based on values below 
-        #psp_A3b = [[1.59, 1.0, 1.0],[1.5, 1.0, 1.0],[0.5, 1.0, 0.19]]
+        """ 
+        Postsynaptic potential (13x13) averages from Isbister, Jiang, and more (see excel file FinalConnectivity_PSP.csv for mor info).
+        Again, values for area 3b are merged from S1 later on. 
+        """
                     
-        # Postsynaptic potential (13x13) averages from Isbister, Jiang, and more (see excel file FinalConnectivity_PSP.csv for mor info)
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         # Targets in rows, sources in columns
         psp_S1 = np.array([
@@ -132,14 +127,6 @@ class Parameter():
             [0.5, 1.0, 1.0, 1.0, 0.29, 1.0, 1.0, 0.5, 1.0, 1.0, 0.75, 2.0, 1.0],
             [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
             [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]]
-
-        # to Area 3b
-        #psp_S1toA3b = [[0.5, 1.0, 1.0, 1.0, 1.59, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-        #    [0.5, 1.0, 1.0, 1.0, 1.5, 1.0, 1.0, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-        #    [0.5, 1.0, 1.0, 1.0, 0.5, 1.0, 0.19, 0.5, 1.0, 1.0, 0.5, 1.0, 1.0],
-        #    ] # same as S1 to layer 4, since A3b is only modelled as the input layer!
-        #psp_S2toA3b = np.zeros((3,13))
-        #psp_toA3b = np.hstack((psp_A3b, psp_S1toA3b, psp_S2toA3b))
         
         # to S1
         psp_S2toS1 = np.zeros((13,13))
@@ -172,11 +159,21 @@ class Parameter():
         return C 
 
     def get_raw_connectivity(self, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount):
+        """Put together the connevtivity matrix (not yet scaled by coupling strength and EI-balance parameter)
+        
+        Args:
+            thal_connect: connecivity between thalamic neurons (E and I)
+            extI_cellcount: number of external input neurons (in the thalamus)
+            bI_cellcount: number of background input neurons (from other cortical areas)
+            thal_cellcount: number of neurons in the thalamus connecting to the somatosensory area
+
+        Returns: 
+            W0 (2D numpy array): connectivity matrix of only cortical populations (no thalamus)! 
+            W_to_thal (2D numpy array): 
+            W_from_thal (2D numpy array):
+            Wb (1D numpy array): background input array
+            Wext (1D numpy array): external input array
         """
-        thal_connect: connecivity between thalamic neurons (E and I)
-        extI_cellcount: number of external input neurons (in the thalamus)
-        bI_cellcount: number of background input neurons (from other cortical areas)"""
-        # g is a scaling factor scaling the general coupling strength
 
         S = self.get_connectStrength()
         P = self.get_connectProb()
@@ -229,7 +226,7 @@ class Parameter():
                             np.vstack((W_A3bA3b_ES, W_A3bA3b_PS, W_A3bA3b_SS, W_A3bA3b_VS)),
                             np.vstack((W_A3bA3b_EV, W_A3bA3b_PV, W_A3bA3b_SV, W_A3bA3b_VV))))
         
-        W_A3bA3b = np.zeros((4, 4))
+        #W_A3bA3b = np.zeros((4, 4))
         
         # ... from  area 3b to S1
         # this means we have to fuse the source populations together
@@ -245,7 +242,7 @@ class Parameter():
         W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
         #W_A3bS1 = np.zeros((4, 13))
 
-        # connectivity between S2 and A3b has to be defined manually
+        # TODO: connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
         #W_S2A3b[4,0] = 100
         #W_S2A3b[5,0] = 100
@@ -253,7 +250,7 @@ class Parameter():
         #W_A3bS2[0,4] = 50
         #W_A3bS2[1,4] = 50
 
-        # connectivity between S2 and S1 also has to be defined manually
+        # TODO: connectivity between S2 and S1 also has to be defined manually
         # feedforward
         #W0[idx_S1_E[1]+13,idx_S1_E[2]] = 100 # S1 layer 5 E to S2 layer 4 E
         #W0[idx_S1_P[1]+13,idx_S1_E[2]] = 100
@@ -329,17 +326,39 @@ class Parameter():
         Wb = np.zeros((W_from_thal.shape[1],1))
         Wb[:-2] = 1 * bI_cellcount # cellcount from background input
 
+        # shut down S1 and S2 for now
+        #W0[4:,:] = 0
+        #W0[:,4:] = 0
+
         # build a matrix out of ones!
-        W0 = np.ones((30,30)) * 10
-        W0[:,:4] = 0
-        W_to_thal = np.ones((2,30)) * 10 
-        W_from_thal = np.ones((2,32)) * 10
+        #W0 = np.ones((30,30)) * 50
+        #W0[4:,:] = 0
+        #W0[:,4:] = 0
+        #W_to_thal = np.ones((2,30)) * 0 
+        #W_from_thal = np.ones((2,32)) * 0
 
 
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
 
-    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, area='all'):
+    def get_connectivity(self, gE, gI, gEthal, gEthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, area='all'):
+        """Apply coupling strength parameter and compute the final connectivity matrix.  
+        
+        Args:
+            gE, gI (float): Coupling strength parameter for E and I populations.   
+                            It should be the result of the equation: g * bEI (where g is the general coupling strength and bEI is the EI-balance).
+            gEthal, gEthal (float): Same as above, just for thalamic neurons.
+            thal_connect (int): connecivity between thalamic neurons (E and I)
+            extI_cellcount (int): number of external input neurons (in the thalamus)
+            bI_cellcount (int): number of background input neurons (from other cortical areas)
+            thal_cellcount (int): number of neurons in the thalamus connecting to the somatosensory area
+            area (string): area to chose if you want to look at an isolated area (sets all other connections to zero).
+                           Options: 'ThalA3b', 'S1', 'A3b', 'S1','ThalS1', 'A1', 'ThalA1', 'ThalA1S2', 'S2', 'A1S2'
+        
+        Returns:
+            2D numpy array: complete connectivity matrix (32x34)
+        """
+        
 
         W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(thal_connect, extI_cellcount, bI_cellcount, thal_cellcount)
 
@@ -370,13 +389,15 @@ class Parameter():
         W0 = np.append(W0, W_from_thal.T, axis=1)
         W = np.concatenate((W0, Wb, Wext), axis=1)
 
+        
+        # if we don't want to use the entire model, just use one area 
         # based on what area was chosen, set the respective connectivity values to 0 
         if area=='ThalA3b':
             W[4:-2,:] = 0 # to A1, S2 from everywhere
             W[:,4:-4] = 0 # to everywhere from A1, S2
         elif area=='A3b':
             W[4:] = 0 # to A1, S2, Thal from everywhere
-            W[:,4:-2] = 0 # 
+            W[:,4:-2] = 0 
         elif area=='S1':
             W[4+13:,4+13:] = 0
         elif area=='ThalS1':
@@ -414,7 +435,16 @@ class Parameter():
         return W
 
     def get_sigmoid(self):
+        """
+        Sigmoid function (nPop x 3) --> 3 stands for parameters: r(1/mV), v_thr(mV), m_max (1/s)
+        
+        Returns:
+            numpy array: sigmoid values.
+        """
+        
         # sigmoid function (nPop x 3) --> 3 stands for parameters: r(1/mV), v_thr(mV), m_max (1/s)
+        
+        
         sigmoid_params_A3b = [[  0.12782346,  32.10540543,  31.39696397],
                                     [  0.14218422,  40.03107351, 166.82960408],
                                     [  0.07937015,  42.01276379,  56.95305832],
@@ -455,6 +485,3 @@ class Parameter():
         sigmoid_params = np.vstack((sigmoid_params_A3b, sigmoid_params_S1, sigmoid_params_S2))
                                        
         return sigmoid_params
-
-
-# %%

@@ -9,6 +9,7 @@ from parameters import Parameter
 import os
 
 WDDIR = os.getenv("WDDIR")
+SIMDIR = os.getenv("SIMDIR")
 
 def read_simulation_params():
     """Read simulation parameters from json file."""
@@ -124,14 +125,11 @@ class SomatoModel():
 
     def plot_W_heatmap(self):
         """
-        Plot heatmap of connectivity matrix
+        Plot connectivity matrix as heatmap.
         """
         
         W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
-        rows = np.r_[:30, -2, -1]
-        cols = np.r_[:30, -4, -3]
-        W_all = W[np.ix_(rows, cols)]
-        sns.heatmap(W_all, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
+        sns.heatmap(W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
 
     def simulate(self):
