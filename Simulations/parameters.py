@@ -191,8 +191,6 @@ class Parameter():
         idx_S1_S = [2,6,9,12]
         idx_S1_V = [3]
 
-        #return W0, C, PS
-
         # set up the connectivity for area 3b as a weighted average of the connectivity from S1
         # ... within A3b
         # ... merge input from all E to all other populations
@@ -240,7 +238,6 @@ class Parameter():
         WS1_collapse_targets_S = np.dot(W0[idx_S1_S,:int(len(W0)/2)].T, C[idx_S1_S])/np.sum(C[idx_S1_S])
         WS1_collapse_targets_V = np.dot(W0[idx_S1_V,:int(len(W0)/2)].T, C[idx_S1_V])/np.sum(C[idx_S1_V])
         W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
-        #W_A3bS1 = np.zeros((4, 13))
 
         # TODO: connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
@@ -261,10 +258,6 @@ class Parameter():
         # stack the matrices together 
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))
         W0 = np.hstack((np.vstack((W_A3bA3b, W_S1A3b, W_S2A3b)), W0))
-
-        # create the external input matrix, based on thalamus connectivity (average of findings, see FinalConnectivity_PSPs.ods)
-        # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        #S_thal = np.array([0.49, 0.49, 0.245, 0, 1.45, 2.3, 0.245, 0.5, 0.49,0.245, 0.85, 2.2, 0.245]) # Thal to S1 based on Isbister & jiang 
 
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         S_thalToS1 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
@@ -295,7 +288,6 @@ class Parameter():
         PS_from_thal_S1 = np.multiply(P_thalToS1, S_thalToS1)
         cell_count_thal = thal_cellcount # it is 230 in Jiang et al. 2023 but for us it might be different!
         W_from_thal_S1 = np.multiply(PS_from_thal_S1, cell_count_thal)
-        #W_from_thal_S1 = np.zeros((2,13))
 
         # now that we have the connectivity from- and to thalamus and S1/S2,
         # we can collapse it to get input array to area 3b 
@@ -304,7 +296,6 @@ class Parameter():
         W_A3bThal_S = np.sum(W_from_thal_S1[:,idx_S1_S], axis=1)
         W_A3bThal_V = np.sum(W_from_thal_S1[:,idx_S1_V], axis=1)
         W_A3bThal = np.vstack((W_A3bThal_E, W_A3bThal_P, W_A3bThal_S, W_A3bThal_V))
-        #W_A3bThal = np.zeros((4,2))
 
         # adjust input from thalamus to S1 (should be slightly weaker compared to A3b)
         W_from_thal_S1 = W_from_thal_S1 * 0.8
@@ -325,18 +316,6 @@ class Parameter():
         # .. and also for the background input (all cells receive input except the thalamus)
         Wb = np.zeros((W_from_thal.shape[1],1))
         Wb[:-2] = 1 * bI_cellcount # cellcount from background input
-
-        # shut down S1 and S2 for now
-        #W0[4:,:] = 0
-        #W0[:,4:] = 0
-
-        # build a matrix out of ones!
-        #W0 = np.ones((30,30)) * 50
-        #W0[4:,:] = 0
-        #W0[:,4:] = 0
-        #W_to_thal = np.ones((2,30)) * 0 
-        #W_from_thal = np.ones((2,32)) * 0
-
 
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
