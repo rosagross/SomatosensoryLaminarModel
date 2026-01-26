@@ -227,7 +227,14 @@ def compute_baseline(df, rates_df, potentials_df, input_onset, step_size, sample
     baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
     baseline_stop = int(baseline_start + sample_dur/step_size)
     df['rate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].mean()
+    df['minRate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].min()
+    df['maxRate_baseline'] = rates_df.iloc[baseline_start:baseline_stop].max()
+    df['diffRate_baseline'] = df['maxRate_baseline'] - df['minRate_baseline']
+    
     df['potential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].mean()
+    df['minPotential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].min()
+    df['maxPotential_baseline'] = potentials_df.iloc[baseline_start:baseline_stop].max()
+    df['diffPotential_baseline'] = df['maxPotential_baseline'] - df['minPotential_baseline']
 
 def compare_longterm_baseline(df):                    
     # long term to baseline comparison (here we don't take the diffRate because the baseline does not 
@@ -314,7 +321,8 @@ def load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cell
     if pyrates:
         filename = f"gthal2_bEIthal0.5_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_PYRATES.hdf5"
     else:    
-        filename = f"gthal2_bEIthal0.5_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
+        filename = f"gthal0_bEIthal0_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
+        #filename = f"gthal2_bEIthal0.5_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon.hdf5"
 
     rates_df = pd.read_hdf(os.path.join(data_dir, filename), key='rates')
     
@@ -325,7 +333,8 @@ def load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cell
 
 def load_derivative(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir):
     """ load the characteristics/processed data of one simulation """
-    deriv_file = f"gthal2_bEIthal0.5_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon_processed.csv"
+    deriv_file = f"gthal0_bEIthal0_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon_processed.csv"
+    #deriv_file = f"gthal2_bEIthal0.5_g{g}_bEI{bEI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2Uncon_processed.csv"
     deriv_df = pd.read_csv(os.path.join(deriv_dir, deriv_file))
     return deriv_df
 

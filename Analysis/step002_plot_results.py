@@ -67,16 +67,16 @@ thal_cellcounts = params['thal_cellcounts']
 # %% Make plots that demonstrate the sampling time line 
 
 # load trajectory to plot
-g = 20.0
-Iext_dur = 1.5 
-Iext_str = 10
-Ib_str = 5
+g = 120
+Iext_dur = 0
+Iext_str = 0
+Ib_str = 40
 bEI = 0.8
 rates_df, potentials_df, filename = load_simulation_data(g, bEI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir) 
 trajectory_df = load_trajectory(rates_df, potentials_df, g, bEI, Iext_dur, Iext_str, Ib_str, step_size)
 
 # choose population
-population = 'E3'
+population = 'E3b'
 line_df = trajectory_df[trajectory_df['population']==population]
 
 # LONG TERM and DURING INPUT
@@ -126,16 +126,16 @@ plt.show()
 '''
 
 # choose example settings
-g = 20.0
-bEI = 0.8
-Iext_dur = 1.5
-Iext_str = 30
-Ib_str = 7
+g = 20
+bEI = 0.7
+Iext_dur = 0
+Iext_str = 0
+Ib_str = 8
 
 rates_df, potentials_df, filename = load_simulation_data(g, bEI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir) 
 trajectory_df = load_trajectory(rates_df, potentials_df, g, bEI, Iext_dur, Iext_str, Ib_str, step_size)
 
-population = 'E3' # 'E1'
+population = 'E3b' # 'E1'
 line_df = trajectory_df[trajectory_df['global_coupling']==g]
 line_df = line_df[line_df['population']==population]
 plotting_window = []
@@ -157,13 +157,13 @@ Plot a heatmap showing the effect of Input Strength versus Input Duration
 """
 
 # choose a coupling strength, background input strength and a population
-g = 20.0
-bEI = 0.8
-Ib_str = 7
+g = 20
+bEI = 0.7
+Ib_str = 8
 Iext_str = params['input_strengths']
-Iext_dur = [1.5] #params['input_durations']
+Iext_dur = params['input_durations']
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
-population = 'E3'
+population = 'E3b'
 
 data_df = data_df[data_df['globalCoupling']==g]
 data_df = data_df[data_df['balanceEI']==bEI]
@@ -184,14 +184,14 @@ sns.heatmap(data_heatmap, cmap='magma')
 values = 'longtermVSbaseline_rate'
 
 # choose a coupling strength and a population
-g = 20.0
-bEI = 0.8
+g = 20
+bEI = 0.7
 Iext_str = params['input_strengths']
-Iext_dur = [1.5] #params['input_durations']
-Ib_str = 7
+Iext_dur = params['input_durations']
+Ib_str = 8
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 
-population = 'PV2'
+population = 'PV3b'
 data_df = data_df[data_df['globalCoupling']==g]
 data_df = data_df[data_df['balanceEI']==bEI]
 data_df = data_df[data_df['population']==population]
@@ -204,14 +204,14 @@ sns.heatmap(data_heatmap, cmap='magma')
 # 1.3) MULTI fingerprint PLOT:
 
 # look at several difference E-I balance values
-bEIs = [0.75, 0.8, 0.85]
+bEIs = params['balance_EI']
 # choose a global coupling strength and a population
-g = 20.0
-Ib_str = 7
+g = 20
+Ib_str = 8
 Iext_str = params['input_strengths']
-Iext_dur = [1.5]
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
-population = 'E2'
+Iext_dur = [0]
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+population = 'E3b'
 bEImulti_fingerprint_IextDurVsStr(data_df, g, bEIs, Ib_str, population, thalamus_source, figure_dir)
 
 # %%
@@ -225,11 +225,11 @@ bEImulti_fingerprint_IextDurVsStr(data_df, g, bEIs, Ib_str, population, thalamus
     - subplot rows: coupling strengths
 '''
 
-g = [10.0, 20.0, 30.0]
+g = params['coupling_strengths']
 rate_measure = 'longtermVSbaseline_rate'
-bEI = 0.8
-Ib_str = 7
-Iext_dur = [1.5] #params['input_durations']
+bEI = 0.7
+Ib_str = 8
+Iext_dur = [0] #params['input_durations']
 Iext_str = params['input_strengths']
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 
@@ -246,10 +246,10 @@ Plot difference between Mininum and Maximum Firing rates
 """
 
 # choose settings (make sure that there is no input in the samples)
-Iext_dur = 1.5
-Iext_str = 10
-bEI = 0.8
-Ib_str = 5
+Iext_dur = 0
+Iext_str = 0
+bEI = 0.7
+Ib_str = 8
 
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 multiLayer_couplingOnLongeterm_diffRate(data_df, Iext_dur, Iext_str, Ib_str, bEI, thalamus_source, figure_dir)
@@ -264,14 +264,14 @@ multiLayer_couplingOnLongeterm_diffRate(data_df, Iext_dur, Iext_str, Ib_str, bEI
 - one subplot for each bEI value
 '''
 
-bEI = [0.7, 0.8, 0.9]
-Ib_str = [5,6,7]
-Iext_dur = 1.5
-Iext_str = 10 #, 200, 300, 400]
-g = [10.0, 20.0, 30.0]
+bEI = params['balance_EI']
+Ib_str = params['backgrndI_strengths']
+Iext_dur = 0
+Iext_str = 0 #, 200, 300, 400]
+g = params['coupling_strengths']
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
-population = 'E3'
-rate_measure = 'lateLongterm' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
+population = 'E3b'
+rate_measure = 'baseline' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
 multibEI_couplingOnMinmaxRate(data_df, bEI, Ib_str, population, rate_measure, thalamus_source, figure_dir)
 
 # %%
@@ -279,12 +279,12 @@ multibEI_couplingOnMinmaxRate(data_df, bEI, Ib_str, population, rate_measure, th
 BACKGROUND INPUT
 3.2) all layers
 '''
-Iext_dur = 1.5
-Iext_str = 10
-Ib_str = 7
-bEI = 0.8
-g = [10.0, 20.0, 30.0]
-rate_measure = 'lateLongterm' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
+Iext_dur = 0
+Iext_str = 0
+Ib_str = 6
+bEI = 0.5
+g = params['coupling_strengths']
+rate_measure = 'baseline' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
 
 data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 multiLayer_couplingOnMinMaxRate(data_df, Iext_dur, Iext_str, Ib_str, bEI, rate_measure, thalamus_source, figure_dir)

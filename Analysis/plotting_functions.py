@@ -258,6 +258,22 @@ def multiLayer_couplingOnMinMaxRate(data_df, Iext_dur, Iext_str, Ib_str, bEI, ra
     plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
     plt.show()
 
+    # make a plot for A3b too
+    cells = ['E3b, PV3b', 'SST3b', 'VIP3b']
+    fig, axes = plt.subplots(1, 1, figsize=(10, 10), sharey=False, sharex=True)  # Set figure size
+    for cell in cells:
+        layer_df = data_df[data_df['population'] == cell]
+        sns.lineplot(layer_df, y=f'minRate_{rate_measure}', x='globalCoupling', ax=axes, legend=True)
+        sns.lineplot(layer_df, y=f'maxRate_{rate_measure}', x='globalCoupling', ax=axes, legend=False)
+        axes.set_ylabel('Rate (Hz)')
+        axes.set_xlabel('Global Coupling Strength')
+        #axes.legend(f'{cell}', prop={'size':8})
+
+    sns.despine(trim=True)
+    figure_name = f'A3b_couplingOnMinMaxRate_{rate_measure}_Iextstr{Iext_str}_Ibstr{Ib_str}_bEI{bEI}_tauVisual_{thalamus_source}.pdf'
+    plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+    plt.show()
+
 
 def inputStrengthOnminMaxpotential(data_df, Iext_str, Ib_str, bEI, population, potential_measure, thalamus_source, figure_dir):
     """
