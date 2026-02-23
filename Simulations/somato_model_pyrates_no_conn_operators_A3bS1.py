@@ -9,8 +9,8 @@
 """
 # %% libraries import
 import os 
-SIMDIR =  "/data/p_02989/Modelling/output_grossmannr/" #os.getenv("WDDIR")
-WDDIR = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/" #os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+SIMDIR = os.getenv("SIMDIR")
 #os.chdir(os.path.join(WDDIR,"PyratesBasics","exp_model")) 
 import sys
 import json
@@ -50,9 +50,14 @@ class SomatoModelPyrates():
         self.nPop = self.p.nPop
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
         self.sigm = self.p.sigmoid_params
+        #sigmoid_params = self.p.get_sigmoid()  #already in the correct order
+        #self.sigm = np.vstack((sigmoid_params[:4], sigmoid_params[-2:])) # A3b + thalE and thalI are the last two rows of S2
+
         self.cells = ['E3b','PV3b','SST3b','VIP3b', # A3b
+        'E1S1', 'PV1S1', 'SST1S1', 'VIPS1', 'E2S1', 'PV2S1', 'SST2S1', 'E3S1', 'PV3S1', 'SST3S1', 'E4S1', 'PV4S1', 'SST4S1', # S1
+        'E1S2', 'PV1S2', 'SST1S2', 'VIPS2', 'E2S2', 'PV2S2', 'SST2S2', 'E3S2', 'PV3S2', 'SST3S2', 'E4S2', 'PV4S2', 'SST4S2', # S2
         'ThalE', 'ThalI']
-        self.cells_ext = self.cells + ['BACKGROUND'] # + ['G'] + ['G_THAL'] + ['BEI'] + ['BEI_THAL'] 
+        self.cells_ext = self.cells #+ ['BACKGROUND'] # + ['G'] + ['G_THAL'] + ['BEI'] + ['BEI_THAL'] 
         # model parameters
         self.pro_names = ["PRO_"+ cell for cell in self.cells]
         self.rpo_names=["RPO_"+cell for cell in self.cells]
@@ -110,14 +115,18 @@ class SomatoModelPyrates():
     def _extract_sigmoid_params(self):
         """Extract r, v_thr, m_max from sigmoid parameter matrix."""
         N_cells = len(self.cells)
+        
         self.r = [self.sigm[row, 0] for row in range(N_cells)]
         self.v_thr = [self.sigm[row, 1] for row in range(N_cells)]
         self.m_max = [self.sigm[row, 2] for row in range(N_cells)]
+        
 
     def _load_tau_params(self):
         """Load time constants from Parameter object."""
-        tau, _ = self.p.get_params()
-        self.tau = tau[0, :]
+        #tau, _ = self.p.get_params()
+        #self.tau = np.hstack((tau[0, :4], tau[0, -2:]))
+
+        self.tau = self.p.tau
     
     def connectivity_weights(self):
         #self.W0, self.W_to_thal, self.W_from_thal, self.Wb, self.Wext = self.p.get_raw_connectivity(self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts)
@@ -129,7 +138,7 @@ class SomatoModelPyrates():
         import seaborn as sns
         sns.heatmap(self.W)
         
-        
+        """
         A3bS1 = self.W[:4,:4]
         to_thalamus = self.W[-2:, :4] # 2 x 17
         from_thalamus = self.W[:4, -4:-2] # 17 x 2
@@ -138,6 +147,8 @@ class SomatoModelPyrates():
 
         self.W = np.vstack((A3bS1, to_thalamus))
         self.W = np.hstack((self.W, from_thalamus))
+        """
+        
 
 
     
@@ -146,15 +157,15 @@ class SomatoModelPyrates():
         idx_I_A3b = np.array([1,2,3])
         idx_I_S = [1,2,3,5,6,8,9,11,12]
         idx_I_S1 = np.array(idx_I_S)+4 
-        #idx_I_S2 = np.array(idx_I_S)+17
-        self.idx_I = np.concatenate((idx_I_A3b,idx_I_S1))
+        idx_I_S2 = np.array(idx_I_S)+17
+        self.idx_I = np.concatenate((idx_I_A3b,idx_I_S1, idx_I_S2))
         
         # excitatory
         idx_E_A3b = np.array([0])
         idx_E_S = [0,4,7,10]
         idx_E_S1 = np.array(idx_E_S)+4
-        #idx_E_S2 = np.array(idx_E_S)+17
-        self.idx_E = np.concatenate((idx_E_A3b,idx_E_S1))
+        idx_E_S2 = np.array(idx_E_S)+17
+        self.idx_E = np.concatenate((idx_E_A3b,idx_E_S1, idx_E_S2))
 
 
     def create_Iext(self):
@@ -199,6 +210,7 @@ class SomatoModelPyrates():
                'V_thr': 35.0,
                'm_max': 70.0},
             description="sigmoidal potential-to-rate operator")
+        """
         # background input:
         pro_bI = OperatorTemplate(
         name='PRO_bI', path=None,
@@ -210,7 +222,13 @@ class SomatoModelPyrates():
                'V_thr': 35.0,
                'm_max': 70.0},
         description="sigmoidal potential-to-rate operator")
-
+        """
+        pros = [deepcopy(pro).update_template(name=self.pro_names[i],
+                                      variables={'r': self.r[i],
+                                                 'V_thr': self.v_thr[i],
+                                                 'm_max': self.m_max[i]}) for i in range(N_cells)]
+        
+        """
         pros = [
             (   # background input: all populations except thalamus
                 deepcopy(pro_bI).update_template(name=self.pro_names[i], variables={'r': self.r[i],
@@ -223,7 +241,8 @@ class SomatoModelPyrates():
                                                  'm_max': self.m_max[i]})
             )
             for i in range(N_cells)
-            ]   
+            ] 
+        """
 
         # Operator template for the RPO
         rpo = OperatorTemplate(
@@ -242,9 +261,9 @@ class SomatoModelPyrates():
         # Operator template for the background input --> only for the "BACKGROUND" population!
         rpo_bI = OperatorTemplate(
             name='RPO_bI', path=None,
-            equations=['d/dt * v_bI = i',
-               'd/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v_bI/tau^2'],
-            variables={'v_bI': 'output',
+            equations=['d/dt * v = i',
+               'd/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v/tau^2'],
+            variables={'v': 'output',
                'i': 'variable',
                'bI': f'input({self.Ib_strength})',  # external background input
                'bI_cellcount': self.bI_cellcounts,
@@ -382,12 +401,12 @@ class SomatoModelPyrates():
         # Node templates
         nodes = [
             NodeTemplate(
-                name=self.cells_ext[i],
+                name=self.cells[i],
                 path=None,
-                operators=(
-                    ([pros[i]] +  rpos + # connectivity[i] +
-                    (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
-                    ) if i < N_cells 
+                #operators=(
+                #    ([pros[i]] +  rpos + # connectivity[i] +
+                #    (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
+                #    ) if i < N_cells 
                     #else [rpo_bI] if i == N_cells
                     
                     #else [g_definition] if i == N_cells + 1 # G
@@ -395,18 +414,24 @@ class SomatoModelPyrates():
                     #else [bEI_definition] if i == N_cells + 3 # BEI
                     #else [bEI_thal_definition] if i == N_cells + 4 # BEI_THAL
     
-                    else [rpo_bI] # operator for the background input
+                #    else [rpo_bI] # operator for the background input
+                #)
+                operators=(
+                    [pros[i]] + rpos +
+                    ([rpo_bI] if i in range(N_cells-2) else []) +
+                    (rpo_Iext_thalE + create_I_ext if i == N_cells - 2 else [])
                 )
             )
-            for i in range(len(self.cells_ext))
+            for i in range(N_cells)
         ]
+
         # Edges
         edges=[]
         # i : target 
         for i, cell_i in enumerate(self.cells):
             
-            if cell_i not in ['ThalE', 'ThalI']:
-                edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{self.pro_names[i]}/v_bIn', None, {'weight': float(1.0)})) # background input
+            #if cell_i not in ['ThalE', 'ThalI']:
+            #    edges.append(('BACKGROUND/RPO_bI/v_bI', f'{cell_i}/{self.pro_names[i]}/v_bIn', None, {'weight': float(1.0)})) # background input
                 #edges.append(('G/g_definition/gC', f'{cell_i}/{self.connectivity_names[i]}/g', None, {'weight': 1.0})) # G
                 #edges.append(('BEI/bEI_definition/bEIC', f'{cell_i}/{self.connectivity_names[i]}/bEI', None, {'weight': 1.0})) # BEI
             #else:
@@ -439,8 +464,26 @@ class SomatoModelPyrates():
                 for rpo_name in self.rpo_names[:N_cells]:
                     outputs[f'V_{target_cell}/{rpo_name}'] = f'{target_cell}/{rpo_name}/v'
 
-        outputs['V_background/RPO_bI'] = 'BACKGROUND/RPO_bI/v_bI'
+            if i in range(N_cells-2):
+                #print(f'{target_cell}/RPO_bI/v')
+                outputs[f'V_{target_cell}/RPO_bI'] = f'{target_cell}/RPO_bI/v'
+        #outputs['V_background/RPO_bI'] = 'BACKGROUND/RPO_bI/v_bI'
         
+        # Check the type of outputs
+        print(f"Type of outputs: {type(outputs)}")
+
+        # Check if any values in outputs are arrays
+        for key, value in outputs.items():
+            if not isinstance(value, str):
+                print(f"Non-string value found: {key} = {value} (type: {type(value)})")
+
+        # Check the inputs parameter if you're using one
+        if hasattr(self, 'inputs'):
+            print(f"\nType of inputs: {type(self.inputs)}")
+            if isinstance(self.inputs, dict):
+                for key, value in self.inputs.items():
+                    print(f"  {key}: type={type(value)}, shape={getattr(value, 'shape', 'N/A')}")
+
         results = self.model.run(simulation_time=self.simulation_dur,
                   step_size=self.step_size,
                   sampling_step_size=self.sampling_step_size,
@@ -449,7 +492,13 @@ class SomatoModelPyrates():
                   vectorize=False,
                   float_precision="float64"
                   )
+
+        self.simulation_results = results
+
+        """
+        # ---------------------
         all_potentials = []
+        
         for i, cell in enumerate(self.cells):
                 
             # ThalE and ThalI do not receive background input
@@ -486,7 +535,43 @@ class SomatoModelPyrates():
         all_potentials = np.array(all_potentials)
         all_potentials = np.rollaxis(all_potentials, 2, 1) # shape: target cells x source cells x timepoints
 
+    
+        """
+
+        all_potentials = []
+
+        for i, cell in enumerate(self.cells):
+            # always include rpo_names[:N_cells]
+            if i == (N_cells-2):
+                potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names_extended[:N_cells+1]]
+                sources = results[potential_keys]
+                zero_array = np.zeros((sources.shape[0], 1))
+                sources = np.hstack((sources, zero_array)) # zero array for background input
+            else: 
+                potential_keys = [f'V_{cell}/{rpo}' for rpo in self.rpo_names[:N_cells]]
+                
+                # include rpo_name only if i in range(N_cells-2)
+                if i in range(N_cells-2):
+                    potential_keys += [f'V_{cell}/RPO_bI']
+                    sources = results[potential_keys]
+                    zero_array = np.zeros((sources.shape[0], 1))
+                    sources = np.hstack((sources, zero_array)) # zero array for external input 
+                else:    
+                    sources = results[potential_keys]           
+                    zero_array = np.zeros((sources.shape[0], 1))
+                    sources = np.hstack((sources, zero_array)) # zero array for background input for ThalI
+                    sources = np.hstack((sources, zero_array)) # zero array for external input 
+                    
+
+            all_potentials.append(sources)
+
+        all_potentials = np.array(all_potentials)
+        all_potentials = np.rollaxis(all_potentials, 2, 1) # shape: target cells x source cells x timepoints
+            
+        self.potential = all_potentials
+        
         # rates:
+        print(all_potentials.shape)
         summed_potentials = np.sum(all_potentials, axis=1)
         
         n_cells, n_timepoints  = summed_potentials.shape
@@ -497,7 +582,6 @@ class SomatoModelPyrates():
                 1 + np.exp(self.r[i] * (self.v_thr[i] - summed_potentials[i, :]))
             )
 
-        self.potential = all_potentials
         self.rate = m_out_all
         
 
@@ -572,9 +656,7 @@ modello_prova = SomatoModelPyrates(params)
 #modello_prova.circuit_to_yaml(yaml_output)
 #modello_prova.circuit_to_yaml()
 modello_prova.simulate()
-all_potentials = modello_prova.potential
-summed_potentials = np.sum(all_potentials, axis=1)
-potential_df = pd.DataFrame(summed_potentials.T, columns=modello_prova.cells)
+potential_df = modello_prova.potential_df
 # %% plot
 # division into layers
 
