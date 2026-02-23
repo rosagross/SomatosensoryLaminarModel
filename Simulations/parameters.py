@@ -320,7 +320,7 @@ class Parameter():
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
 
-    def get_connectivity(self, gE, gI, gEthal, gEthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, area='all'):
+    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, area='all'):
         """Apply coupling strength parameter and compute the final connectivity matrix.  
         
         Args:
