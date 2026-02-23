@@ -231,7 +231,7 @@ class SomatoModelPyrates():
             variables={'v_bI': 'output',
                'i': 'variable',
                'bI': f'input({self.Ib_strength})',  # external background input
-               'bI_cellcount': self.bI_cellcounts,
+               'bI_cellcount': float(self.bI_cellcounts),
                'tau': 0.003,
                'H': 1.0},
             description="excitatory rate-to-potential operator-background input")
@@ -248,7 +248,7 @@ class SomatoModelPyrates():
         variables={'v': 'output',
                'i': 'variable',
                'Iext': 'input',
-               'Iext_cellcounts': self.extI_cellcounts,
+               'Iext_cellcounts': float(self.extI_cellcounts),
                'tau': self.tau[N_cells-2],
                'H': 1.0}
             ) 
