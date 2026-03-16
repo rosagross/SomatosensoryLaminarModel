@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+</head>
+
+<body>
+
+<h2>Neural Mass Model</h2>
+
+<button onclick="startSim()">Start</button>
+<button onclick="stopSim()">Stop</button>
+<button onclick="clearPlot()">Clear</button>
+<button onclick="resetSim()">Reset</button>
+
+<div class="controls">
+    <div class="sliders">
+<label>Coupling Strength</label>
+<input id="couplingStrength" type="range" min="0" max="100" step="0.1"
+       oninput="updateParam('coupling_strength', this.value); updateLabel('couplingVal', this.value)">
+<span id="couplingVal">10</span>
+
+        <br><br>
+
+<label>bEI Balance</label>
+<input id="balanceEI" type="range" min="0" max="1" step="0.01"
+       oninput="updateParam('balance_EI', this.value); updateLabel('balanceVal', this.value)">
+<span id="balanceVal">0</span>
+
+        <br><br>
+
+<label>Input Strength</label>
+<input id="IextStrength" type="range" min="0" max="20" step="0.1"
+       oninput="updateParam('Iext_strength', this.value); updateLabel('IextStrengthVal', this.value)">
+<span id="IextStrengthVal">10</span>
+
+        <br><br>
+
+<label>Input Duration (s)</label>
+<input id="IextDuration" type="range" min="0" max="2" step="0.01"
+       oninput="updateParam('Iext_duration', this.value); updateLabel('IextDurationVal', this.value)">
+<span id="IextDurationVal">0.5</span>
+
+        <br><br>
+
+<label>Background Input</label>
+<input id="IbStrength" type="range" min="0" max="20" step="0.1"
+       oninput="updateParam('Ib_strength', this.value); updateLabel('IbStrengthVal', this.value)">
+<span id="IbStrengthVal">7</span>
+
+        <br><br>
+
+        <label for="popSelect">Population</label>
+        <select id="popSelect" onchange="changePopulation(this.value)"></select>
+
+        <br><br>
+
+        <label>Display Resolution (s)</label>
+        <input id="displayResolution" type="text" value="0.01"
+               oninput="updateDisplayResolution(this.value)">
+
+        <br><br>
+
+        <label>Speed Multiplier</label>
+        <input id="speedMultiplier" type="text" value="1.0"
+               oninput="updateSpeed(this.value)">
+    </div>
+
+    <div class="params">
+        <h4>Other Simulation Parameters</h4>
+        <ul id="otherParams"></ul>
+    </div>
+</div>
+
+<div class="plots">
+    <div id="plot" class="plotBox"></div>
+    <div id="plotPotential" class="plotBox"></div>
+</div>
+
+<style>
+.controls {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+    margin-top: 12px;
+}
+.sliders {
+    min-width: 420px;
+}
+.params {
+    min-width: 300px;
+}
+.plots {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+}
+.plotBox {
+    width: 520px;
+    height: 420px;
+}
+</style>
+
+<script>
+
+let ws
+let stepSize = 0.001
+let displayStep = 0.01
+let decimateEvery = Math.round(displayStep / stepSize)
+let windowSeconds = 3
+let maxPoints = Math.ceil(windowSeconds / displayStep) + 1
+let time = []
+let selectedPop = 0
+
+let populationLabels = [
+    "E3b",
+    "PV3b",
+    "SST3b",
+    "VIP3b",
+    "E1",
+    "PV1",
+    "SST1",
+    "VIP1",
+    "E2",
+    "PV2",
+    "SST2",
+    "E3",
+    "PV3",
+    "SST3",
+    "E4",
+    "PV4",
+    "SST4",
+    "E1S2",
+    "PV1S2",
+    "SST1S2",
+    "VIP1S2",
+    "E2S2",
+    "PV2S2",
+    "SST2S2",
+    "E3S2",
+    "PV3S2",
+    "SST3S2",
+    "E4S2",
+    "PV4S2",
+    "SST4S2",
+    "ThalE",
+    "ThalI"
+]
+
+let otherParams = []
+
+let trace = {
+    x: [],
+    y: [],
+    mode: "lines",
+    name: populationLabels[selectedPop]
+}
+
+let potentialTrace = {
+    x: [],
+    y: [],
+    mode: "lines",
+    name: `${populationLabels[selectedPop]} potential`
+}
+
+Plotly.newPlot("plot", [trace], {
+    xaxis: {title: "Time (s)", range: [0, windowSeconds]},
+    yaxis: {title: "Firing rate", range: [0, 3], autorange: false}
+})
+
+Plotly.newPlot("plotPotential", [potentialTrace], {
+    xaxis: {title: "Time (s)", range: [0, windowSeconds]},
+    yaxis: {title: "Summed potential"}
+})
+
+function renderOtherParams(){
+    let list = document.getElementById("otherParams")
+    list.innerHTML = ""
+    otherParams.forEach(p => {
+        let li = document.createElement("li")
+        li.textContent = `${p.name}: ${p.value}`
+        list.appendChild(li)
+    })
+}
+
+function populateSelect(){
+    let select = document.getElementById("popSelect")
+    populationLabels.forEach((label, idx) => {
+        let opt = document.createElement("option")
+        opt.value = idx
+        opt.text = `${idx}: ${label}`
+        select.appendChild(opt)
+    })
+    select.value = String(selectedPop)
+}
+
+function changePopulation(value){
+    selectedPop = Number(value)
+    Plotly.restyle("plot", {y: [[]], x: [[]], name: populationLabels[selectedPop]}, [0])
+    Plotly.restyle("plotPotential", {y: [[]], x: [[]], name: `${populationLabels[selectedPop]} potential`}, [0])
+}
+
+function startSim(){
+
+    console.log("[ui] start clicked")
+    if (ws && ws.readyState === WebSocket.OPEN){
+        ws.close()
+    }
+    fetch("http://127.0.0.1:8000/start", {method:"POST"})
+        .then(r => r.text())
+        .then(t => {
+            console.log("[start] response", t)
+            applyCurrentParams()
+            fetchParams()
+        })
+        .catch(e => console.error("[start] error", e))
+
+    ws = new WebSocket("ws://127.0.0.1:8000/ws")
+
+    ws.onopen = function(){
+        console.log("[ws] open")
+    }
+
+    ws.onerror = function(err){
+        console.error("[ws] error", err)
+    }
+
+    ws.onclose = function(ev){
+        console.log("[ws] close", ev.code, ev.reason)
+    }
+
+    ws.onmessage = function(event){
+
+        let data = JSON.parse(event.data)
+
+        let rate = data.rates[selectedPop]
+        let pot = data.potential[selectedPop]
+        if (data.t % 200 === 0){
+            console.log("[ws] t", data.t, "rate", rate)
+        }
+
+        if (data.t % decimateEvery !== 0){
+            return
+        }
+
+        let tSec = data.t * stepSize
+        time.push(tSec)
+        Plotly.extendTraces(
+            "plot",
+            {x:[[tSec]], y:[[rate]]},
+            [0],
+            maxPoints
+        )
+        Plotly.extendTraces(
+            "plotPotential",
+            {x:[[tSec]], y:[[pot]]},
+            [0],
+            maxPoints
+        )
+        if (tSec > windowSeconds){
+            Plotly.relayout("plot", {"xaxis.range": [tSec - windowSeconds, tSec]})
+            Plotly.relayout("plotPotential", {"xaxis.range": [tSec - windowSeconds, tSec]})
+        }
+    }
+}
+
+function stopSim(){
+
+    console.log("[ui] stop clicked")
+    fetch("http://127.0.0.1:8000/stop", {method:"POST"})
+        .then(r => r.text())
+        .then(t => console.log("[stop] response", t))
+        .catch(e => console.error("[stop] error", e))
+    if (ws && ws.readyState === WebSocket.OPEN){
+        ws.close()
+    }
+
+}
+
+function resetSim(){
+    console.log("[ui] reset clicked")
+    fetch("http://127.0.0.1:8000/reset", {method:"POST"})
+        .then(r => r.text())
+        .then(t => console.log("[reset] response", t))
+        .catch(e => console.error("[reset] error", e))
+}
+
+function clearPlot(){
+    Plotly.restyle("plot", {x: [[]], y: [[]]}, [0])
+    Plotly.restyle("plotPotential", {x: [[]], y: [[]]}, [0])
+}
+
+function updateParam(name,value){
+
+    fetch("http://127.0.0.1:8000/params",{
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({[name]:Number(value)})
+    })
+
+}
+
+function updateLabel(id, value){
+    let el = document.getElementById(id)
+    if (el){
+        el.textContent = value
+    }
+}
+
+function updateDisplayResolution(value){
+    let v = Number(value)
+    if (!isFinite(v) || v <= 0){
+        return
+    }
+    displayStep = v
+    decimateEvery = Math.max(1, Math.round(displayStep / stepSize))
+    maxPoints = Math.ceil(windowSeconds / displayStep) + 1
+    console.log("[ui] displayStep", displayStep, "decimateEvery", decimateEvery)
+}
+
+function updateSpeed(value){
+    let v = Number(value)
+    if (!isFinite(v) || v <= 0){
+        return
+    }
+    fetch("http://127.0.0.1:8000/speed",{
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({speed_multiplier: v})
+    })
+    .then(r => r.text())
+    .then(t => console.log("[speed] response", t))
+    .catch(e => console.error("[speed] error", e))
+}
+
+function setSliderValue(id, value){
+    let el = document.getElementById(id)
+    if (el){
+        el.value = value
+    }
+}
+
+function fetchParams(){
+    fetch("http://127.0.0.1:8000/params")
+        .then(r => r.json())
+        .then(p => {
+            // sliders
+            setSliderValue("couplingStrength", p.coupling_strength)
+            updateLabel("couplingVal", p.coupling_strength)
+
+            setSliderValue("balanceEI", p.balance_EI)
+            updateLabel("balanceVal", p.balance_EI)
+
+            setSliderValue("IextStrength", p.Iext_strength)
+            updateLabel("IextStrengthVal", p.Iext_strength)
+
+            setSliderValue("IextDuration", p.Iext_duration)
+            updateLabel("IextDurationVal", p.Iext_duration)
+
+            setSliderValue("IbStrength", p.Ib_strength)
+            updateLabel("IbStrengthVal", p.Ib_strength)
+
+            // update display params
+            otherParams = [
+                {name: "simulation_dur", value: p.simulation_dur},
+                {name: "step_size", value: p.step_size},
+                {name: "input_onset", value: p.input_onset},
+                {name: "thal_connect", value: JSON.stringify(p.thal_connect)},
+                {name: "extI_cellcounts", value: p.extI_cellcounts},
+                {name: "bI_cellcounts", value: p.bI_cellcounts},
+                {name: "thal_cellcounts", value: p.thal_cellcounts},
+                {name: "bEI_thal", value: p.bEI_thal},
+                {name: "g_thal", value: p.g_thal},
+                {name: "input_type", value: p.input_type},
+                {name: "area", value: p.area}
+            ]
+            renderOtherParams()
+        })
+        .catch(e => console.error("[params] error", e))
+}
+
+function applyCurrentParams(){
+    let payload = {
+        coupling_strength: Number(document.getElementById("couplingStrength").value),
+        balance_EI: Number(document.getElementById("balanceEI").value),
+        Iext_strength: Number(document.getElementById("IextStrength").value),
+        Iext_duration: Number(document.getElementById("IextDuration").value),
+        Ib_strength: Number(document.getElementById("IbStrength").value)
+    }
+    fetch("http://127.0.0.1:8000/params",{
+        method:"POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.text())
+    .then(t => console.log("[params] applied", t))
+    .catch(e => console.error("[params] apply error", e))
+}
+
+populateSelect()
+renderOtherParams()
+fetchParams()
+
+</script>
+
+</body>
+</html>

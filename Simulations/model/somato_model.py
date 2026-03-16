@@ -40,7 +40,7 @@ class SomatoModel():
         self.balance_EI = 0 #0.7
         self.bI_cellcounts = 100
         self.thal_cellcounts = 500
-        self.bEI_thal = 0 #0.5
+        self.bEI_thal = 0.5
         self.g_thal = 2
         self.input_type = 'step'
         self.area = 'all' 
@@ -74,6 +74,61 @@ class SomatoModel():
             f"gthal{self.g_thal}_bEIthal{self.bEI_thal}_g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
             f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_thalUncon_S1S2Uncon"
+        )
+
+        # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
+        self.rate = np.zeros((self.nPop, len(self.steps)))
+        self.potential = np.zeros((self.nPop, self.nPop+2, len(self.steps))) 
+
+        # Simulation loop
+        # Initialize first values for the potential, rate and first order derivative with 0 or randomly
+        self.v_current = np.zeros((self.nPop, self.nPop+2)) # +2 because 1 for background input and one for external input 
+        self.rate_current = np.zeros(self.nPop)
+        self.u_t = np.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
+        self.t = 0.0
+
+        # Weight matrix [to x from]
+        self.W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
+
+
+    def initialize_state(self):
+        """
+        Reset the dynamic state for interactive simulations.
+        """
+        self.v_current = np.zeros((self.nPop, self.nPop + 2))
+        self.rate_current = np.zeros(self.nPop)
+        self.u_t = np.zeros((self.nPop, self.nPop + 2))
+        self.t = 0.0
+
+
+    def apply_params(self, params: dict):
+        """
+        Update parameters and recompute derived state.
+        """
+        self.__dict__.update(params)
+
+        # recompute inputs and gains
+        Iext = self.create_Iext()
+        Ib = self.create_Ibackground()
+        self.Iext = np.tile(Iext, (self.nPop, 1))
+        self.Ib = np.tile(Ib, (self.nPop, 1))
+
+        self.gE = self.coupling_strength * self.balance_EI
+        self.gI = self.coupling_strength * (1 - self.balance_EI)
+        self.gEthal = self.g_thal * self.bEI_thal
+        self.gIthal = self.g_thal * (1 - self.bEI_thal)
+
+        # update connectivity with new gains and counts
+        self.W = self.p.get_connectivity(
+            self.gE,
+            self.gI,
+            self.gEthal,
+            self.gIthal,
+            self.thal_connect,
+            self.extI_cellcounts,
+            self.bI_cellcounts,
+            self.thal_cellcounts,
+            area=self.area
         )
 
 
@@ -132,64 +187,118 @@ class SomatoModel():
         sns.heatmap(W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
 
+
+
     def simulate(self):
         '''
         Simulation loop
         '''
-        # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
-        self.rate = np.zeros((self.nPop, len(self.steps)))
-        self.potential = np.zeros((self.nPop, self.nPop+2, len(self.steps))) 
-
-        # Simulation loop
-        # Initialize first values for the potential, rate and first order derivative with 0 or randomly
-        self.v_current = np.zeros((self.nPop, self.nPop+2)) # +2 because 1 for background input and one for external input 
-        self.rate_current = np.zeros(self.nPop)
-        self.u_t = np.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
-
-        # Weight matrix [to x from]
-        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
 
         last_step = self.steps[-1] 
 
-        for timestep, time in enumerate(self.steps):
-            
-            # Update RATE (calculated from the current potential)
-            # technically this could also go to the end of the for-loop but we need a rate value calculated from the initial potential value
-            for i in range(self.nPop):
+        for timestep, _ in enumerate(self.steps):
 
-                # the incoming potential has to be defined in mV because of how the sigmoid parameter are defined (also in mV!)
-                self.rate_current[i] = self.sigm[i][2] / (1 + np.exp(self.sigm[i][0]*(self.sigm[i][1] - np.sum(self.v_current[i,:]))))  
-                
-            # Save the new values
-            self.rate[:, timestep] = self.rate_current 
-            self.potential[:, :, timestep] = self.v_current
-            
-
-            # We go through every population and evaluate the new membrane potential based on the connectivity
-            for i in range(self.nPop):
-                for j in range(self.nPop):
-
-                    # 1. Calculate new POTENTIAL (calculated using the current first derivative) - but it's only updated/saved in the next step
-                    v_dot = self.u_t[i, j]
-                    self.v_current[i, j] = self.v_current[i, j] + v_dot * self.step_size
-                    
-                    # 2. Update the first derivative based on the current potential (NOT the just updated one!) current first derivative
-                    u_dot = (self.H[i, j]/self.tau[i,j]) * (W[i, j]*self.rate_current[j]) - 2 * self.u_t[i, j]/self.tau[i,j] - self.potential[i, j, timestep]/(self.tau[i,j]**2)
-                    self.u_t[i, j] = self.u_t[i,j] + u_dot * self.step_size
-
-                # Add external input (goes to thalamus only, so it's kind of a brain stem input) 
-                v_dot = self.u_t[i, -1] # the -1 is the external input 
-                self.v_current[i, -1] = self.v_current[i, -1] + v_dot * self.step_size
-                u_dot = (self.H[i,-1]/self.tau[i,-1]) * (W[i, -1] * self.Iext[i, timestep]) - 2 * self.u_t[i, -1]/self.tau[i,-1] - self.potential[i, -1, timestep]/(self.tau[i,-1]**2)
-                self.u_t[i, -1] = self.u_t[i,-1] + u_dot * self.step_size
-
-                # Add background input (to all populations)
-                v_dot = self.u_t[i, -2]
-                self.v_current[i, -2] = self.v_current[i, -2] + v_dot * self.step_size
-                u_dot = (self.H[i,-2]/self.tau[i,-2]) * (W[i, -2] * self.Ib[i, timestep]) - 2 * self.u_t[i, -2]/self.tau[i,-2] - self.potential[i, -2, timestep]/(self.tau[i,-2]**2)
-                self.u_t[i, -2] = self.u_t[i,-2] + u_dot * self.step_size
+            # compute simulation step         
+            self.potential[:, :, timestep] = self.v_current.copy()
+            self.rate_current = self.compute_rates()
+            self.rate[:, timestep] = self.rate_current
+            self.v_current = self.compute_potentials(timestep)
 
         print('finished loop...')
+
+    def compute_rates(self):
+        """
+        Compute the firing rates of all populations.
+        """
+        v_sum = np.sum(self.v_current, axis=1)
+
+        self.rate_current = self.sigm[:,2] / (
+            1 + np.exp(self.sigm[:,0] * (self.sigm[:,1] - v_sum))
+        )
+
+        return self.rate_current.copy()
+
+    def compute_potentials(self, timestep):
+        """
+        Compute the potentials of all populations.
+        Also take into account the background input and external input.
+        """
+
+        pop_slice = slice(0, self.nPop)
+
+        # store previous potentials (needed for correct Euler update)
+        v_prev = self.v_current.copy()
+
+        # -----------------------------
+        # POPULATION INTERACTIONS
+        # -----------------------------
+
+        # update potentials
+        self.v_current[:, pop_slice] += (
+            self.u_t[:, pop_slice] * self.step_size
+        )
+
+        # synaptic drive
+        drive = self.W[:, pop_slice] * self.rate_current
+
+        u_dot = (
+            (self.H[:, pop_slice] / self.tau[:, pop_slice]) * drive
+            - 2 * self.u_t[:, pop_slice] / self.tau[:, pop_slice]
+            - v_prev[:, pop_slice] / (self.tau[:, pop_slice] ** 2)
+        )
+
+        self.u_t[:, pop_slice] += u_dot * self.step_size
+
+
+        # -----------------------------
+        # EXTERNAL INPUT
+        # -----------------------------
+
+        # update potentials
+        v_dot = self.u_t[:, -1]
+        self.v_current[:, -1] += v_dot * self.step_size
+
+        u_dot = (
+            (self.H[:, -1] / self.tau[:, -1])
+            * (self.W[:, -1] * self.Iext[:, timestep])
+            - 2 * self.u_t[:, -1] / self.tau[:, -1]
+            - v_prev[:, -1] / (self.tau[:, -1] ** 2)
+        )
+
+        self.u_t[:, -1] += u_dot * self.step_size
+
+
+        # -----------------------------
+        # BACKGROUND INPUT
+        # -----------------------------
+
+        # update potentials
+        v_dot = self.u_t[:, -2]
+        self.v_current[:, -2] += v_dot * self.step_size
+
+        u_dot = (
+            (self.H[:, -2] / self.tau[:, -2])
+            * (self.W[:, -2] * self.Ib[:, timestep])
+            - 2 * self.u_t[:, -2] / self.tau[:, -2]
+            - v_prev[:, -2] / (self.tau[:, -2] ** 2)
+        )
+
+        self.u_t[:, -2] += u_dot * self.step_size
+
+        return self.v_current.copy()
+
+
+    def simulate_step(self, timestep):
+        """
+        Only for interactive computation
+        """
+        self.rate_current = self.compute_rates()
+        self.v_current = self.compute_potentials(timestep)
+
+        self.t += self.step_size
+
+        return self.rate_current.copy()
+
 
     def compute_ecds():
         raise NotImplementedError
@@ -281,8 +390,6 @@ class SomatoModel():
 
     
     
-
-
 
 
 
