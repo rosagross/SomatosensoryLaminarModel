@@ -63,12 +63,12 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [100, 120, 140, 160]
-backgrndI_strengths = [40, 60, 80] #,6,7]
+coupling_strengths = [30] #[100, 120, 140, 160]
+backgrndI_strengths = [5] #[40, 60, 80] #,6,7]
 input_durations = [0]
 input_strengths = [0]
 balance_EI = [0.8, 0.82, 0.84, 0.86]
-area = 'ThalA3b'
+area = 'all'
 
 # %%
 for d in input_durations:
@@ -89,8 +89,8 @@ for d in input_durations:
                     params['area'] = area
 
                     # additional parameters (that are usually fixed)
-                    params['g_thal'] = 0
-                    params['bEI_thal'] = 0
+                    params['g_thal'] = 2
+                    params['bEI_thal'] = 0.5
                     params['extI_cellcounts'] = 1000
                     params['bI_cellcounts'] = 100
                     params['thal_cellcounts'] = 500

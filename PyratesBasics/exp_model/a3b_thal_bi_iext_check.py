@@ -1,17 +1,21 @@
-# %%
+# %% libraries import
 import os 
+WDDIR = os.getenv("WDDIR")
+SIMDIR = os.getenv("SIMDIR")
+#os.chdir(os.path.join(WDDIR,"PyratesBasics","exp_model")) 
 import sys
-#os.chdir("/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/exp_model/""") 
-SIMDIR =  "/data/p_02989/Modelling/output_grossmannr/" #os.getenv("WDDIR")
-WDDIR = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/" #os.getenv("SIMDIR")
-from pyrates.frontend import OperatorTemplate, NodeTemplate, CircuitTemplate
+import json
+from ruamel.yaml import YAML
+from pyrates.frontend.template import CircuitTemplate
+from pyrates.frontend.fileio.yaml import dump_to_yaml
+from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, CircuitTemplate
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
+import h5py
 import pandas as pd
-from yaml_saving import circuit_to_yaml
 from pprint import pprint
-
+#from parameters import Parameter
 param_path = os.path.join(WDDIR,"Simulations")
 
 if param_path not in sys.path:
@@ -22,7 +26,6 @@ import json
 #%%
 # Parameters:
 cells = ['E3b','PV3b','SST3b','VIP3b','thalE', 'thalI'] # taken from the weights matrix
-
 N_cells = len(cells)
 params = Parameter()
 
@@ -31,12 +34,12 @@ params = Parameter()
 input_type = "step" # other options are "step", "baseline" (equals input strength 0) or "background"
 input_onset = 1.0 # in sec
 simulation_dur = 2.0
-input_duration = 1  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
-input_strength = 50 #[0, 50, 300, 500] #np.arange(0, 500, 100)
+input_duration = 0  #, 1, 1.5] # np.arange(0, 1, 1) # in sec 
+input_strength = 0 #[0, 50, 300, 500] #np.arange(0, 500, 100)
 backgrndI_strengths = 5 #[0, 5, 10, 15, 20]
 step_size=1e-3
 sampling_step_size=1e-3
-simulation_time = 3 # float(int(input_onset) + simulation_dur)
+#simulation_time = 1 # float(int(input_onset) + simulation_dur)
 
 # %% sigmoid parameters
 sigmoid_params = params.get_sigmoid()  #already in the correct order
@@ -55,8 +58,8 @@ tau,_ = params.get_params()
 tau_a3b_thal = np.hstack((tau[0, :4], tau[0, -2:]))
 
 # %% weights
-bEI = 0.5
-g = 10 # (g)
+bEI = 0.84
+g = 30.0 # (g)
 gE = g * bEI
 gI = g * (1 - bEI)
 g_thal = 2
@@ -119,22 +122,36 @@ rpos = [deepcopy(rpo).update_template(name=rpo_names[i], variables={"tau": tau_a
 rpo_bI = OperatorTemplate(
     name='RPO_bI', path=None,
     equations=['d/dt * v = i',
-               'd/dt * i = H/tau * (bI) - 2 * i/tau - v/tau^2'],
+               'd/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
                'bI': f'input({backgrndI_strengths})',  # external background input
+               'bI_cellcount': f'input({bI_cellcounts})',
                'tau': 0.003,
                'H': 1.0},
     description="excitatory rate-to-potential operator")
-
+"""
+rpo_bI = OperatorTemplate(
+            name='RPO_bI', path=None,
+            equations=['d/dt * v_bI = i',
+               'd/dt * i = H/tau * bI_cellcount * (bI) - 2 * i/tau - v_bI/tau^2'],
+            variables={'v_bI': 'output',
+               'i': 'variable',
+               'bI': f'input({backgrndI_strengths})',  # external background input
+               'bI_cellcount': bI_cellcounts,
+               'tau': 0.003,
+               'H': 1.0},
+            description="excitatory rate-to-potential operator-background input")
+"""
 # %% Operator template for the external input --> only for thalE!
 rpo_Iext_thalE = [OperatorTemplate(
     name='RPO_Iext', path=None,
     equations=['d/dt * v = i',
-               'd/dt * i = H/tau * (Iext) - 2 * i/tau - v/tau^2'],
+               'd/dt * i = H/tau * Iext_cellcounts *(Iext) - 2 * i/tau - v/tau^2'],
     variables={'v': 'output',
                'i': 'variable',
                'Iext': 'input',
+               'Iext_cellcounts': extI_cellcounts,
                'tau': tau_a3b_thal[N_cells-2],
                'H': 1.0}
     ) 
@@ -158,10 +175,8 @@ create_I_ext = [OperatorTemplate(
     },
     description="External step input"
 )]
+# %%
 
-# %%
-# Node templates
-# %%
 # Node templates
 nodes = [
     NodeTemplate(
@@ -212,7 +227,7 @@ for i, target_cell in enumerate(cells):
         print(f'{target_cell}/RPO_bI/v')
         outputs[f'V_{target_cell}/RPO_bI'] = f'{target_cell}/RPO_bI/v'
 
-results = area_a3b_thal_bI_iext.run(simulation_time=simulation_time,
+results = area_a3b_thal_bI_iext.run(simulation_time=simulation_dur,
                   step_size=step_size,
                   sampling_step_size=sampling_step_size,
                   outputs=outputs,
@@ -238,7 +253,6 @@ for i, cell in enumerate(cells):
         potential_keys += [f'V_{cell}/RPO_bI']
 
     # include rpo_names_extended[:N_cells+1] only if i == 13
-    
 
     sources = results[potential_keys]
     all_potentials.append(np.sum(sources, axis=1))
