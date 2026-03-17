@@ -19,11 +19,6 @@ import pandas as pd
 import time
 import csv
 
-# add model to datapath
-sys.path.append('./model')
-from somato_model import SomatoModel, read_simulation_params
-from somato_model_pyrates_no_conn_operators_A3bS1 import SomatoModelPyrates, read_simulation_params
-import plotting_functions as pf
 
 # %%
 SIMDIR = os.getenv("SIMDIR")
@@ -31,6 +26,12 @@ WDDIR = os.getenv("WDDIR")
 SIMDIR =  "/data/p_02989/Modelling/output_grossmannr/" #os.getenv("WDDIR")
 WDDIR = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/"
 figure_dir = os.path.join(SIMDIR, "Figures")
+
+# add model to datapath
+sys.path.append(os.path.join(WDDIR, 'Simulations', 'model'))
+from somato_model import SomatoModel, read_simulation_params
+from somato_model_pyrates_no_conn_operators_A3bS1_pycobi import SomatoModelPyrates, read_simulation_params
+import plotting_functions as pf
 
 # %%   
 
@@ -98,9 +99,9 @@ for d in input_durations:
                     params['bI_cellcounts'] = 100
                     params['thal_cellcounts'] = 500
 
-                    model = SomatoModel(params)
+                    #model = SomatoModel(params)
                     #model.plot_W_heatmap()
-                    #model = SomatoModelPyrates(params)
+                    model = SomatoModelPyrates(params)
 
                     # simulate rates and potentials
                     start = time.time()
