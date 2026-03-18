@@ -12,11 +12,16 @@ Description: Write tests if the current model is corresponding to the results si
 
 import csv
 import os
+import sys
 import numpy as np
 from numpy import testing
 import matplotlib.pyplot as plt
 import pandas as pd
+SIMDIR = os.getenv("SIMDIR")
+WDDIR = os.getenv("WDDIR")
+sys.path.append(os.path.join(WDDIR, 'Simulations', 'model'))
 from somato_model import SomatoModel, read_simulation_params
+from somato_model_pyrates_no_conn_operators_complete_pycobi import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 
 
@@ -72,14 +77,14 @@ def test_pyrates_ThalA3b():
         legend_list.append(f'{i} {np.round(potential_ThalA3b[:,i][-1],10)}')
     plt.legend(legend_list)
     plt.title('Python - Thal A3b')
-    plt.show()
+    plt.close()
 
     plt.plot(potential_pyrates_array[:,0]-potential_ThalA3b[:,0])
     plt.plot(potential_pyrates_array[:,1]-potential_ThalA3b[:,1])
     plt.plot(potential_pyrates_array[:,2]-potential_ThalA3b[:,2])
     plt.plot(potential_pyrates_array[:,3]-potential_ThalA3b[:,3])
     plt.title('Thal & Area 3b  - Difference Pyrates vs. Pure Python')
-    plt.show()
+    plt.close()
 
     # check if they are (almost) equal
     testing.assert_almost_equal(potential_ThalA3b, potential_pyrates_array)
@@ -128,7 +133,7 @@ def test_pyrates_A1():
     plt.plot(potential_pyrates_array[:,10]-potential_A1[:,10])
     plt.plot(potential_pyrates_array[:,11]-potential_A1[:,11])
     plt.title('Area 1 - Difference Pyrates vs. Pure Python')
-    plt.show()
+    plt.close()
 
     # check if they are (almost) equal
     testing.assert_almost_equal(potential_A1, potential_pyrates_array, 5)
@@ -197,7 +202,7 @@ def test_pyrates_ThalA1():
     plt.plot(potential_pyrates_array[:,13]-potential_A1[:,13])
     plt.title('Thal & Area 1 - Difference Pyrates vs. Pure Python')
     plt.legend(cells)
-    plt.show()
+    plt.close()
 
     # check if they are (almost) equal
     testing.assert_almost_equal(potential_A1, potential_pyrates_array, 5)
@@ -209,10 +214,10 @@ def test_complete_python_model():
     step_size = 0.01
     simulation_time = 2
 
-
     params = read_simulation_params()
 
-    test_cases = [[10, 0.5, 0, 0, 0, 0, 0, 1000, 100, 500]] # tens!
+    # g, bEI, Iextd, stepIexts, Ib, gthal, bEIthal
+    test_cases = [[10, 0.5, 0, 0, 0, 2, 0.5, 1000, 100, 500]] # tens!
                   #[0, 0, 0, 0, 0, 0, 0, 1000, 100, 500], # fine
                   #[10, 0, 0, 0, 0, 0, 0, 1000, 100, 500], # fine
                   #[10, 1, 0, 0, 0, 0, 0, 1000, 100, 500], # error
@@ -246,12 +251,9 @@ def test_complete_python_model():
 
         rate = model.rate
         potential_sum_python = np.sum(model.potential, axis=1).T
-        A3bS1 = potential_sum_python[:,:4]
-        thalamus = potential_sum_python[:,30:32]
-        potential_sum_python = np.hstack((A3bS1, thalamus))
 
         # load pyrates results
-        test_filename = f'A3b_gthal{case[5]}_bEIthal{case[6]}_g{case[0]}_bEI{case[1]}_Ib{case[4]}_Iextd{case[2]}_stepIexts{case[3]}_Ionset1.001_thalcells500_Ibcells100_Iextcells1000_PYRATES.hdf5'
+        test_filename = f'gthal{case[5]}_bEIthal{case[6]}_g{case[0]}_bEI{case[1]}_Ib{case[4]}_Iextd{case[2]}_stepIexts{case[3]}_Ionset1.001_thalcells500_Ibcells100_Iextcells1000_PYRATES.hdf5'
         potential_sum_pyrates = pd.read_hdf(os.path.join(param_path, 'test_data', test_filename), key='summed_potential')
 
         # difference 
@@ -266,22 +268,22 @@ def test_complete_python_model():
         for cell in cells[:4]:
             plt.plot(diff_df[cell], label=cell)
         plt.legend()
-        plt.show()
+        plt.close()
 
         for cell in cells[4:17]:
             plt.plot(diff_df[cell], label=cell)
         plt.legend()
-        plt.show()
+        plt.close()
 
         for cell in cells[17:-2]:
             plt.plot(diff_df[cell], label=cell)
         plt.legend()
-        plt.show()
+        plt.close()
 
         for cell in cells[-2:]:
             plt.plot(diff_df[cell], label=cell)
         plt.legend()
-        plt.show()
+        plt.close()
 
         python_df = pd.DataFrame(potential_sum_python,
         index=potential_sum_pyrates.index,
@@ -295,30 +297,124 @@ def test_complete_python_model():
         for cell in cells[:4]:
             plt.plot(pyrates_df[cell], label=f'{cell} - pyrates, {np.round(pyrates_df[cell].iloc[-1], 7)}')
         plt.legend()
-        plt.show()
+        plt.close()
 
         for cell in cells[:4]:
             plt.plot(python_df[cell], label=cell)
+        plt.legend()
+        plt.close()
+
+        start_plot = 0
+
+        # assert if different
+        testing.assert_almost_equal(potential_sum_python, potential_sum_pyrates, 8)
+
+
+
+def test_complete_pyrates_model():
+    """
+    Compare to previously computed pyrates results (which match python results) to make sure 
+    they sill match with the current pyrates implementation.
+    """
+    input_onset = 1.001
+    input_type = 'step'
+    step_size = 0.01
+    simulation_time = 2
+
+    params = read_simulation_params()
+
+    # g, bEI, Iextd, stepIexts, Ib, gthal, bEIthal
+    test_cases = [[10, 0.5, 0, 0, 0, 2, 0.5, 1000, 100, 500], # tens!
+                  [10, 0.5, 0.5, 10, 0, 2, 0.5, 1000, 100, 500],
+                  [10, 0.5, 0, 0, 5, 2, 0.5, 1000, 100, 500],
+                  [10, 0.5, 0.5, 10, 5, 2, 0.5, 1000, 100, 500]]
+    
+    for case in test_cases:
+        # set parameters 
+        params['coupling_strength'] = case[0]
+        params['balance_EI'] = case[1]
+        params['Iext_duration'] = case[2]
+        params['Iext_strength'] = case[3]
+        params['Ib_strength'] = case[4]
+        params['area'] = 'all'
+        
+        # additional parameters (that are usually fixed)
+        params['g_thal'] = case[5]
+        params['bEI_thal'] = case[6]
+        params['extI_cellcounts'] = case[7]
+        params['bI_cellcounts'] = case[8]
+        params['thal_cellcounts'] = case[9]
+
+        # setup model
+        model = SomatoModelPyrates(params)
+        
+        # simulate rates and potentials
+        model.simulate()
+
+        rate = model.rate
+        potential_sum_pyrates = model.potential.T
+
+        # load pyrates results
+        test_filename = f'gthal{case[5]}_bEIthal{case[6]}_g{case[0]}_bEI{case[1]}_Ib{case[4]}_Iextd{case[2]}_stepIexts{case[3]}_Ionset1.001_thalcells500_Ibcells100_Iextcells1000_PYRATES.hdf5'
+        potential_sum_orig_pyrates = pd.read_hdf(os.path.join(param_path, 'test_data', test_filename), key='summed_potential')
+
+        # difference 
+        diff_df = pd.DataFrame(
+        potential_sum_pyrates - potential_sum_orig_pyrates,
+        index=potential_sum_orig_pyrates.index,
+        columns=potential_sum_orig_pyrates.columns
+        )
+
+        # plot difference 
+        cells = potential_sum_orig_pyrates.columns
+        for cell in cells[:4]:
+            plt.plot(diff_df[cell], label=cell)
+        plt.legend()
+        plt.close()
+
+        for cell in cells[4:17]:
+            plt.plot(diff_df[cell], label=cell)
+        plt.legend()
+        plt.close()
+
+        for cell in cells[17:-2]:
+            plt.plot(diff_df[cell], label=cell)
+        plt.legend()
+        plt.close()
+
+        for cell in cells[-2:]:
+            plt.plot(diff_df[cell], label=cell)
+        plt.legend()
+        plt.close()
+
+        pyrates_df = pd.DataFrame(potential_sum_pyrates,
+        index=potential_sum_orig_pyrates.index,
+        columns=potential_sum_orig_pyrates.columns
+        )
+        orig_pyrates_df = pd.DataFrame(potential_sum_orig_pyrates,
+        index=potential_sum_orig_pyrates.index,
+        columns=potential_sum_orig_pyrates.columns
+        )
+
+        for cell in cells[:4]:
+            plt.plot(orig_pyrates_df[cell], label=f'{cell} - pyrates, {np.round(pyrates_df[cell].iloc[-1], 7)}')
+        plt.legend()
+        plt.close()
+
+        for cell in cells[:4]:
+            plt.plot(pyrates_df[cell], label=cell)
         plt.legend()
         plt.show()
 
         start_plot = 0
 
         # assert if different
-        #testing.assert_almost_equal(potential_sum_python, potential_sum_pyrates, 8)
+        testing.assert_almost_equal(potential_sum_pyrates, potential_sum_orig_pyrates, 8)
 
-
-    
-
-
-
-def test_complete_pyrates_model():
-    """
-    Compare to previously computed python results to make sure they sill match.
-    """
 
 
 #test_pyrates_ThalA3b()
 #test_pyrates_A1()
 #test_pyrates_ThalA1()
-test_complete_python_model()
+#test_complete_python_model()
+test_complete_pyrates_model()

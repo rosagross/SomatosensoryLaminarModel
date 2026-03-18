@@ -556,7 +556,7 @@ class SomatoModelPyrates():
 # - after simulation we assign the attributes rate and potential to the class. The attribute "model.potential" should be a numpy array of 3 dimensions 
 # - in "save_results" also implement to save the connectivity parameter
 # %%
-"""
+
 params = read_simulation_params()
 
 # /data/hu_mecozzi/Documents/SomatosensoryLaminarModel/Simulations/simulation_parameter.json
@@ -576,7 +576,7 @@ layers = [potential_df.columns[:4],   # A3b
           potential_df.columns[30:32] # thal
          ]
 
-layers = [ # i_ext + bckgrd
+"""layers = [ # i_ext + bckgrd
     ["E1S1","E2S1","E3S1","E4S1"],
     ["E1S2","E2S2","E3S2","E4S2"],
     ["ThalE","ThalI"], # thalamus
@@ -588,9 +588,9 @@ layers = [ # i_ext + bckgrd
     ["VIPS1"],
     ["VIPS2"]
 ]
-
+"""
 fig, axes = plt.subplots(2, 2, figsize=(14, 10)) 
-fig, axes = plt.subplots(4, 3, figsize=(18, 16))
+#fig, axes = plt.subplots(4, 3, figsize=(18, 16))
 axes = axes.flatten()
 for ax, cols in zip(axes, layers):
     labels_with_final = [f"{col} ({potential_df[col].iloc[-1]:.6f})" for col in cols]
@@ -614,7 +614,7 @@ layers = [rates_df.columns[:4],   # A3b
           potential_df.columns[17:30],  # S2
           potential_df.columns[30:32] # thal
          ]
-
+"""
 layers = [ # i_ext + bckgrd
     ["E1S1","E2S1","E3S1","E4S1"],
     ["E1S2","E2S2","E3S2","E4S2"],
@@ -626,7 +626,8 @@ layers = [ # i_ext + bckgrd
     ["SST1S2","SST2S2","SST3S2","SST4S2"],
     ["VIPS1"],
     ["VIPS2"]
-]
+]"""
+
 #fig, axes = plt.subplots(2, 2, figsize=(14, 10))  # 2x2 grid
 fig, axes = plt.subplots(4, 3, figsize=(18, 16))
 axes = axes.flatten()
@@ -644,4 +645,3 @@ for ax, cols in zip(axes, layers):
 fig.suptitle("Rates", fontsize=20, fontweight='bold')
 plt.tight_layout(rect=[0, 0, 1, 0.95])
 plt.show() 
-"""

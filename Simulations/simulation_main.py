@@ -4,7 +4,6 @@ Author: Rosa Grossmann
 Contact: grossmannr@cbs.mpg.de
 Date: 2025-08-05
 Description: Run this file to run the simulation! 
-
 """
 
 # %%
@@ -30,7 +29,7 @@ figure_dir = os.path.join(SIMDIR, "Figures")
 # add model to datapath
 sys.path.append(os.path.join(WDDIR, 'Simulations', 'model'))
 from somato_model import SomatoModel, read_simulation_params
-from somato_model_pyrates_no_conn_operators_A3bS1_pycobi import SomatoModelPyrates, read_simulation_params
+from somato_model_pyrates_no_conn_operators_complete_pycobi import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 
 # %%   
@@ -67,12 +66,13 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [30] #[100, 120, 140, 160]
+coupling_strengths = [10] #[100, 120, 140, 160]
 backgrndI_strengths = [5] #[40, 60, 80] #,6,7]
 input_durations = [0]
 input_strengths = [0]
-balance_EI = [0.8]
+strength_I = [0.5]
 area = 'all'
+pyrates = True
 
 # %%
 for d in input_durations:
@@ -83,10 +83,10 @@ for d in input_durations:
             all_durations_saving = []
 
             for g in coupling_strengths:
-                for bEI in balance_EI:
+                for sI in strength_I:
                     
                     params['coupling_strength'] = g 
-                    params['balance_EI'] = bEI
+                    params['strength_I'] = sI
                     params['Iext_duration'] = d
                     params['Iext_strength'] = s
                     params['Ib_strength'] = sb
@@ -99,10 +99,12 @@ for d in input_durations:
                     params['bI_cellcounts'] = 100
                     params['thal_cellcounts'] = 500
 
-                    #model = SomatoModel(params)
-                    #model.plot_W_heatmap()
-                    model = SomatoModelPyrates(params)
-
+                    if pyrates:
+                        model = SomatoModelPyrates(params)
+                    else:
+                        model = SomatoModel(params)
+                        model.plot_W_heatmap()
+                    
                     # simulate rates and potentials
                     start = time.time()
                     model.simulate()
@@ -117,7 +119,7 @@ for d in input_durations:
                     print('input_onset', model.input_onset) 
                     print('thal_connect', model.thal_connect) 
                     print('extI_cellcounts', model.extI_cellcounts) 
-                    print('balance_EI', model.balance_EI) 
+                    print('strength_I', model.strength_I) 
                     print('bI_cellcounts', model.bI_cellcounts) 
                     print('thal_cellcounts', model.thal_cellcounts) 
                     print('bEI_thal', model.bEI_thal) 
@@ -147,7 +149,7 @@ for d in input_durations:
                             model.step_size,
                             simulation_dur,
                             start_plot,
-                            bEI,
+                            sI,
                             g,
                             model.area,
                             d,
@@ -157,11 +159,13 @@ for d in input_durations:
                         )
 
                     if plot_potentials:
-                        potential_sum = np.sum(model.potential, axis=1)
                         resolution_tstep = 1e-2
-                        potential_sum_downsampled = potential_sum[
-                            :, :: int(1000 * resolution_tstep)
-                        ]
+                        if pyrates:
+                            potential_sum = model.potential
+                        else:
+                            potential_sum = np.sum(model.potential, axis=1)
+
+
                         pf.plot_potentials(
                             potential_sum,
                             model.Iext[-2],
@@ -170,7 +174,7 @@ for d in input_durations:
                             simulation_dur,
                             start_plot,
                             figure_dir,
-                            bEI,
+                            sI,
                             g,
                             d,
                             sb,
