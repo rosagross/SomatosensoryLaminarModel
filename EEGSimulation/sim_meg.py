@@ -13,8 +13,16 @@ import csv
 csv.field_size_limit(10**7)
 import pandas as pd
 # Add the parent directory to the sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-param_path = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/Simulations"
+location = "laptop"
+if location == "laptop":
+    WDDIR = r"C:\Users\gross\OneDrive - UvA\Documents\IMPRS_Leipzig\MyProject\Modelling\ChienReplication\SomatosensoryLaminarModel"
+    SIMDIR = os.path.join(WDDIR, "output")
+if location == "mpi":
+    SIMDIR = os.getenv("SIMDIR")
+    WDDIR = os.getenv("WDDIR")
+    figure_dir = os.path.join(SIMDIR, "Figures")
+
+param_path = sys.path.append(os.path.abspath(os.path.join(WDDIR, 'Simulations')))
 if param_path not in sys.path:
     sys.path.append(param_path)
 from parameters import Parameter
@@ -100,6 +108,8 @@ def simDipoles(dipole_setting, pop_counts, indices_E, psp_dir=None, psp_filename
         # for each E this should give a [1 x timesteps] vector 
         # current flow: absolute psp values that come into each E population
         simDipoles[i, :] = np.dot(dipoles[i, :],abs(psp_s1[i, :, :]))
+        # psp is the potential directed to a single E (nP x times)
+        # in dipoles we store the value for a specific E, (1, np)
 
     return simDipoles
 
@@ -126,5 +136,45 @@ def plot_dipoles(simDipoles, input_onset):
     axes[1].legend()
     sns.despine(trim=True)
     plt.show()
+
+def get_population_mapping():
+    """
+    Get mapping between model populations and brain regions.
+    
+    Returns:
+        dict: Mapping of population indices to brain regions and layers
+    """
+    # Population order from parameters.py:
+    # A3b: E, PV, SST, VIP (indices 0-3)
+    # A1: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (indices 4-16)  
+    # S2: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (indices 17-29)
+    # Thalamus: ThalE, ThalI (indices 30-31)
+    
+    mapping = {
+        # A3b populations
+        'A3b': {
+            'E': 0, 'PV': 1, 'SST': 2, 'VIP': 3
+        },
+        # A1 populations (layers 1-4)
+        'A1': {
+            'L1_E': 4, 'L1_PV': 5, 'L1_SST': 6, 'L1_VIP': 7,
+            'L4_E': 8, 'L4_PV': 9, 'L4_SST': 10,
+            'L5_E': 11, 'L5_PV': 12, 'L5_SST': 13,
+            'L6_E': 14, 'L6_PV': 15, 'L6_SST': 16
+        },
+        # S2 populations (layers 1-4)
+        'S2': {
+            'L1_E': 17, 'L1_PV': 18, 'L1_SST': 19, 'L1_VIP': 20,
+            'L4_E': 21, 'L4_PV': 22, 'L4_SST': 23,
+            'L5_E': 24, 'L5_PV': 25, 'L5_SST': 26,
+            'L6_E': 27, 'L6_PV': 28, 'L6_SST': 29
+        },
+        # Thalamic populations
+        'Thalamus': {
+            'E': 30, 'I': 31
+        }
+    }
+    
+    return mapping
     
 # %%
