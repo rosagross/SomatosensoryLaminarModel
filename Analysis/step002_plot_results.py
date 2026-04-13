@@ -48,14 +48,18 @@ if not os.path.exists(figure_dir):
 
 raw_dir = os.path.join(SIMDIR, "simulation_results")
 processed_dir = os.path.join(SIMDIR, "derivatives")
+# read params
+params = load_parameters(WDDIR)
+
 
 # some global settings
-step_size = 0.01
-sample_delay_immediate = 0.3
-sample_delay_late = 1 # when to start the long term behaviour "window"
-input_onset = 1.001
-sample_dur = 0.3
-offset=0.1 
+sampling_params = params['sampling']
+step_size = sampling_params['step_size']
+sample_delay_immediate = sampling_params['sample_delay_immediate']
+sample_delay_late = sampling_params['sample_delay_late']  # when to start the long term behaviour "window"
+sample_dur = sampling_params['sample_dur']
+offset = sampling_params['offset']
+input_onset = params['input_onset']
 input_type = 'step'
 thalamus_source = 'Jiang'
 # connectivity params
@@ -67,13 +71,13 @@ thal_cellcounts = params['thal_cellcounts']
 # %% Make plots that demonstrate the sampling time line 
 
 # load trajectory to plot
-g = 120
-Iext_dur = 0
+g = 20
+Iext_dur = 0.006
 Iext_str = 0
-Ib_str = 40
-bEI = 0.8
-rates_df, potentials_df, filename = load_simulation_data(g, bEI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir) 
-trajectory_df = load_trajectory(rates_df, potentials_df, g, bEI, Iext_dur, Iext_str, Ib_str, step_size)
+Ib_str = 4
+sI = 0.24
+rates_df, potentials_df, filename = load_simulation_data(g, sI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir) 
+trajectory_df = load_trajectory(rates_df, potentials_df, g, sI, Iext_dur, Iext_str, Ib_str, step_size)
 
 # choose population
 population = 'E3b'
@@ -116,7 +120,7 @@ sns.despine(trim=True)
 plt.savefig(os.path.join(figure_dir, 'plotting_windows.pdf'), bbox_inches='tight')
 plt.show()
 
-# %%
+    # %%
 
 '''
 1.1) SINGLE PLOT: Plot example trajectory
@@ -126,14 +130,14 @@ plt.show()
 '''
 
 # choose example settings
-g = 20
-bEI = 0.7
-Iext_dur = 0
-Iext_str = 0
-Ib_str = 8
+g = 10
+sI = 0.2
+Iext_dur = 0.018
+Iext_str = 20
+Ib_str = 2
 
-rates_df, potentials_df, filename = load_simulation_data(g, bEI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir) 
-trajectory_df = load_trajectory(rates_df, potentials_df, g, bEI, Iext_dur, Iext_str, Ib_str, step_size)
+rates_df, potentials_df, filename = load_simulation_data(g, sI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir) 
+trajectory_df = load_trajectory(rates_df, potentials_df, g, sI, Iext_dur, Iext_str, Ib_str, step_size)
 
 population = 'E3b' # 'E1'
 line_df = trajectory_df[trajectory_df['global_coupling']==g]
@@ -146,7 +150,7 @@ fig = plt.figure(figsize=(10,5))
 sns.lineplot(data=line_df, x='time', y='rate', hue='InputStrength', legend='', palette=['grey'])
 sns.despine(trim=True)
 plt.ylabel('Rate (Hz)')
-figure_name = f'trajectory_g{g}bEI{bEI}_pop{population}_Iduration{Iext_dur}_{Iext_str}.pdf'
+figure_name = f'trajectory_g{g}sI{sI}_pop{population}_Iduration{Iext_dur}_{Iext_str}.pdf'
 plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
@@ -158,15 +162,15 @@ Plot a heatmap showing the effect of Input Strength versus Input Duration
 
 # choose a coupling strength, background input strength and a population
 g = 20
-bEI = 0.7
-Ib_str = 8
+sI = 0.3
+Ib_str = 4
 Iext_str = params['input_strengths']
 Iext_dur = params['input_durations']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 population = 'E3b'
 
 data_df = data_df[data_df['globalCoupling']==g]
-data_df = data_df[data_df['balanceEI']==bEI]
+data_df = data_df[data_df['strength_I']==sI]
 data_df = data_df[data_df['population']==population]
 data_df = data_df[data_df['BckgndInputStrength']==Ib_str]
 
@@ -185,15 +189,15 @@ values = 'longtermVSbaseline_rate'
 
 # choose a coupling strength and a population
 g = 20
-bEI = 0.7
+sI = 0.3
 Iext_str = params['input_strengths']
 Iext_dur = params['input_durations']
-Ib_str = 8
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+Ib_str = 4
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 
 population = 'PV3b'
 data_df = data_df[data_df['globalCoupling']==g]
-data_df = data_df[data_df['balanceEI']==bEI]
+data_df = data_df[data_df['strength_I']==sI]
 data_df = data_df[data_df['population']==population]
 data_df = data_df[data_df['BckgndInputStrength']==Ib_str]
 data_heatmap = data_df.pivot(index='InputStrength',columns='InputDuration', values=values)
@@ -204,18 +208,41 @@ sns.heatmap(data_heatmap, cmap='magma')
 # 1.3) MULTI fingerprint PLOT:
 
 # look at several difference E-I balance values
-bEIs = params['balance_EI']
+sIs = params['strength_I']
 # choose a global coupling strength and a population
-g = 20
-Ib_str = 8
+g = params['coupling_strengths']
+Ib_str = 4
 Iext_str = params['input_strengths']
-Iext_dur = [0]
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+Iext_dur = params['input_durations']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 population = 'E3b'
-bEImulti_fingerprint_IextDurVsStr(data_df, g, bEIs, Ib_str, population, thalamus_source, figure_dir)
+sImulti_fingerprint_IextDurVsStr(data_df, g, sIs, Ib_str, population, thalamus_source, figure_dir)
 
 # %%
 
+# 1.3a) Fingerprint: sI vs Input Strength (fixed g)
+g = 50
+Iext_dur = params['input_durations'][1]
+Iext_str = params['input_strengths']
+Ib_str = params['backgrndI_strengths'][3]
+sIs = params['strength_I']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+population = 'E3b'
+fingerprint_sI_vs_IextStr(data_df, g, Iext_dur, Ib_str, population, thalamus_source, figure_dir)
+
+
+# 1.3b) Fingerprint: g vs Input Strength (fixed sI)
+sI = 0.26 #params['strength_I'][0]
+Iext_dur = params['input_durations'][1]
+Iext_str = params['input_strengths']
+Ib_str = params['backgrndI_strengths'][3]
+g = params['coupling_strengths']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+population = 'E3b'
+fingerprint_g_vs_IextStr(data_df, sI, Iext_dur, Ib_str, population, thalamus_source, figure_dir)
+
+
+# %%
 '''
 1.4) MULTI PLOT: Effect of input intensity and duration on firing rates
     - plot style: heatmap
@@ -227,17 +254,17 @@ bEImulti_fingerprint_IextDurVsStr(data_df, g, bEIs, Ib_str, population, thalamus
 
 g = params['coupling_strengths']
 rate_measure = 'longtermVSbaseline_rate'
-bEI = 0.7
-Ib_str = 8
-Iext_dur = [0] #params['input_durations']
+sI = 0.26
+Ib_str = 1
+Iext_dur = params['input_durations']
 Iext_str = params['input_strengths']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 
 populations = np.array(['E1', 'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
 #populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
 
-multiPop_heatmap_IextDurVsStr(data_df, g, bEI, Ib_str, populations, rate_measure, figure_dir)
+multiPop_heatmap_IextDurVsStr(data_df, g, sI, Ib_str, populations, rate_measure, figure_dir)
 
 # %% 
 """
@@ -248,31 +275,71 @@ Plot difference between Mininum and Maximum Firing rates
 # choose settings (make sure that there is no input in the samples)
 Iext_dur = 0
 Iext_str = 0
-bEI = 0.7
-Ib_str = 8
+sI = 0.26
+Ib_str = 5
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+multiLayer_couplingOnLongeterm_diffRate(data_df, Iext_dur, Iext_str, Ib_str, sI, thalamus_source, figure_dir)
 
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
-multiLayer_couplingOnLongeterm_diffRate(data_df, Iext_dur, Iext_str, Ib_str, bEI, thalamus_source, figure_dir)
+
+# %%
+"""
+4) Oscillation frequency analysis
+"""
+
+# 4.1) Heatmap of dominant frequency (late longterm)
+g = 15
+sI = 0.26
+Iext_str = params['input_strengths']
+Iext_dur = params['input_durations']
+Ib_str = 5
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+population = 'E2'
+heatmap_frequency_IextDurVsStr(data_df, g, sI, Ib_str, population, "lateLongterm", "Rate", Iext_dur, Iext_str, thalamus_source, figure_dir)
+
+# %%
+
+# 4.2) Coupling strength vs frequency (late longterm)
+Iext_dur = 0
+Iext_str = 0
+sI = 0.28
+Ib_str = 5
+g = params['coupling_strengths']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+multiLayer_couplingOnFrequency(data_df, Iext_dur, Iext_str, Ib_str, sI, "lateLongterm", "Potential", thalamus_source, figure_dir)
 
 
+# 4.3) Heatmap: frequency vs coupling strength and sI (single population)
+Iext_dur = 0
+Iext_str = 0
+Ib_str = 5
+g = params['coupling_strengths']
+sI = params['strength_I']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+area = 'A1'
+heatmap_frequency_coupling_vs_sI(data_df, area, "lateLongterm", "Potential", Iext_dur, Iext_str, Ib_str, figure_dir)
+
+
+# 4.4) Frequency vs oscillation amplitude scatter (late longterm)
+population = 'E1'
+scatter_frequency_vs_diff(data_df, "lateLongterm", "Potential", population, figure_dir)
 
 # %%
 '''
 3.1) Background input strength 
 - x-axis: input strength
 - y-axis: PSP of E3 population
-- one subplot for each bEI value
+- one subplot for each sI value
 '''
 
-bEI = params['balance_EI']
+sI = params['strength_I'][0:4]
 Ib_str = params['backgrndI_strengths']
 Iext_dur = 0
 Iext_str = 0 #, 200, 300, 400]
 g = params['coupling_strengths']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 population = 'E3b'
 rate_measure = 'baseline' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
-multibEI_couplingOnMinmaxRate(data_df, bEI, Ib_str, population, rate_measure, thalamus_source, figure_dir)
+multisI_couplingOnMinmaxRate(data_df, sI, Ib_str, population, rate_measure, thalamus_source, figure_dir)
 
 # %%
 '''
@@ -281,13 +348,13 @@ BACKGROUND INPUT
 '''
 Iext_dur = 0
 Iext_str = 0
-Ib_str = 6
-bEI = 0.5
+Ib_str = 5
+sI = 0.26
 g = params['coupling_strengths']
 rate_measure = 'baseline' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
 
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
-multiLayer_couplingOnMinMaxRate(data_df, Iext_dur, Iext_str, Ib_str, bEI, rate_measure, thalamus_source, figure_dir)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+multiLayer_couplingOnMinMaxRate(data_df, Iext_dur, Iext_str, Ib_str, sI, rate_measure, thalamus_source, figure_dir)
 
 
 # %%  
@@ -299,16 +366,16 @@ In this plot I use the potential instead of the firing rates.
 '''
 
 # load time series data
-Iext_dur = 1.5
-Iext_str = [10, 20, 30]
-bEI = 0.8
-Ib_str = 7
-g = [10.0, 20.0, 30.0]
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+Iext_dur = 0.5
+Iext_str = params['input_strengths']
+sI = 0.2
+Ib_str = 5
+g = params['coupling_strengths']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 
 potential_measure = 'lateLongterm'
-population = 'E3'
-inputStrengthOnminMaxpotential(data_df, Iext_str, Ib_str, bEI, population, potential_measure, thalamus_source, figure_dir)
+population = 'E1'
+inputStrengthOnminMaxpotential(data_df, Iext_str, Ib_str, sI, population, potential_measure, thalamus_source, figure_dir)
 
 
 # %% Line Plot 
@@ -327,12 +394,12 @@ Look at the change of rate difference comparing populations
 Look at the interaction between global coupling and E-I balance in different populations.
 '''
 
-Iext_dur = 1.5
+Iext_dur = 0.5
 Iext_str = [10, 20, 30]
 g = [10.0, 20.0, 30.0]
 Ib_str = 7
-bEI = [0.7, 0.8, 0.9]
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, bEI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
+sI = [0.7, 0.8, 0.9]
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir)
 
 rate_measure = 'longtermVSbaseline_rate'
 
@@ -357,7 +424,7 @@ for i,input_s in enumerate(Iext_str):
         minmax_df = minmax_df[minmax_df['population']==p]
         #minmax_df['InputDuration'] = minmax_df['InputDuration'].round(4)
 
-        data_heatmap = minmax_df.pivot(index='globalCoupling', columns='balanceEI', values=rate_measure)
+        data_heatmap = minmax_df.pivot(index='globalCoupling', columns='strength_I', values=rate_measure)
 
         if (minmax_df[rate_measure].isna() | (minmax_df[rate_measure] == 0)).all().all():
             print('black')
@@ -381,7 +448,7 @@ fig.text(0, 0.5, 'coupling strength', va='center', rotation='vertical')
 fig.text(0, 0.83, 'coupling strength', va='center', rotation='vertical')
 
 plt.tight_layout(h_pad=1)
-figure_name = f'gvsbEI_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
+figure_name = f'gvssI_{populations[0][0]}pop_{rate_measure}_tauVisual.png'
 plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
 plt.show()
 
@@ -428,7 +495,7 @@ fig, axes = plt.subplots(ncols=2, nrows=2)
 
 # %% 
 # PLOT 1: fixed points and limit cycles
-bEIs = [0.2, 0.5, 0.8, 1]
+sIs = [0.2, 0.5, 0.8, 1]
 gs = coupling_strengths
 
 input_duration = 0.5
@@ -441,7 +508,7 @@ data_df = data_df[data_df['InputDuration']==input_duration]
 data_df = data_df[data_df['InputStrength'].isin(input_strengths)]
 
 # plot results (balance E-I and global coupling on the global axis)
-fig, axs = plt.subplots(ncols=len(bEIs), nrows=len(gs),figsize=(20,10)) 
+fig, axs = plt.subplots(ncols=len(sIs), nrows=len(gs),figsize=(20,10)) 
 
 # Create a colormap
 cmap = cm.get_cmap('Dark2', len(input_strengths))  # Choose a colormap, e.g., 'viridis'
@@ -452,13 +519,13 @@ input_strengths = data_df['InputStrength'].unique()
 
 for i, g in enumerate(gs):
     coupling_df = data_df[data_df['globalCoupling']==g]
-    for j, bEI in enumerate(bEIs):
-        balance_df = coupling_df[coupling_df['balanceEI']==bEI]
+    for j, sI in enumerate(sIs):
+        balance_df = coupling_df[coupling_df['strength_I']==sI]
         ax = axs[i][j]
         if j ==0:
             ax.set_ylabel(f'g={g}\nRate (Hz)')
         if i == len(gs)-1:
-            ax.set_xlabel(f'Background Input Strength\n E-I Balance={bEI}')
+            ax.set_xlabel(f'Background Input Strength\n E-I Balance={sI}')
         for k, s in enumerate(input_strengths):
             Istrength_df = balance_df[balance_df['InputStrength']==s]
             color = cmap(k / (len(input_strengths)))  # Normalize i to [0, 1] for colormap
@@ -481,15 +548,15 @@ plt.show()
 Idur = 0.5
 population = 'E3'
 
-fig, axs = plt.subplots(ncols=len(bEIs), nrows=len(gs), figsize=(20,10)) 
+fig, axs = plt.subplots(ncols=len(sIs), nrows=len(gs), figsize=(20,10)) 
 
 data_df = summary_df[summary_df['population']==population]
 data_df = data_df[data_df['InputDuration']==Idur]
 
 for i, g in enumerate(gs):
     coupling_df = data_df[data_df['globalCoupling']==g]
-    for j, bEI in enumerate(bEIs):
-        balance_df = coupling_df[coupling_df['balanceEI']==bEI]
+    for j, sI in enumerate(sIs):
+        balance_df = coupling_df[coupling_df['strength_I']==sI]
         ax = axs[i][j]
 
         data_heatmap = balance_df.pivot(index='BckgndInputStrength',columns='InputStrength', values='diffRate_duringInput')
@@ -498,7 +565,7 @@ for i, g in enumerate(gs):
         if j ==0:
             ax.set_ylabel(f'g={g}\n Background Input')
         if i == len(gs)-1:
-            ax.set_xlabel(f'Input Strength\n E-I Balance={bEI}')
+            ax.set_xlabel(f'Input Strength\n E-I Balance={sI}')
         else:
             ax.set_xlabel('')
             ax.set_ylabel('')
@@ -509,15 +576,15 @@ for i, g in enumerate(gs):
 Idur = 0.5
 population = 'E3'
 
-fig, axs = plt.subplots(ncols=len(bEIs), nrows=len(gs), figsize=(20,10)) 
+fig, axs = plt.subplots(ncols=len(sIs), nrows=len(gs), figsize=(20,10)) 
 
 data_df = summary_df[summary_df['population']==population]
 data_df = data_df[data_df['InputDuration']==Idur]
 
 for i, g in enumerate(gs):
     coupling_df = data_df[data_df['globalCoupling']==g]
-    for j, bEI in enumerate(bEIs):
-        balance_df = coupling_df[coupling_df['balanceEI']==bEI]
+    for j, sI in enumerate(sIs):
+        balance_df = coupling_df[coupling_df['strength_I']==sI]
         ax = axs[i][j]
 
         data_heatmap = balance_df.pivot(index='BckgndInputStrength',columns='InputStrength', values='longtermVSbaseline_rate')
@@ -527,7 +594,7 @@ for i, g in enumerate(gs):
         if i ==0:
             ax.set_ylabel(f'g={g}\n Background Input')
         if i == len(gs)-1:
-            ax.set_xlabel(f'Input Strength\n E-I Balance={bEI}')
+            ax.set_xlabel(f'Input Strength\n E-I Balance={sI}')
         else:
             ax.set_xlabel('')
             ax.set_ylabel('')

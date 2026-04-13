@@ -8,26 +8,35 @@
     "jax_mode": false,
     "connect_reverse_factor": 1,
     "coupling_strengths": [
-        100, 120, 140, 160
+        0,  5, 10, 15, 20, 25, 30, 35, 40, 45, 50
     ],
-    "balance_EI": [
-        0.8, 0.82, 0.84, 0.86
+    "strength_I": [
+        0.2 , 0.22, 0.24, 0.26, 0.28, 0.3 , 0.32, 0.34, 0.36, 0.38, 0.4, 0.42
     ],
-    "g_thal": 0,
-    "bEI_thal": 0,
+    "g_thal": 2,
+    "sI_thal": 0.5,
     "step_size": 0.001,
     "area": "ThalA3b",
     "filedir": "/data/p_02989/Modelling/output_grossmannr/",
     "input_type": "step",
     "input_onset": 1.001,
     "simulation_dur": 1,
-    "input_durations": [0
+    "sampling": {
+        "step_size": 0.001,
+        "sample_delay_immediate": 0.3,
+        "sample_delay_late": 0.8,
+        "sample_dur": 0.3,
+        "response_window": 0.02,
+        "offset": 0.1,
+        "rate_osc_threshold": 0.1,
+        "potential_osc_threshold": 0.01
+    },
+    "input_durations": [0.006, 0.008, 0.01 , 0.012, 0.014, 0.016, 0.018
     ],
-    "input_strengths": [0
+    "input_strengths": [0, 10, 20, 30, 40
     ],
     "backgrndI_strengths": [
-        40, 60, 80
-    ],
+        0, 2, 4, 6  ],
     "thal_connect": [
         0,
         0,

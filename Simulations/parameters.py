@@ -228,7 +228,7 @@ class Parameter():
         
         # ... from  area 3b to S1
         # this means we have to fuse the source populations together
-        W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
+        #W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
         W_S1A3b = np.zeros((13, 4))
  
         # ... from S1 to area 3b
@@ -237,7 +237,8 @@ class Parameter():
         WS1_collapse_targets_P = np.dot(W0[idx_S1_P,:int(len(W0)/2)].T, C[idx_S1_P])/np.sum(C[idx_S1_P])
         WS1_collapse_targets_S = np.dot(W0[idx_S1_S,:int(len(W0)/2)].T, C[idx_S1_S])/np.sum(C[idx_S1_S])
         WS1_collapse_targets_V = np.dot(W0[idx_S1_V,:int(len(W0)/2)].T, C[idx_S1_V])/np.sum(C[idx_S1_V])
-        W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
+        #W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
+        W_A3bS1 = np.zeros((4, 13))
 
         # TODO: connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 

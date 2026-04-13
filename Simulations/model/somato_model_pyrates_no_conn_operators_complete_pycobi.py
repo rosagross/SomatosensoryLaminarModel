@@ -73,10 +73,10 @@ class SomatoModelPyrates():
         self.thal_connect = [0,0,0,0]
         self.simulation_dur = 5.0
         self.extI_cellcounts = 1000
-        self.balance_EI = 0.7
+        self.strength_I = 0.7
         self.bI_cellcounts = 100
         self.thal_cellcounts = 500
-        self.bEI_thal = 0.5
+        self.sI_thal = 0.5
         self.g_thal = 2
         self.input_type = 'step'
         self.area = 'all' 
@@ -89,10 +89,10 @@ class SomatoModelPyrates():
         self.__dict__.update(params)
 
         # define coupling and balance parameter
-        self.gE = self.coupling_strength * self.balance_EI 
-        self.gI = self.coupling_strength * (1 - self.balance_EI)
-        self.gEthal = self.g_thal * self.bEI_thal
-        self.gIthal = self.g_thal * (1 - self.bEI_thal)
+        self.gE = self.coupling_strength 
+        self.gI = self.coupling_strength * self.strength_I
+        self.gEthal = self.g_thal 
+        self.gIthal = self.g_thal * self.sI_thal
 
         # sigmoid parameters 
         self._extract_sigmoid_params()
@@ -107,7 +107,7 @@ class SomatoModelPyrates():
 
         # define filename for saving results
         self.filename = (
-            f"gthal{self.g_thal}_bEIthal{self.bEI_thal}_g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"gthal{self.g_thal}_bEIthal{self.sI_thal}_g{self.coupling_strength}_bEI{self.strength_I}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
             f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_PYRATES"
         )
@@ -324,7 +324,7 @@ class SomatoModelPyrates():
         bEI_definition = OperatorTemplate(
             name="bEI_definition",
             equations="bEIC = bEI_input",
-            variables={"bEIC": "output", "bEI_input": f"input({float(self.balance_EI)})"}
+            variables={"bEIC": "output", "bEI_input": f"input({float(self.strength_I)})"}
         )       
         g_thal_definition = OperatorTemplate(
             name="g_thal_definition",
@@ -345,7 +345,7 @@ class SomatoModelPyrates():
                             #"g": g,
                             #"bEI":bEI,
                             "g": float(self.coupling_strength),
-                            "bEI": float(self.balance_EI),
+                            "bEI": float(self.strength_I),
                             "m_outC":"input"
                             #"connect_reverse_factor": f"input({float(connect_reverse_factor)})"
                             }
@@ -357,7 +357,7 @@ class SomatoModelPyrates():
                             #"g": -g,
                             #"bEI":bEI,
                             "g": float(self.coupling_strength),
-                            "bEI": float(self.balance_EI),
+                            "bEI": float(self.strength_I),
                             #"connect_reverse_factor":f"input({float(connect_reverse_factor)})",
                             "m_outC":"input"
                             }

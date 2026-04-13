@@ -34,13 +34,14 @@ class SomatoModel():
         # (first initialized with default values) 
         self.simulation_dur = 2 # in s
         self.step_size = 0.001 # in s
+        self.resolution_tstep = 0.001 # in s
         self.input_onset = 1.001
         self.thal_connect = [0,0,0,0]
         self.extI_cellcounts = 1000
-        self.balance_EI = 0 #0.7
+        self.strength_I = 0 #0.7
         self.bI_cellcounts = 100
         self.thal_cellcounts = 500
-        self.bEI_thal = 0.5
+        self.sI_thal = 0.5
         self.g_thal = 2
         self.input_type = 'step'
         self.area = 'all' 
@@ -55,10 +56,10 @@ class SomatoModel():
         # create input array
         Iext = self.create_Iext()
         Ib = self.create_Ibackground()
-        self.gE = self.coupling_strength * self.balance_EI 
-        self.gI = self.coupling_strength * (1 - self.balance_EI)
-        self.gEthal = self.g_thal * self.bEI_thal
-        self.gIthal = self.g_thal * (1 - self.bEI_thal)
+        self.gE = self.coupling_strength
+        self.gI = self.coupling_strength * self.strength_I
+        self.gEthal = self.g_thal 
+        self.gIthal = self.g_thal * self.sI_thal
 
         # Synaptic kernel 
         self.H = np.ones((self.nPop, self.nPop+1))
@@ -71,7 +72,7 @@ class SomatoModel():
         self.Ib = np.tile(Ib, (self.nPop,1))
 
         self.filename = (
-            f"gthal{self.g_thal}_bEIthal{self.bEI_thal}_g{self.coupling_strength}_bEI{self.balance_EI}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"gthal{self.g_thal}_sIthal{self.sI_thal}_g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
             f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_thalUncon_S1S2Uncon"
         )
@@ -99,6 +100,8 @@ class SomatoModel():
         self.rate_current = np.zeros(self.nPop)
         self.u_t = np.zeros((self.nPop, self.nPop + 2))
         self.t = 0.0
+        self.rate = np.zeros((self.nPop, len(self.steps)))
+        self.potential = np.zeros((self.nPop, self.nPop + 2, len(self.steps)))
 
 
     def apply_params(self, params: dict):
@@ -113,10 +116,10 @@ class SomatoModel():
         self.Iext = np.tile(Iext, (self.nPop, 1))
         self.Ib = np.tile(Ib, (self.nPop, 1))
 
-        self.gE = self.coupling_strength * self.balance_EI
-        self.gI = self.coupling_strength * (1 - self.balance_EI)
-        self.gEthal = self.g_thal * self.bEI_thal
-        self.gIthal = self.g_thal * (1 - self.bEI_thal)
+        self.gE = self.coupling_strength 
+        self.gI = self.coupling_strength * self.strength_I
+        self.gEthal = self.g_thal 
+        self.gIthal = self.g_thal * self.sI_thal
 
         # update connectivity with new gains and counts
         self.W = self.p.get_connectivity(
@@ -346,10 +349,9 @@ class SomatoModel():
 
         filename = filename + ".hdf5"
 
-        # only safe every second datapoint
-        resolution_tstep = 0.01
-        print("tstep resolution", resolution_tstep)
-        rates_downsampled = self.rate[:, :: int(1000 * resolution_tstep)]
+        # only safe every X datapoint
+        print("tstep resolution", self.resolution_tstep)
+        rates_downsampled = self.rate[:, :: int(1000 * self.resolution_tstep)]
         rates_df = pd.DataFrame(rates_downsampled.T, columns=cells)
         rates_df.to_hdf(
             os.path.join(filedir, filename), index=False, key="rates", mode="a"
@@ -357,7 +359,7 @@ class SomatoModel():
 
         # sum the potentials together and save them
         potential_sum = np.sum(self.potential, axis=1)
-        potential_sum_downsampled = potential_sum[:, :: int(1000 * resolution_tstep)]
+        potential_sum_downsampled = potential_sum[:, :: int(1000 * self.resolution_tstep)]
         potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
         potential_df.to_hdf(
             os.path.join(filedir, filename), index=False, key="summed_potential", mode="a"
@@ -390,7 +392,6 @@ class SomatoModel():
 
     
     
-
 
 
 

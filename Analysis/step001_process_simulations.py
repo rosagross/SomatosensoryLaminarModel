@@ -44,9 +44,9 @@ bI_cellcounts = params['bI_cellcounts']
 thal_cellcounts = params['thal_cellcounts']
 
 # coupling strengths, balance and area selection
-balance_EI = params['balance_EI']
+strength_I = params['strength_I']
 g_thal = params['g_thal']
-bEI_thal = params['bEI_thal']
+sI_thal = params['sI_thal']
 step_size = params['step_size']
 area = params['area']
 filedir = params['filedir']
@@ -59,42 +59,83 @@ input_durations = params['input_durations']
 input_strengths = params['input_strengths']
 backgroundI_strengths = params['backgrndI_strengths']
 
+#coupling_strengths = [10] #np.arange(0,55,5) #[100, 120, 140, 160]
+#backgroundI_strengths = [0] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
+#input_durations = [0.004] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+#input_strengths = [10] #np.arange(0,50,10)
+#strength_I = [0.2]
+
+
 # sampling parameters
-step_size = 0.01 # of saving, not of simulation!
-sample_delay_immediate = 0.3
-sample_delay_late = 0.5 # when to start the long term behaviour "window"
-input_onset = 1.001
-sample_dur = 0.3
-offset=0.1 # offset : time in s between baseline sampling and start of input 
+sampling_params = params['sampling']
+step_size = sampling_params['step_size']  # of saving, not of simulation!
+sample_delay_immediate = sampling_params['sample_delay_immediate']
+sample_delay_late = sampling_params['sample_delay_late']  # when to start the long term behaviour "window"
+sample_dur = sampling_params['sample_dur']
+offset = sampling_params['offset']  # time in s between baseline sampling and start of input
+rate_osc_threshold = sampling_params['rate_osc_threshold']
+potential_osc_threshold = sampling_params['potential_osc_threshold']
+response_window = sampling_params['response_window']
 
 # %%
 
-
 # loop over all simulations
 for d in input_durations:
+    print('Iextd', d)
     for s in input_strengths:
+        print('Iexts', s)
         for g in coupling_strengths:
-            for bEI in balance_EI:
+            #print('coupling', g)
+            for sI in strength_I:
+                #print('sI', sI)
                 for bI in backgroundI_strengths:
+                    #print('bI', bI)
 
                     df = pd.DataFrame()
                     
                     # read data 
-                    rates_df, potentials_df, filename = load_simulation_data(g, bEI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, sim_dir)
+                    rates_df, potentials_df, filename = load_simulation_data(g, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, sim_dir)
 
                     # compute characteristics
                     compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)
                     compute_longeterm_late(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_late, sample_dur)
-                    compute_input_response(df, rates_df, potentials_df, input_onset, d, step_size, sample_dur, offset)
+                    compute_input_response(df, rates_df, potentials_df, input_onset, d, step_size, response_window)
                     compute_baseline(df, rates_df, potentials_df, input_onset, step_size, sample_dur, offset)
                     compare_longterm_baseline(df)             
                     classify_response(df)
-                    set_sim_info(df, potentials_df, g, bEI, d, s, bI)
+                    
+                    # compute oscillation frequency in different windows
+                    baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
+                    baseline_stop = int(baseline_start + sample_dur/step_size)
+                    compute_window_frequency(
+                        df, rates_df, potentials_df,
+                        baseline_start, baseline_stop,
+                        "baseline", step_size,
+                        rate_osc_threshold, potential_osc_threshold
+                    )
+
+                    start_sample_during = int((input_onset)/step_size)
+                    stop_sample_during = int((input_onset+d)/step_size)
+                    compute_window_frequency(
+                        df, rates_df, potentials_df,
+                        start_sample_during, stop_sample_during,
+                        "duringInput", step_size,
+                        rate_osc_threshold, potential_osc_threshold
+                    )
+
+                    start_sample_late = int((input_onset+d+sample_delay_late)/step_size)
+                    stop_sample_late = int(start_sample_late + sample_dur/step_size)
+                    compute_window_frequency(
+                        df, rates_df, potentials_df,
+                        start_sample_late, stop_sample_late,
+                        "lateLongterm", step_size,
+                        rate_osc_threshold, potential_osc_threshold
+                    )
+
+                    set_sim_info(df, potentials_df, g, sI, d, s, bI)
 
                     # save to csv
                     outfilename = filename.replace('.hdf5', '_processed.csv')
                     outpath = os.path.join(output_dir, outfilename)
                     df.to_csv(outpath, index=False)
                     
-
-# %%

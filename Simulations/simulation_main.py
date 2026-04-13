@@ -19,6 +19,7 @@ import time
 import csv
 
 
+
 # %%
 SIMDIR = os.getenv("SIMDIR")
 WDDIR = os.getenv("WDDIR")
@@ -66,13 +67,13 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [10] #[100, 120, 140, 160]
-backgrndI_strengths = [5] #[40, 60, 80] #,6,7]
-input_durations = [0]
-input_strengths = [0]
-strength_I = [0.5]
+coupling_strengths = [15] # np.arange(0,55,5) #[100, 120, 140, 160]
+backgrndI_strengths =  # np.arange(0,8,2) #[40, 60, 80] #,6,7]
+input_durations = np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = np.arange(0,50,10)
+strength_I = np.arange(0.2,0.44,0.02) #, 0.25, 0.26, 0.36]
 area = 'all'
-pyrates = True
+pyrates = False
 
 # %%
 for d in input_durations:
@@ -86,15 +87,15 @@ for d in input_durations:
                 for sI in strength_I:
                     
                     params['coupling_strength'] = g 
-                    params['strength_I'] = sI
-                    params['Iext_duration'] = d
+                    params['strength_I'] = np.round(sI, 3)
+                    params['Iext_duration'] = np.round(d, 3)
                     params['Iext_strength'] = s
                     params['Ib_strength'] = sb
                     params['area'] = area
 
                     # additional parameters (that are usually fixed)
                     params['g_thal'] = 2
-                    params['bEI_thal'] = 0.5
+                    params['sI_thal'] = 0.5
                     params['extI_cellcounts'] = 1000
                     params['bI_cellcounts'] = 100
                     params['thal_cellcounts'] = 500
@@ -103,7 +104,7 @@ for d in input_durations:
                         model = SomatoModelPyrates(params)
                     else:
                         model = SomatoModel(params)
-                        model.plot_W_heatmap()
+                        #model.plot_W_heatmap()
                     
                     # simulate rates and potentials
                     start = time.time()
@@ -114,6 +115,7 @@ for d in input_durations:
                     print("Simulation duration (in s):", duration)
 
                     # print important parameters
+                    """
                     print('simulation_dur', model.simulation_dur)
                     print('step_size', model.step_size)
                     print('input_onset', model.input_onset) 
@@ -122,15 +124,15 @@ for d in input_durations:
                     print('strength_I', model.strength_I) 
                     print('bI_cellcounts', model.bI_cellcounts) 
                     print('thal_cellcounts', model.thal_cellcounts) 
-                    print('bEI_thal', model.bEI_thal) 
+                    print('sI_thal', model.sI_thal) 
                     print('g_thal', model.g_thal) 
                     print('input_type', model.input_type) 
                     print('area', model.area) 
-                    print(model.coupling_strength) 
-                    print(model.Ib_strength) 
-                    print(model.Iext_strength) 
-                    print(model.Iext_duration) 
-
+                    """
+                    print('coupling strength', model.coupling_strength) 
+                    print('b input', model.Ib_strength) 
+                    print('Iext strength', model.Iext_strength) 
+                    print('Iext dur', model.Iext_duration) 
 
                     if save_results:
                         start = time.time()
