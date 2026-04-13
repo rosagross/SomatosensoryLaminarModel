@@ -1,7 +1,6 @@
 # %%
 import numpy as np
 import pandas as pd
-import yaml
 
 # %%
 class Parameter():
@@ -139,7 +138,7 @@ class Parameter():
 
         return psp
 
-    def get_cellcounts(self):
+    def get_cellcounts(self, return_A3b=False):
         
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         C_S1 = np.array([1691, 90, 74, 85, 1656, 85, 48, 1095, 109, 105, 1288, 56, 66])
@@ -150,11 +149,15 @@ class Parameter():
 
         # For Area 3b we take the cell counts summed for each population
         # So we end up with a "collapsed" area 
-        C_A3b_E = np.sum(C_relativeS1[[0,4,7,10]])
-        C_A3b_PV = np.sum(C_relativeS1[[1,5,8,11]])
-        C_A3b_SST = np.sum(C_relativeS1[[2,6,9,12]])
-        C_A3b_VIP = np.sum(C_relativeS1[[3]])
-        C = np.hstack((C_S1, C_S2))
+        C_A3b_E = np.sum(C_S1[[0,4,7,10]])
+        C_A3b_PV = np.sum(C_S1[[1,5,8,11]])
+        C_A3b_SST = np.sum(C_S1[[2,6,9,12]])
+        C_A3b_VIP = np.sum(C_S1[[3]])
+
+        if return_A3b: 
+            C = np.hstack((C_A3b_E, C_A3b_PV, C_A3b_SST, C_A3b_VIP, C_S1, C_S2))
+        else:
+            C = np.hstack((C_S1, C_S2))
 
         return C 
 
