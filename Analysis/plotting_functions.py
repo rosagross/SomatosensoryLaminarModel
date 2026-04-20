@@ -388,6 +388,8 @@ def heatmap_frequency_coupling_vs_sI(data_df, area, window_prefix, signal_type, 
     area: "A1", "S2", or "A3b"
     """
     col = f"freq{signal_type}_{window_prefix}"
+    if col not in data_df.columns:
+        raise ValueError(f"Column '{col}' not found in data frame.")
 
     if area == "A1":
         populations = ['E1', 'PV1', 'SST1', 'VIP1',
@@ -417,9 +419,22 @@ def heatmap_frequency_coupling_vs_sI(data_df, area, window_prefix, signal_type, 
     fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 3 * nrows), sharex=True, sharey=True)
     axes = np.atleast_1d(axes).flatten()
 
+    # for the colorbar
+    norm = plt.Normalize(vmin=vmin, vmax=vmax)
+    sm = plt.cm.ScalarMappable(cmap="magma", norm=norm)
+    sm.set_array([])
+
     for ax, pop in zip(axes, populations):
         pop_df = plot_df[plot_df["population"] == pop]
         data_heatmap = pop_df.pivot(index="strength_I", columns="globalCoupling", values=col)
+
+        # seaborn.heatmap fails on empty matrices ("zero-size array to reduction")
+        # which can happen when no rows match the current population/filter values.
+        if data_heatmap.empty or data_heatmap.shape[0] == 0 or data_heatmap.shape[1] == 0 or np.all(np.isnan(data_heatmap.to_numpy())):
+            ax.axis("off")
+            ax.text(0.5, 0.5, f"{pop}\n(no data)", ha="center", va="center", transform=ax.transAxes)
+            continue
+
         sns.heatmap(data_heatmap, cmap="magma", vmin=vmin, vmax=vmax, ax=ax, cbar=False)
         ax.invert_yaxis()
         ax.set_title(pop)
@@ -429,6 +444,9 @@ def heatmap_frequency_coupling_vs_sI(data_df, area, window_prefix, signal_type, 
     # turn off unused axes
     for ax in axes[n:]:
         ax.axis('off')
+
+    cbar = fig.colorbar(sm, ax=axes, orientation="vertical", fraction=0.02, pad=0.02)
+    cbar.set_label(col)
 
     fig.suptitle(f"{signal_type} freq ({window_prefix}) - area {area}")
     plt.tight_layout()
