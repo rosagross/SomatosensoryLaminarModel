@@ -74,7 +74,7 @@ class SomatoModel():
         self.filename = (
             f"gthal{self.g_thal}_sIthal{self.sI_thal}_g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
-            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_thalUncon_S1S2Uncon"
+            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_thalUncon_S1S2Connected"
         )
 
         # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
@@ -188,8 +188,6 @@ class SomatoModel():
         
         W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
         sns.heatmap(W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
-
-
 
 
     def simulate(self):

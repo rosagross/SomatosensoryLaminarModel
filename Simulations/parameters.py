@@ -31,6 +31,27 @@ class Parameter():
         tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
+        # add delay to long range connections
+        # from S2 to A3b
+        tau[0, 0+4+13] += 5*1e-3
+        tau[0, 7+4+13] += 5*1e-3
+        # from A3b to S2
+        tau[0+4+13, 0] += 5*1e-3
+        tau[4+4+13, 0] += 5*1e-3
+        tau[7+4+13, 0] += 5*1e-3
+        # from S2 to S1
+        tau[0+4, 0+4+13] += 5*1e-3
+        tau[0+4, 7+4+13] += 5*1e-3
+        tau[7+4, 0+4+13] += 5*1e-3
+        tau[7+4, 7+4+13] += 5*1e-3
+        # from S1 to S2
+        tau[0+4+13, 0+4] += 5*1e-3
+        tau[0+4+13, 7+4] += 5*1e-3
+        tau[4+4+13, 0+4] += 5*1e-3 # layer 4 in S2
+        tau[4+4+13, 7+4] += 5*1e-3 # layer 4
+        tau[7+4+13, 0+4] += 5*1e-3
+        tau[7+4+13, 7+4] += 5*1e-3
+
         # Alternative, old values for tau
         # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
         #tau = np.tile(np.array([2,2,2,2,4,4,4,4,4,4,4,4,4,3])*1e-3, (nPop+1,1)) 
@@ -231,8 +252,8 @@ class Parameter():
         
         # ... from  area 3b to S1
         # this means we have to fuse the source populations together
-        #W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
-        W_S1A3b = np.zeros((13, 4))
+        W_S1A3b = np.column_stack((WS1_collapse_sources_E, WS1_collapse_sources_P, WS1_collapse_sources_S, WS1_collapse_sources_V))
+        #W_S1A3b = np.zeros((13, 4))
  
         # ... from S1 to area 3b
         # we need to compress the target populations 
@@ -240,24 +261,34 @@ class Parameter():
         WS1_collapse_targets_P = np.dot(W0[idx_S1_P,:int(len(W0)/2)].T, C[idx_S1_P])/np.sum(C[idx_S1_P])
         WS1_collapse_targets_S = np.dot(W0[idx_S1_S,:int(len(W0)/2)].T, C[idx_S1_S])/np.sum(C[idx_S1_S])
         WS1_collapse_targets_V = np.dot(W0[idx_S1_V,:int(len(W0)/2)].T, C[idx_S1_V])/np.sum(C[idx_S1_V])
-        #W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
-        W_A3bS1 = np.zeros((4, 13))
+        W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
+        #W_A3bS1 = np.zeros((4, 13))
 
-        # TODO: connectivity between S2 and A3b has to be defined manually
+        # connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
-        #W_S2A3b[4,0] = 100
-        #W_S2A3b[5,0] = 100
+        W_S2A3b[0,0] = 30 # to E in layer 2/3 from E in A3b
+        W_S2A3b[4,0] = 40 # to E in layer 4 from E in A3b
+        W_S2A3b[7,0] = 30 # to E in layer 5 from E in A3b
         W_A3bS2 = np.zeros(W_A3bS1.shape) 
-        #W_A3bS2[0,4] = 50
-        #W_A3bS2[1,4] = 50
+        W_A3bS2[0,0] = 50 # to E from E in layer 2/3 in S2
+        W_A3bS2[0,7] = 30 # to E from E in layer 5 in S2
+        #print("A3b to S1", W_S1A3b[0,0], W_S1A3b[7,0])
+        #print("A3b to S2", W_S2A3b[0,0], W_S2A3b[7,0])
 
-        # TODO: connectivity between S2 and S1 also has to be defined manually
+
         # feedforward
-        #W0[idx_S1_E[1]+13,idx_S1_E[2]] = 100 # S1 layer 5 E to S2 layer 4 E
-        #W0[idx_S1_P[1]+13,idx_S1_E[2]] = 100
+        W0[idx_S1_E[0]+13,idx_S1_E[0]] = 20 # S1 layer 2/3 E to S2 layer 2/3 E
+        W0[idx_S1_E[0]+13,idx_S1_E[2]] = 10 # S1 layer 5 E to S2 layer 2/3 E
+        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 30 # S1 layer 2/3 E to S2 layer 4 E
+        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 30 # S1 layer 5 E to S2 layer 5 E
+        W0[idx_S1_E[2]+13,idx_S1_E[0]] = 20 # S1 layer 2/3 E to S2 layer 5 E
+        W0[idx_S1_E[2]+13,idx_S1_E[2]] = 10 # S1 layer 5 E to S2 layer 5 E
+        
         # feedback
-        #W0[idx_S1_E[0],idx_S1_E[2]+13] = 50 # S2 layer 5 E to S1 layer 1 E 
-        #W0[idx_S1_P[0],idx_S1_E[2]+13] = 50 # S2 layer 5 E to S1 layer 1 PV
+        W0[idx_S1_E[0],idx_S1_E[0]+13] = 30 # S2 layer 2 E to S1 layer 2/3 E
+        W0[idx_S1_E[0],idx_S1_E[2]+13] = 15 # S2 layer 5 E to S1 layer 2/3 E
+        W0[idx_S1_E[2],idx_S1_E[0]+13] = 30 # S2 layer 2 E to S1 layer 5 E
+        W0[idx_S1_E[2],idx_S1_E[2]+13] = 15 # S2 layer 5 E to S1 layer 5 E
 
         # stack the matrices together 
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))
