@@ -1,15 +1,22 @@
 import numpy as np
-import matplotlib.pyplot as plt
-import seaborn as sns
-import pandas as pd
+import os
 import h5py
 import yaml
 import json
+import sys
+import matplotlib.pyplot as plt
+import seaborn as sns
+import pandas as pd
 from parameters import Parameter
-import os
+
+
 
 WDDIR = os.getenv("WDDIR")
 SIMDIR = os.getenv("SIMDIR")
+
+helper_path = os.path.join(WDDIR, 'Analysis')
+sys.path.insert(0, helper_path)
+import helper_functions as hf
 
 def read_simulation_params():
     """Read simulation parameters from json file."""
@@ -18,6 +25,10 @@ def read_simulation_params():
         params = json.load(json_file)
     
     return params
+
+def read_analysis_params():
+    analysis_params = hf.load_parameters(WDDIR)
+    return analysis_params
 
 class SomatoModel():
 
@@ -50,6 +61,9 @@ class SomatoModel():
         self.Iext_strength = 10
         self.Iext_duration = 0.5
 
+        # scaling the coupling strength between the cortical areas
+        self.g_intercortical = 1
+
         # update parameters based on params dicts
         self.__dict__.update(params)
 
@@ -74,7 +88,7 @@ class SomatoModel():
         self.filename = (
             f"gthal{self.g_thal}_sIthal{self.sI_thal}_g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
-            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_thalUncon_S1S2Connected"
+            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_gInter{self.g_intercortical}_thalUncon"
         )
 
         # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
@@ -89,7 +103,7 @@ class SomatoModel():
         self.t = 0.0
 
         # Weight matrix [to x from]
-        self.W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
+        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
 
 
     def initialize_state(self):
@@ -123,6 +137,7 @@ class SomatoModel():
 
         # update connectivity with new gains and counts
         self.W = self.p.get_connectivity(
+            self.g_intercortical,
             self.gE,
             self.gI,
             self.gEthal,
@@ -163,7 +178,7 @@ class SomatoModel():
         S = self.p.get_connectStrength()
         P = self.p.get_connectProb()
         C = self.p.get_cellcounts()
-        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts)
+        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts)
 
         # Convert numpy arrays to lists
         parameters = {
@@ -186,7 +201,7 @@ class SomatoModel():
         Plot connectivity matrix as heatmap.
         """
         
-        W = self.p.get_connectivity(self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
+        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
         sns.heatmap(W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
 
@@ -304,12 +319,8 @@ class SomatoModel():
     def compute_ecds():
         raise NotImplementedError
 
-    def save_results_csv(self, filedir, filename, full=False, save_params=False):
-        """
-        Safe the simulated data in a csv file
-        """
-
-        cells = [
+    def get_population_labels(self):
+        return np.array([
             "E3b",
             "PV3b",
             "SST3b",
@@ -340,25 +351,53 @@ class SomatoModel():
             "E4S2",
             "PV4S2",
             "SST4S2",
-            "ThalE", 
-            "ThalI"
-        ]
-        cells = np.array(cells)
+            "ThalE",
+            "ThalI",
+        ])
 
-        filename = filename + ".hdf5"
+    def get_population_spectrum_groups(self):
+        return [
+            ("A3b Layer 2/3", ["E3b", "PV3b", "SST3b", "VIP3b"]),
+            ("S1 Layer 2/3", ["E1", "PV1", "SST1", "VIP1"]),
+            ("S1 Layer 4", ["E2", "PV2", "SST2"]),
+            ("S1 Layer 5", ["E3", "PV3", "SST3"]),
+            ("S1 Layer 6", ["E4", "PV4", "SST4"]),
+            ("S2 Layer 2/3", ["E1S2", "PV1S2", "SST1S2", "VIP1S2"]),
+            ("S2 Layer 4", ["E2S2", "PV2S2", "SST2S2"]),
+            ("S2 Layer 5", ["E3S2", "PV3S2", "SST3S2"]),
+            ("S2 Layer 6", ["E4S2", "PV4S2", "SST4S2"]),
+            ("Thalamus", ["ThalE", "ThalI"]),
+        ]
+
+    def prepare_dataframes(self):
+
+        cells = self.get_population_labels()
 
         # only safe every X datapoint
         print("tstep resolution", self.resolution_tstep)
         rates_downsampled = self.rate[:, :: int(1000 * self.resolution_tstep)]
         rates_df = pd.DataFrame(rates_downsampled.T, columns=cells)
-        rates_df.to_hdf(
-            os.path.join(filedir, filename), index=False, key="rates", mode="a"
-        )
 
         # sum the potentials together and save them
         potential_sum = np.sum(self.potential, axis=1)
         potential_sum_downsampled = potential_sum[:, :: int(1000 * self.resolution_tstep)]
         potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
+
+        return rates_df, potential_df
+
+    def save_results_csv(self, filedir, filename, full=False, save_params=False):
+        """
+        Safe the simulated data in a csv file
+        """
+
+        rates_df, potential_df = self.prepare_dataframes()
+
+        filename = filename + ".hdf5"
+        
+        rates_df.to_hdf(
+            os.path.join(filedir, filename), index=False, key="rates", mode="a"
+        )
+
         potential_df.to_hdf(
             os.path.join(filedir, filename), index=False, key="summed_potential", mode="a"
         )
@@ -382,6 +421,207 @@ class SomatoModel():
 
         with h5py.File(filename, "w") as f:
             f.create_dataset(dataset_name, data=self.potential, compression="gzip")
+    
+    def compute_late_longterm_spectrum(self):
+        """
+        Compute late-longterm frequency spectra for all populations.
+        """
+        analysis_params = read_analysis_params()
+        sampling_params = analysis_params['sampling']
+
+        rates_df, potentials_df = self.prepare_dataframes()
+        df = pd.DataFrame()
+
+        hf.compute_longeterm_late(
+            df,
+            rates_df,
+            potentials_df,
+            self.input_onset,
+            self.Iext_duration,
+            self.step_size,
+            sampling_params['sample_delay_late'],
+            sampling_params['sample_dur']
+        )
+
+        start_sample_late = int(
+            (self.input_onset + self.Iext_duration + sampling_params['sample_delay_late']) / self.step_size
+        )
+        stop_sample_late = int(start_sample_late + sampling_params['sample_dur'] / self.step_size)
+
+        spectra, freqs = hf.compute_window_frequency(
+            df,
+            rates_df,
+            potentials_df,
+            start_sample_late,
+            stop_sample_late,
+            "lateLongterm",
+            self.step_size,
+            sampling_params['rate_osc_threshold'],
+            sampling_params['potential_osc_threshold'],
+            compute_spectrum=True
+        )
+
+        return spectra, freqs
+
+    def save_frequency_spectra(self, filedir, filename=None, spectra=None, freqs=None, window_prefix="lateLongterm"):
+        """
+        Save frequency spectra to an HDF5 file with simulation metadata.
+        """
+        os.makedirs(filedir, exist_ok=True)
+
+        if spectra is None or freqs is None:
+            spectra, freqs = self.compute_late_longterm_spectrum()
+
+        if spectra.ndim != 2:
+            raise ValueError("spectra must be 2D (n_populations x n_frequencies)")
+
+        population_labels = self.get_population_labels()
+        if spectra.shape[0] != len(population_labels):
+            raise ValueError(
+                f"spectra rows ({spectra.shape[0]}) do not match number of populations ({len(population_labels)})"
+            )
+
+        if filename is None:
+            filename = (
+                f"spectrum_ginter{self.g_intercortical}_"
+                f"g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_"
+                f"Iextd{self.Iext_duration}_{self.input_type}Iexts{self.Iext_strength}.hdf5"
+            )
+        elif not filename.endswith(".hdf5"):
+            filename = filename + ".hdf5"
+
+        filepath = os.path.join(filedir, filename)
+        with h5py.File(filepath, "w") as h5f:
+            h5f.create_dataset("freqs", data=freqs)
+            h5f.create_dataset("spectra", data=spectra)
+            h5f.create_dataset("population_labels", data=np.asarray(population_labels, dtype="S32"))
+
+            h5f.attrs["window_prefix"] = window_prefix
+            h5f.attrs["g_intercortical"] = self.g_intercortical
+            h5f.attrs["coupling_strength"] = self.coupling_strength
+            h5f.attrs["strength_I"] = self.strength_I
+            h5f.attrs["Ib_strength"] = self.Ib_strength
+            h5f.attrs["Iext_strength"] = self.Iext_strength
+            h5f.attrs["Iext_duration"] = self.Iext_duration
+            h5f.attrs["step_size"] = self.step_size
+            h5f.attrs["input_onset"] = self.input_onset
+            h5f.attrs["area"] = self.area
+            h5f.attrs["input_type"] = self.input_type
+
+        return filepath
+
+
+    def analyse_signal(self, save_spectrum=False):
+        """
+        Get the following aspects from the signal:
+        - oscillation frequency peak
+        - oscillation yes/no
+        """
+        spectra, freqs = self.compute_late_longterm_spectrum()
+
+
+        self.plot_freq_spectrum(spectra, freqs)
+        self.plot_freq_spectrum_all_populations(spectra, freqs)
+
+        if save_spectrum:
+            spectrum_dir = os.path.join(SIMDIR, "spectrum_results")
+            path = self.save_frequency_spectra(spectrum_dir, spectra=spectra, freqs=freqs)
+            print(f"saved spectra: {path}")
+
+
+    def plot_freq_spectrum(self, spectra, freqs, pop_idx=0, pop_name=None, max_freq_hz=100):
+        """
+        Plot frequency spectrum for a single population.
+
+        Parameters
+        ----------
+        spectra : np.ndarray
+            Array of shape (n_populations, n_frequencies)
+        freqs : np.ndarray
+            Frequency vector (Hz)
+        pop_idx : int
+            Index of population to plot
+        pop_name : str (optional)
+            Name of the population (for title)
+        """
+
+        if spectra.ndim != 2:
+            raise ValueError("spectra must be 2D (n_populations x n_frequencies)")
+
+        if pop_idx < 0 or pop_idx >= spectra.shape[0]:
+            raise IndexError(f"pop_idx {pop_idx} out of range")
+
+        population_labels = self.get_population_labels()
+        resolved_name = pop_name
+        if resolved_name is None:
+            if pop_idx < len(population_labels):
+                resolved_name = population_labels[pop_idx]
+            else:
+                resolved_name = f"Population {pop_idx}"
+
+        power = spectra[pop_idx]
+
+        plt.figure()
+        plt.plot(freqs, power, label=resolved_name)
+
+        plt.xlabel("Frequency (Hz)")
+        plt.ylabel("Power Spectrum Density")
+        plt.title(f"Frequency Spectrum - {resolved_name}")
+        plt.legend(title="Population")
+        plt.xlim(0, max_freq_hz)
+
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
+
+
+    def plot_freq_spectrum_all_populations(self, spectra, freqs, log_scale=False, max_freq_hz=100):
+        """
+        Plot frequency spectra for all populations with one subplot per layer/area group.
+        """
+
+        if spectra.ndim != 2:
+            raise ValueError("spectra must be 2D (n_populations x n_frequencies)")
+
+        population_labels = self.get_population_labels()
+        if spectra.shape[0] != len(population_labels):
+            raise ValueError(
+                f"spectra rows ({spectra.shape[0]}) do not match number of populations ({len(population_labels)})"
+            )
+
+        groups = self.get_population_spectrum_groups()
+        n_groups = len(groups)
+        n_cols = 2
+        n_rows = int(np.ceil(n_groups / n_cols))
+
+        fig, axes = plt.subplots(n_rows, n_cols, figsize=(14, 3 * n_rows), sharex=True)
+        axes = np.atleast_1d(axes).flatten()
+        label_to_idx = {label: idx for idx, label in enumerate(population_labels)}
+
+        for ax, (group_title, group_labels) in zip(axes, groups):
+            for label in group_labels:
+                idx = label_to_idx.get(label)
+                if idx is None:
+                    continue
+                ax.plot(freqs, spectra[idx], label=label)
+
+            if log_scale:
+                ax.set_yscale("log")
+            ax.set_title(group_title)
+            ax.set_xlabel("Frequency (Hz)")
+            ax.set_ylabel("Power Spectrum Density")
+            ax.set_xlim(0, max_freq_hz)
+            ax.grid(True, alpha=0.3)
+            ax.legend(fontsize=8)
+
+        for ax in axes[n_groups:]:
+            ax.axis("off")
+
+        fig.suptitle("Frequency spectra by area and layer")
+        plt.tight_layout(rect=[0, 0, 1, 0.98])
+        plt.show()
+
+
         
 
 
@@ -390,6 +630,3 @@ class SomatoModel():
 
     
     
-
-
-

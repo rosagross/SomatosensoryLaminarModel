@@ -35,7 +35,7 @@ import seaborn as sns
 import pandas as pd
 from plotting_style import figure_style
 from helper_functions import *
-from plotting_functions import *
+from plotting_functions_analysis import *
 
 colors, _ = figure_style() 
 

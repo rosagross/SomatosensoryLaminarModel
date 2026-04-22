@@ -29,7 +29,7 @@
         "response_window": 0.02,
         "offset": 0.1,
         "rate_osc_threshold": 0.1,
-        "potential_osc_threshold": 0.01
+        "potential_osc_threshold": 0.1
     },
     "input_durations": [0.006, 0.008, 0.01 , 0.012, 0.014, 0.016, 0.018
     ],

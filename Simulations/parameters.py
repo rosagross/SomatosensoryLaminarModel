@@ -182,7 +182,7 @@ class Parameter():
 
         return C 
 
-    def get_raw_connectivity(self, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount):
+    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount):
         """Put together the connevtivity matrix (not yet scaled by coupling strength and EI-balance parameter)
         
         Args:
@@ -266,29 +266,32 @@ class Parameter():
 
         # connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
-        W_S2A3b[0,0] = 30 # to E in layer 2/3 from E in A3b
-        W_S2A3b[4,0] = 40 # to E in layer 4 from E in A3b
-        W_S2A3b[7,0] = 30 # to E in layer 5 from E in A3b
+        W_S2A3b[0,0] = 3 * g_intercortical # to E in layer 2/3 from E in A3b
+        W_S2A3b[4,0] = 4 * g_intercortical # to E in layer 4 from E in A3b
+        W_S2A3b[7,0] = 3 * g_intercortical # to E in layer 5 from E in A3b
         W_A3bS2 = np.zeros(W_A3bS1.shape) 
-        W_A3bS2[0,0] = 50 # to E from E in layer 2/3 in S2
-        W_A3bS2[0,7] = 30 # to E from E in layer 5 in S2
+        W_A3bS2[0,0] = 5 * g_intercortical # to E from E in layer 2/3 in S2
+        W_A3bS2[0,7] = 3 * g_intercortical # to E from E in layer 5 in S2
         #print("A3b to S1", W_S1A3b[0,0], W_S1A3b[7,0])
         #print("A3b to S2", W_S2A3b[0,0], W_S2A3b[7,0])
 
+        #print('g_intercortical', W_S2A3b[0,0], g_intercortical)
+        #print('A3b to A3b', W_A3bA3b)
+
 
         # feedforward
-        W0[idx_S1_E[0]+13,idx_S1_E[0]] = 20 # S1 layer 2/3 E to S2 layer 2/3 E
-        W0[idx_S1_E[0]+13,idx_S1_E[2]] = 10 # S1 layer 5 E to S2 layer 2/3 E
-        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 30 # S1 layer 2/3 E to S2 layer 4 E
-        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 30 # S1 layer 5 E to S2 layer 5 E
-        W0[idx_S1_E[2]+13,idx_S1_E[0]] = 20 # S1 layer 2/3 E to S2 layer 5 E
-        W0[idx_S1_E[2]+13,idx_S1_E[2]] = 10 # S1 layer 5 E to S2 layer 5 E
+        W0[idx_S1_E[0]+13,idx_S1_E[0]] = 2 * g_intercortical # S1 layer 2/3 E to S2 layer 2/3 E
+        W0[idx_S1_E[0]+13,idx_S1_E[2]] = 1 * g_intercortical # S1 layer 5 E to S2 layer 2/3 E
+        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 3 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
+        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 3 * g_intercortical # S1 layer 5 E to S2 layer 5 E
+        W0[idx_S1_E[2]+13,idx_S1_E[0]] = 2 * g_intercortical # S1 layer 2/3 E to S2 layer 5 E
+        W0[idx_S1_E[2]+13,idx_S1_E[2]] = 1 * g_intercortical # S1 layer 5 E to S2 layer 5 E
         
         # feedback
-        W0[idx_S1_E[0],idx_S1_E[0]+13] = 30 # S2 layer 2 E to S1 layer 2/3 E
-        W0[idx_S1_E[0],idx_S1_E[2]+13] = 15 # S2 layer 5 E to S1 layer 2/3 E
-        W0[idx_S1_E[2],idx_S1_E[0]+13] = 30 # S2 layer 2 E to S1 layer 5 E
-        W0[idx_S1_E[2],idx_S1_E[2]+13] = 15 # S2 layer 5 E to S1 layer 5 E
+        W0[idx_S1_E[0],idx_S1_E[0]+13] = 3 * g_intercortical # S2 layer 2 E to S1 layer 2/3 E
+        W0[idx_S1_E[0],idx_S1_E[2]+13] = 1.5 * g_intercortical # S2 layer 5 E to S1 layer 2/3 E
+        W0[idx_S1_E[2],idx_S1_E[0]+13] = 3 * g_intercortical # S2 layer 2 E to S1 layer 5 E
+        W0[idx_S1_E[2],idx_S1_E[2]+13] = 1.5 * g_intercortical # S2 layer 5 E to S1 layer 5 E
 
         # stack the matrices together 
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))
@@ -355,7 +358,7 @@ class Parameter():
         return W0, W_to_thal, W_from_thal, Wb, Wext
 
 
-    def get_connectivity(self, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, area='all'):
+    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount, area='all'):
         """Apply coupling strength parameter and compute the final connectivity matrix.  
         
         Args:
@@ -374,7 +377,7 @@ class Parameter():
         """
         
 
-        W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(thal_connect, extI_cellcount, bI_cellcount, thal_cellcount)
+        W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thal_cellcount)
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])

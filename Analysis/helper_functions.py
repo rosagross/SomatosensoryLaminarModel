@@ -12,10 +12,15 @@ import ast
 import h5py
 from pandas.errors import InvalidIndexError
 
-def compute_fft_peak_frequency(signal, step_size, fmin=0.0, fmax=None, window="hann"):
+
+def compute_freq_spectrum(signal, step_size, window="hann"):
     """
-    Compute dominant frequency of a 1D signal using FFT peak.
-    Returns (frequency_hz, peak_power).
+    Compute power spectrum from a signal
+    signal: 1D numpy array containing the signal
+
+    Returns:
+    - frequencies
+    - power spectrum density
     """
     if signal is None:
         return np.nan, np.nan
@@ -35,7 +40,21 @@ def compute_fft_peak_frequency(signal, step_size, fmin=0.0, fmax=None, window="h
     # FFT
     fft_vals = np.fft.rfft(x)
     freqs = np.fft.rfftfreq(n, d=step_size)
-    power = np.abs(fft_vals) ** 2
+
+    # compute power spectrum density
+    n = len(signal)
+    powersd = (np.abs(fft_vals) ** 2) / n**2
+
+    return freqs, powersd
+
+def compute_fft_peak_frequency(signal, step_size, fmin=0.0, fmax=None, window="hann"):
+    """
+    Extract dominant frequency frequency density spektrum by using the peak.
+
+    Returns (frequency_hz, peak_power).
+    """
+    
+    freqs, power = compute_freq_spectrum(signal, step_size, window=window)
 
     # exclude DC
     valid = freqs > 0.0
@@ -54,11 +73,14 @@ def compute_fft_peak_frequency(signal, step_size, fmin=0.0, fmax=None, window="h
 
 
 def compute_window_frequency(df, rates_df, potentials_df, start_idx, stop_idx, prefix, step_size,
-                             osc_gate_rate, osc_gate_potential, fmin=0.0, fmax=None):
+                             osc_gate_rate, osc_gate_potential, fmin=0.0, fmax=None, compute_spectrum=False):
     """
     Compute dominant frequency for each population within a time window.
     Gating is done via diffRate_{prefix} and diffPotential_{prefix}.
     Adds freqRate_{prefix}, freqPotential_{prefix}, fftPowerRate_{prefix}, fftPowerPotential_{prefix}.
+    Returns:
+    - spectra: empty list when compute_spectrum is False, array with power spectra when True
+    - freqs_ref: None array of frequencie, when compute_spectrum is False, array with freqs when True
     """
     rate_col = f"freqRate_{prefix}"
     pot_col = f"freqPotential_{prefix}"
@@ -75,21 +97,36 @@ def compute_window_frequency(df, rates_df, potentials_df, start_idx, stop_idx, p
 
     window_rates = rates_df.iloc[start_idx:stop_idx]
     window_pots = potentials_df.iloc[start_idx:stop_idx]
-
+    freqs_ref = None
+    spectra = []
+    
     for pop in rates_df.columns:
         # gating by min-max diff
         gate_rate = df.loc[pop, f"diffRate_{prefix}"] if f"diffRate_{prefix}" in df.columns else np.nan
         gate_pot = df.loc[pop, f"diffPotential_{prefix}"] if f"diffPotential_{prefix}" in df.columns else np.nan
 
-        if np.isfinite(gate_rate) and gate_rate > osc_gate_rate:
-            freq, pwr = compute_fft_peak_frequency(window_rates[pop].values, step_size, fmin=fmin, fmax=fmax)
-            df.loc[pop, rate_col] = freq
-            df.loc[pop, rate_pow_col] = pwr
+        if not compute_spectrum:
+            if np.isfinite(gate_rate) and gate_rate > osc_gate_rate:
+                    freq, pwr = compute_fft_peak_frequency(window_rates[pop].values, step_size, fmin=fmin, fmax=fmax)
+                    df.loc[pop, rate_col] = freq
+                    df.loc[pop, rate_pow_col] = pwr
 
-        if np.isfinite(gate_pot) and gate_pot > osc_gate_potential:
-            freq, pwr = compute_fft_peak_frequency(window_pots[pop].values, step_size, fmin=fmin, fmax=fmax)
-            df.loc[pop, pot_col] = freq
-            df.loc[pop, pot_pow_col] = pwr
+            if np.isfinite(gate_pot) and gate_pot > osc_gate_potential:
+                freq, pwr = compute_fft_peak_frequency(window_pots[pop].values, step_size, fmin=fmin, fmax=fmax)
+                df.loc[pop, pot_col] = freq
+                df.loc[pop, pot_pow_col] = pwr
+
+        elif compute_spectrum:
+            freqs, power = compute_freq_spectrum(window_pots[pop].values, step_size)
+
+            if freqs_ref is None:
+                freqs_ref = freqs  # same for all populations
+
+            spectra.append(power)
+
+    spectra = np.array(spectra)
+
+    return spectra, freqs_ref
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, strength_I,  
                         backgroundI_strengths, step_size, sample_delay_immediate, sample_delay_late, input_onset, sample_dur, cortex_type, input_type,

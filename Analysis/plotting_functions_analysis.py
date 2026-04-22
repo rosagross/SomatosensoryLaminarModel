@@ -589,7 +589,7 @@ def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels):
 
     axs_op.legend(legend_list, loc='upper right')
 
-def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, sI, g, d, sb, s, figure_dir):
+def plot_rate_results(rates, Iext, Ib, step_size, simulation_time, start_plot, sI, g, d, sb, s, figure_dir):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
     fig, axs = plt.subplots(4, 3, figsize=(15, 15))  # Set figure size
     figure_style()

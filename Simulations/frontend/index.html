@@ -15,46 +15,69 @@
 <button onclick="stopSim()">Stop</button>
 <button onclick="clearPlot()">Clear</button>
 <button onclick="resetSim()">Reset</button>
+<button onclick="copyParams()">Copy Params</button>
 
 <div class="controls">
     <div class="sliders">
 <label>Coupling Strength</label>
 <input id="couplingStrength" type="range" min="0" max="100" step="0.1"
-       oninput="updateParam('coupling_strength', this.value); updateLabel('couplingVal', this.value)">
+       oninput="updateFromSlider('coupling_strength', 'couplingStrength', 'couplingStrengthInput', 'couplingVal')">
+<input id="couplingStrengthInput" type="number" min="0" max="100" step="0.1" value="10"
+       oninput="updateFromInput('coupling_strength', 'couplingStrength', 'couplingStrengthInput', 'couplingVal')">
 <span id="couplingVal">10</span>
 
         <br><br>
 
-<label>bEI Balance</label>
-<input id="balanceEI" type="range" min="0" max="1" step="0.01"
-       oninput="updateParam('balance_EI', this.value); updateLabel('balanceVal', this.value)">
-<span id="balanceVal">0</span>
+<label>Intercortical Strength</label>
+<input id="gIntercortical" type="range" min="0" max="1" step="0.001"
+       oninput="updateFromSlider('g_intercortical', 'gIntercortical', 'gIntercorticalInput', 'gIntercorticalVal')">
+<input id="gIntercorticalInput" type="number" min="0" max="1" step="0.001" value="1"
+       oninput="updateFromInput('g_intercortical', 'gIntercortical', 'gIntercorticalInput', 'gIntercorticalVal')">
+<span id="gIntercorticalVal">1</span>
+
+        <br><br>
+
+<label>Strength I</label>
+<input id="strengthI" type="range" min="0" max="1" step="0.01"
+       oninput="updateFromSlider('strength_I', 'strengthI', 'strengthIInput', 'strengthVal')">
+<input id="strengthIInput" type="number" min="0" max="1" step="0.01" value="0"
+       oninput="updateFromInput('strength_I', 'strengthI', 'strengthIInput', 'strengthVal')">
+<span id="strengthVal">0</span>
 
         <br><br>
 
 <label>Input Strength</label>
-<input id="IextStrength" type="range" min="0" max="20" step="0.1"
-       oninput="updateParam('Iext_strength', this.value); updateLabel('IextStrengthVal', this.value)">
+<input id="IextStrength" type="range" min="0" max="100" step="0.1"
+       oninput="updateFromSlider('Iext_strength', 'IextStrength', 'IextStrengthInput', 'IextStrengthVal')">
+<input id="IextStrengthInput" type="number" min="0" max="100" step="0.1" value="10"
+       oninput="updateFromInput('Iext_strength', 'IextStrength', 'IextStrengthInput', 'IextStrengthVal')">
 <span id="IextStrengthVal">10</span>
 
         <br><br>
 
 <label>Input Duration (s)</label>
 <input id="IextDuration" type="range" min="0" max="2" step="0.01"
-       oninput="updateParam('Iext_duration', this.value); updateLabel('IextDurationVal', this.value)">
+       oninput="updateFromSlider('Iext_duration', 'IextDuration', 'IextDurationInput', 'IextDurationVal')">
+<input id="IextDurationInput" type="number" min="0" max="2" step="0.01" value="0.5"
+       oninput="updateFromInput('Iext_duration', 'IextDuration', 'IextDurationInput', 'IextDurationVal')">
 <span id="IextDurationVal">0.5</span>
 
         <br><br>
 
 <label>Background Input</label>
 <input id="IbStrength" type="range" min="0" max="20" step="0.1"
-       oninput="updateParam('Ib_strength', this.value); updateLabel('IbStrengthVal', this.value)">
+       oninput="updateFromSlider('Ib_strength', 'IbStrength', 'IbStrengthInput', 'IbStrengthVal')">
+<input id="IbStrengthInput" type="number" min="0" max="20" step="0.1" value="7"
+       oninput="updateFromInput('Ib_strength', 'IbStrength', 'IbStrengthInput', 'IbStrengthVal')">
 <span id="IbStrengthVal">7</span>
 
         <br><br>
 
-        <label for="popSelect">Population</label>
-        <select id="popSelect" onchange="changePopulation(this.value)"></select>
+        <label for="plotMode">Plot Mode</label>
+        <select id="plotMode" onchange="changePlotMode(this.value)">
+            <option value="potential">Potentials</option>
+            <option value="rates">Firing rates</option>
+        </select>
 
         <br><br>
 
@@ -76,8 +99,10 @@
 </div>
 
 <div class="plots">
-    <div id="plot" class="plotBox"></div>
-    <div id="plotPotential" class="plotBox"></div>
+    <div id="plotA3b" class="plotBox"></div>
+    <div id="plotA1" class="plotBox"></div>
+    <div id="plotS2" class="plotBox"></div>
+    <div id="plotThal" class="plotBox"></div>
 </div>
 
 <style>
@@ -97,10 +122,11 @@
     display: flex;
     gap: 16px;
     margin-top: 16px;
+    flex-wrap: wrap;
 }
 .plotBox {
     width: 520px;
-    height: 420px;
+    height: 360px;
 }
 </style>
 
@@ -113,7 +139,8 @@ let decimateEvery = Math.round(displayStep / stepSize)
 let windowSeconds = 3
 let maxPoints = Math.ceil(windowSeconds / displayStep) + 1
 let time = []
-let selectedPop = 0
+let plotMode = "potential"
+let plotSpeed = 1.0
 
 let populationLabels = [
     "E3b",
@@ -152,29 +179,44 @@ let populationLabels = [
 
 let otherParams = []
 
-let trace = {
-    x: [],
-    y: [],
-    mode: "lines",
-    name: populationLabels[selectedPop]
+let areaGroups = {
+    A3b: [0, 1, 2, 3],
+    A1: [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+    S2: [17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+    Thal: [30, 31]
 }
 
-let potentialTrace = {
-    x: [],
-    y: [],
-    mode: "lines",
-    name: `${populationLabels[selectedPop]} potential`
+function buildTraces(indices){
+    return indices.map(idx => ({
+        x: [],
+        y: [],
+        mode: "lines",
+        name: populationLabels[idx]
+    }))
 }
 
-Plotly.newPlot("plot", [trace], {
-    xaxis: {title: "Time (s)", range: [0, windowSeconds]},
-    yaxis: {title: "Firing rate", range: [0, 3], autorange: false}
-})
-
-Plotly.newPlot("plotPotential", [potentialTrace], {
-    xaxis: {title: "Time (s)", range: [0, windowSeconds]},
-    yaxis: {title: "Summed potential"}
-})
+function initPlots(){
+    Plotly.newPlot("plotA3b", buildTraces(areaGroups.A3b), {
+        title: "A3b",
+        xaxis: {title: "Time (s)", range: [0, windowSeconds]},
+        yaxis: {title: "Summed potential"}
+    })
+    Plotly.newPlot("plotA1", buildTraces(areaGroups.A1), {
+        title: "A1",
+        xaxis: {title: "Time (s)", range: [0, windowSeconds]},
+        yaxis: {title: "Summed potential"}
+    })
+    Plotly.newPlot("plotS2", buildTraces(areaGroups.S2), {
+        title: "S2",
+        xaxis: {title: "Time (s)", range: [0, windowSeconds]},
+        yaxis: {title: "Summed potential"}
+    })
+    Plotly.newPlot("plotThal", buildTraces(areaGroups.Thal), {
+        title: "Thalamus",
+        xaxis: {title: "Time (s)", range: [0, windowSeconds]},
+        yaxis: {title: "Summed potential"}
+    })
+}
 
 function renderOtherParams(){
     let list = document.getElementById("otherParams")
@@ -186,21 +228,24 @@ function renderOtherParams(){
     })
 }
 
-function populateSelect(){
-    let select = document.getElementById("popSelect")
-    populationLabels.forEach((label, idx) => {
-        let opt = document.createElement("option")
-        opt.value = idx
-        opt.text = `${idx}: ${label}`
-        select.appendChild(opt)
+function extendArea(plotId, indices, values, tSec){
+    let xs = []
+    let ys = []
+    indices.forEach(idx => {
+        xs.push([tSec])
+        ys.push([values[idx]])
     })
-    select.value = String(selectedPop)
+    Plotly.extendTraces(plotId, {x: xs, y: ys}, indices.map((_, i) => i), maxPoints)
 }
 
-function changePopulation(value){
-    selectedPop = Number(value)
-    Plotly.restyle("plot", {y: [[]], x: [[]], name: populationLabels[selectedPop]}, [0])
-    Plotly.restyle("plotPotential", {y: [[]], x: [[]], name: `${populationLabels[selectedPop]} potential`}, [0])
+function clearArea(plotId, indices){
+    let xs = []
+    let ys = []
+    indices.forEach(() => {
+        xs.push([])
+        ys.push([])
+    })
+    Plotly.restyle(plotId, {x: xs, y: ys}, indices.map((_, i) => i))
 }
 
 function startSim(){
@@ -236,33 +281,26 @@ function startSim(){
 
         let data = JSON.parse(event.data)
 
-        let rate = data.rates[selectedPop]
-        let pot = data.potential[selectedPop]
+        let values = plotMode === "rates" ? data.rates : data.potential
         if (data.t % 200 === 0){
-            console.log("[ws] t", data.t, "rate", rate)
+            console.log("[ws] t", data.t)
         }
 
         if (data.t % decimateEvery !== 0){
             return
         }
 
-        let tSec = data.t * stepSize
+        let tSec = data.t * stepSize * plotSpeed
         time.push(tSec)
-        Plotly.extendTraces(
-            "plot",
-            {x:[[tSec]], y:[[rate]]},
-            [0],
-            maxPoints
-        )
-        Plotly.extendTraces(
-            "plotPotential",
-            {x:[[tSec]], y:[[pot]]},
-            [0],
-            maxPoints
-        )
+        extendArea("plotA3b", areaGroups.A3b, values, tSec)
+        extendArea("plotA1", areaGroups.A1, values, tSec)
+        extendArea("plotS2", areaGroups.S2, values, tSec)
+        extendArea("plotThal", areaGroups.Thal, values, tSec)
         if (tSec > windowSeconds){
-            Plotly.relayout("plot", {"xaxis.range": [tSec - windowSeconds, tSec]})
-            Plotly.relayout("plotPotential", {"xaxis.range": [tSec - windowSeconds, tSec]})
+            Plotly.relayout("plotA3b", {"xaxis.range": [tSec - windowSeconds, tSec]})
+            Plotly.relayout("plotA1", {"xaxis.range": [tSec - windowSeconds, tSec]})
+            Plotly.relayout("plotS2", {"xaxis.range": [tSec - windowSeconds, tSec]})
+            Plotly.relayout("plotThal", {"xaxis.range": [tSec - windowSeconds, tSec]})
         }
     }
 }
@@ -282,15 +320,37 @@ function stopSim(){
 
 function resetSim(){
     console.log("[ui] reset clicked")
+    stopSim()
     fetch("http://127.0.0.1:8000/reset", {method:"POST"})
         .then(r => r.text())
-        .then(t => console.log("[reset] response", t))
+        .then(t => {
+            console.log("[reset] response", t)
+            applyCurrentParams()
+            fetchParams()
+            clearPlot()
+        })
         .catch(e => console.error("[reset] error", e))
 }
 
 function clearPlot(){
-    Plotly.restyle("plot", {x: [[]], y: [[]]}, [0])
-    Plotly.restyle("plotPotential", {x: [[]], y: [[]]}, [0])
+    clearArea("plotA3b", areaGroups.A3b)
+    clearArea("plotA1", areaGroups.A1)
+    clearArea("plotS2", areaGroups.S2)
+    clearArea("plotThal", areaGroups.Thal)
+    time = []
+}
+
+function yAxisTitle(){
+    return plotMode === "rates" ? "Firing rate" : "Summed potential"
+}
+
+function changePlotMode(value){
+    plotMode = value === "rates" ? "rates" : "potential"
+    clearPlot()
+    Plotly.relayout("plotA3b", {yaxis: {title: yAxisTitle()}})
+    Plotly.relayout("plotA1", {yaxis: {title: yAxisTitle()}})
+    Plotly.relayout("plotS2", {yaxis: {title: yAxisTitle()}})
+    Plotly.relayout("plotThal", {yaxis: {title: yAxisTitle()}})
 }
 
 function updateParam(name,value){
@@ -301,6 +361,44 @@ function updateParam(name,value){
         body: JSON.stringify({[name]:Number(value)})
     })
 
+}
+
+function updateFromSlider(name, sliderId, inputId, labelId){
+    let slider = document.getElementById(sliderId)
+    if (!slider){
+        return
+    }
+    let v = Number(slider.value)
+    if (!isFinite(v)){
+        return
+    }
+    let input = document.getElementById(inputId)
+    if (input){
+        input.value = slider.value
+    }
+    if (labelId){
+        updateLabel(labelId, slider.value)
+    }
+    updateParam(name, v)
+}
+
+function updateFromInput(name, sliderId, inputId, labelId){
+    let input = document.getElementById(inputId)
+    if (!input){
+        return
+    }
+    let v = Number(input.value)
+    if (!isFinite(v)){
+        return
+    }
+    let slider = document.getElementById(sliderId)
+    if (slider){
+        slider.value = input.value
+    }
+    if (labelId){
+        updateLabel(labelId, input.value)
+    }
+    updateParam(name, v)
 }
 
 function updateLabel(id, value){
@@ -316,7 +414,7 @@ function updateDisplayResolution(value){
         return
     }
     displayStep = v
-    decimateEvery = Math.max(1, Math.round(displayStep / stepSize))
+    decimateEvery = Math.max(1, Math.round(displayStep / (stepSize * plotSpeed)))
     maxPoints = Math.ceil(windowSeconds / displayStep) + 1
     console.log("[ui] displayStep", displayStep, "decimateEvery", decimateEvery)
 }
@@ -326,17 +424,19 @@ function updateSpeed(value){
     if (!isFinite(v) || v <= 0){
         return
     }
-    fetch("http://127.0.0.1:8000/speed",{
-        method:"POST",
-        headers: {"Content-Type":"application/json"},
-        body: JSON.stringify({speed_multiplier: v})
-    })
-    .then(r => r.text())
-    .then(t => console.log("[speed] response", t))
-    .catch(e => console.error("[speed] error", e))
+    plotSpeed = v
+    decimateEvery = Math.max(1, Math.round(displayStep / (stepSize * plotSpeed)))
+    console.log("[ui] plotSpeed", plotSpeed, "decimateEvery", decimateEvery)
 }
 
 function setSliderValue(id, value){
+    let el = document.getElementById(id)
+    if (el){
+        el.value = value
+    }
+}
+
+function setInputValue(id, value){
     let el = document.getElementById(id)
     if (el){
         el.value = value
@@ -347,20 +447,34 @@ function fetchParams(){
     fetch("http://127.0.0.1:8000/params")
         .then(r => r.json())
         .then(p => {
+            if (isFinite(Number(p.step_size)) && Number(p.step_size) > 0){
+                stepSize = Number(p.step_size)
+                decimateEvery = Math.max(1, Math.round(displayStep / stepSize))
+                maxPoints = Math.ceil(windowSeconds / displayStep) + 1
+            }
             // sliders
             setSliderValue("couplingStrength", p.coupling_strength)
+            setInputValue("couplingStrengthInput", p.coupling_strength)
             updateLabel("couplingVal", p.coupling_strength)
 
-            setSliderValue("balanceEI", p.balance_EI)
-            updateLabel("balanceVal", p.balance_EI)
+            setSliderValue("gIntercortical", p.g_intercortical)
+            setInputValue("gIntercorticalInput", p.g_intercortical)
+            updateLabel("gIntercorticalVal", p.g_intercortical)
+
+            setSliderValue("strengthI", p.strength_I)
+            setInputValue("strengthIInput", p.strength_I)
+            updateLabel("strengthVal", p.strength_I)
 
             setSliderValue("IextStrength", p.Iext_strength)
+            setInputValue("IextStrengthInput", p.Iext_strength)
             updateLabel("IextStrengthVal", p.Iext_strength)
 
             setSliderValue("IextDuration", p.Iext_duration)
+            setInputValue("IextDurationInput", p.Iext_duration)
             updateLabel("IextDurationVal", p.Iext_duration)
 
             setSliderValue("IbStrength", p.Ib_strength)
+            setInputValue("IbStrengthInput", p.Ib_strength)
             updateLabel("IbStrengthVal", p.Ib_strength)
 
             // update display params
@@ -372,7 +486,7 @@ function fetchParams(){
                 {name: "extI_cellcounts", value: p.extI_cellcounts},
                 {name: "bI_cellcounts", value: p.bI_cellcounts},
                 {name: "thal_cellcounts", value: p.thal_cellcounts},
-                {name: "bEI_thal", value: p.bEI_thal},
+                {name: "sI_thal", value: p.sI_thal},
                 {name: "g_thal", value: p.g_thal},
                 {name: "input_type", value: p.input_type},
                 {name: "area", value: p.area}
@@ -385,7 +499,8 @@ function fetchParams(){
 function applyCurrentParams(){
     let payload = {
         coupling_strength: Number(document.getElementById("couplingStrength").value),
-        balance_EI: Number(document.getElementById("balanceEI").value),
+        g_intercortical: Number(document.getElementById("gIntercortical").value),
+        strength_I: Number(document.getElementById("strengthI").value),
         Iext_strength: Number(document.getElementById("IextStrength").value),
         Iext_duration: Number(document.getElementById("IextDuration").value),
         Ib_strength: Number(document.getElementById("IbStrength").value)
@@ -400,8 +515,38 @@ function applyCurrentParams(){
     .catch(e => console.error("[params] apply error", e))
 }
 
-populateSelect()
+function copyParams(){
+    let payload = {
+        coupling_strength: Number(document.getElementById("couplingStrength").value),
+        g_intercortical: Number(document.getElementById("gIntercortical").value),
+        strength_I: Number(document.getElementById("strengthI").value),
+        Iext_strength: Number(document.getElementById("IextStrength").value),
+        Iext_duration: Number(document.getElementById("IextDuration").value),
+        Ib_strength: Number(document.getElementById("IbStrength").value)
+    }
+    let text = JSON.stringify(payload, null, 2)
+    if (navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text)
+            .then(() => console.log("[copy] params copied"))
+            .catch(e => console.error("[copy] failed", e))
+    } else {
+        // fallback for older browsers
+        let ta = document.createElement("textarea")
+        ta.value = text
+        document.body.appendChild(ta)
+        ta.select()
+        try {
+            document.execCommand("copy")
+            console.log("[copy] params copied (fallback)")
+        } catch (e) {
+            console.error("[copy] failed (fallback)", e)
+        }
+        document.body.removeChild(ta)
+    }
+}
+
 renderOtherParams()
+initPlots()
 fetchParams()
 
 </script>
