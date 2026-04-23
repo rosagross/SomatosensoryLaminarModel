@@ -18,10 +18,19 @@ import pandas as pd
 import time
 import csv
 
-SIMDIR = os.getenv("SIMDIR")
-WDDIR = os.getenv("WDDIR")
-SIMDIR =  "/data/p_02989/Modelling/output_grossmannr/" #os.getenv("WDDIR")
-WDDIR = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/"
+location = "laptop"
+if location == "laptop":
+    WDDIR = r"C:\Users\gross\OneDrive - UvA\Documents\IMPRS_Leipzig\MyProject\Modelling\ChienReplication\SomatosensoryLaminarModel"
+    SIMDIR = os.path.join(WDDIR, "output")
+    DATADIR = "C:\\Users\\gross\\OneDrive - UvA\\Documents\\IMPRS_Leipzig\\MyProject\\Experiment\\Analysis\\LocalCode\\data"
+    RECONDIR = os.path.join(DATADIR, 'freesurfer')
+
+if location == "mpi":
+    DATADIR = os.getenv('DATADIR')
+    RECONDIR = os.getenv('SUBJECTS_DIR')
+    SIMDIR = os.getenv("SIMDIR")
+    WDDIR = os.getenv("WDDIR")
+    
 figure_dir = os.path.join(SIMDIR, "Figures")
 
 
@@ -47,6 +56,21 @@ def parse_params():
 
     return g
 
+# load EEG data and forward model computation
+# setup sample data for forward modelling
+data_path = sample.data_path()
+subject = "fsaverage"
+trans = "fsaverage"
+src = data_path / "subjects" / "fsaverage" / "bem" / "fsaverage-ico-5-src.fif"
+bem = data_path / "subjects" / "fsaverage" / "bem" / "fsaverage-5120-5120-5120-bem-sol.fif"
+(raw_fname,) = eegbci.load_data(subjects=1, runs=[6])
+raw = mne.io.read_raw_edf(raw_fname, preload=True)
+# Read and set the EEG electrode locations, which are already in fsaverage's
+# space (MNI space) for standard_1020:
+eegbci.standardize(raw)
+montage = mne.channels.make_standard_montage("standard_1005")
+raw.set_montage(montage)
+
 # Assign variables from loaded parameters
 params = read_simulation_params()
 input_onset = params['input_onset']
@@ -65,12 +89,12 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = np.arange(0,55,5) #[100, 120, 140, 160]
-backgrndI_strengths = np.arange(0,8,2) #[40, 60, 80] #,6,7]
-input_durations = np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = np.arange(0,50,10)
-strength_I = np.arange(0.2,0.44,0.02) #, 0.25, 0.26, 0.36]
-ginters = np.arange(0,2,0.01)
+coupling_strengths = [15] #np.arange(0,55,5) #[100, 120, 140, 160]
+backgrndI_strengths = [1] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
+input_durations = [0] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [0] #np.arange(0,50,10)
+strength_I = [0.26] #np.arange(0.2,0.44,0.02) #, 0.25, 0.26, 0.36]
+ginters = [0.5] #np.arange(0,2,0.01)
 area = 'all'
 pyrates = False
 
@@ -116,6 +140,9 @@ for ginter in ginters:
 
                         # analyse signal (frequency spectra)
                         #   model.analyse_signal(save_spectrum=True)
+
+                        # compute dipoles
+                        model.compute_dipoles()
 
                         # print important parameters
                         """

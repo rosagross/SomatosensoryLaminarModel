@@ -4,17 +4,30 @@ import h5py
 import yaml
 import json
 import sys
+import time
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 from parameters import Parameter
 
+location = "laptop"
+if location == "laptop":
+    WDDIR = r"C:\Users\gross\OneDrive - UvA\Documents\IMPRS_Leipzig\MyProject\Modelling\ChienReplication\SomatosensoryLaminarModel"
+    SIMDIR = os.path.join(WDDIR, "output")
+    DATADIR = "C:\\Users\\gross\\OneDrive - UvA\\Documents\\IMPRS_Leipzig\\MyProject\\Experiment\\Analysis\\LocalCode\\data"
+    RECONDIR = os.path.join(DATADIR, 'freesurfer')
 
+if location == "mpi":
+    DATADIR = os.getenv('DATADIR')
+    RECONDIR = os.getenv('SUBJECTS_DIR')
+    SIMDIR = os.getenv("SIMDIR")
+    WDDIR = os.getenv("WDDIR")
+    
+figure_dir = os.path.join(SIMDIR, "Figures")
 
-WDDIR = os.getenv("WDDIR")
-SIMDIR = os.getenv("SIMDIR")
 
 helper_path = os.path.join(WDDIR, 'Analysis')
+
 sys.path.insert(0, helper_path)
 import helper_functions as hf
 
@@ -32,7 +45,7 @@ def read_analysis_params():
 
 class SomatoModel():
 
-    def __init__(self, params={}):
+    def __init__(self, params={}, WDDIR=None):
         
         # load in all connectivity parameters, time constants, etc.
         self.p = Parameter()
@@ -621,8 +634,195 @@ class SomatoModel():
         plt.tight_layout(rect=[0, 0, 1, 0.98])
         plt.show()
 
+    def load_dipole_params(self):
+        # Read in preprocessing parameters
+        with open(os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters.json'), 'r') as json_file:
+            dipole_params = json.load(json_file)
 
+        dipole_length = dipole_params['dipole_lengths']
+        dipole_orientation = dipole_params['dipole_orientation']
+        resistance_factor = 1 
+
+        # load cell count parameter
+        cellcounts = self.p.get_cellcounts(return_A3b=True)
+
+        return dipole_length, dipole_orientation, resistance_factor, cellcounts
+
+    def get_population_mapping(self):
+        """
+        Get mapping between model populations and brain regions.
         
+        Returns:
+            dict: Mapping of population indices to brain regions and layers
+        """
+        # Population order from parameters.py:
+        # A3b: E, PV, SST, VIP (indices 0-3)
+        # A1: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (indices 4-16)  
+        # S2: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (indices 17-29)
+        # Thalamus: ThalE, ThalI (indices 30-31)
+        
+        mapping = {
+            # A3b populations
+            'A3b': {
+                'E': 0, 'PV': 1, 'SST': 2, 'VIP': 3
+            },
+            # A1 populations (layers 1-4)
+            'A1': {
+                'L1_E': 4, 'L1_PV': 5, 'L1_SST': 6, 'L1_VIP': 7,
+                'L4_E': 8, 'L4_PV': 9, 'L4_SST': 10,
+                'L5_E': 11, 'L5_PV': 12, 'L5_SST': 13,
+                'L6_E': 14, 'L6_PV': 15, 'L6_SST': 16
+            },
+            # S2 populations (layers 1-4)
+            'S2': {
+                'L1_E': 17, 'L1_PV': 18, 'L1_SST': 19, 'L1_VIP': 20,
+                'L4_E': 21, 'L4_PV': 22, 'L4_SST': 23,
+                'L5_E': 24, 'L5_PV': 25, 'L5_SST': 26,
+                'L6_E': 27, 'L6_PV': 28, 'L6_SST': 29
+            },
+            # Thalamic populations
+            'Thalamus': {
+                'E': 30, 'I': 31
+            }
+        }
+        
+        return mapping
+    
+    def prepDipoles(self, dipole_length, dipole_orientation, resistance_factor, cellcountsE_relative):
+
+        # dipoles
+        # each dipole set has a value for each source population
+        dipole_matrix = []
+        for i, s in enumerate(dipole_length):
+            dipole = s * dipole_orientation[i] * resistance_factor 
+            dipole_matrix.append(dipole)
+
+        dipole_array = np.array(dipole_matrix)
+
+        # Weighted by E cell count 
+        dipoles_weighted = dipole_array * cellcountsE_relative
+
+        return dipoles_weighted
+
+
+    def compute_dipoles(self):
+        
+        # load dipole parameters
+        start_loadingtime = time.time()
+        dipole_length, dipole_orientation, resistance_factor, cellcounts = self.load_dipole_params()
+        end_loadingtime = time.time()
+        print(f"Loaded dipole parameters in {end_loadingtime - start_loadingtime:.2f} seconds.")
+
+        # get population mapping
+        mapping_time_start = time.time()
+        pop_mapping = self.get_population_mapping()
+        mapping_time_end = time.time()
+        print(f"Retrieved population mapping in {mapping_time_end - mapping_time_start:.2f} seconds.")    
+        
+        dipole_computation_start = time.time()
+        # Extract excitatory populations (these generate the main EEG signal)
+        exc_pops = []
+        for area in ['A3b', 'A1', 'S2']:
+            if area == 'A3b':
+                exc_pops.append(pop_mapping[area]['E'])
+            else:
+                # For A1 and S2, include all layer E populations
+                for layer in ['L1_E', 'L4_E', 'L5_E', 'L6_E']:
+                    exc_pops.append(pop_mapping[area][layer])
+
+        # define parameters and cellcounts
+        dipole_lengths_A3b = dipole_length['A3b']
+        dipole_orientation_A3b = dipole_orientation['A3b']
+        dipole_lengths_A1 = dipole_length['A1']
+        dipole_orientation_A1 = dipole_orientation['A1']
+        dipole_lengths_ES2 = dipole_length['S2']
+        dipole_orientation_ES2 = dipole_orientation['S2']
+        cellcounts_A3b = cellcounts[:4]
+        cellcounts_A3b_relative = cellcounts_A3b/np.sum(cellcounts_A3b)
+        cellcounts_A1 = cellcounts[4:17]
+        cellcounts_A1_relative = cellcounts_A1/np.sum(cellcounts_A1)
+        cellcounts_S2 = cellcounts[17:]
+        cellcounts_S2_relative = cellcounts_S2/np.sum(cellcounts_S2)
+        cellcounts_EA3b_relative = cellcounts_A3b_relative[0]
+        cellcounts_EA1_relative = cellcounts_A1_relative[np.array(exc_pops[1:5])-4]
+        cellcounts_ES2_relative = cellcounts_S2_relative[np.array(exc_pops[-4:])-17]
+
+        # compute dipoles for A3b, A1, S2 
+        dipoles_A3b = self.prepDipoles(dipole_lengths_A3b, dipole_orientation_A3b, resistance_factor, cellcounts_EA3b_relative)
+        dipoles_A1 = []
+        dipoles_ES2 = []
+
+        for i, layer in enumerate(['L1_E', 'L4_E', 'L5_E', 'L6_E']):
+            # compute dipoles for layers in A1
+            dipole_layer_A1 = self.prepDipoles(dipole_lengths_A1[i], dipole_orientation_A1[i], resistance_factor, cellcounts_EA1_relative[i])
+            dipoles_A1.append(dipole_layer_A1)
+
+            # compute dipoles for layers in S2
+            dipole_layer_S2 = self.prepDipoles(dipole_lengths_ES2[i], dipole_orientation_ES2[i], resistance_factor, cellcounts_ES2_relative[i])
+            dipoles_ES2.append(dipole_layer_S2)
+
+        all_dipoles = np.concatenate((dipoles_A3b, *dipoles_A1, *dipoles_ES2))
+
+        # I have the dipole models computed for each area/layer
+        # Now it needs to be convolved with the simulated data
+        potentialsEA3b = self.potentials[exc_pops[0], :-2]
+        potentialsEA1 = self.potentials[exc_pops[1:5], :-2]
+        potentialsES2 = self.potentials[exc_pops[-4:], :-2]
+
+        # for each time point, compute the simulated dipole
+        nE = 9
+        simDipoles = np.zeros((nE, potentialsEA1.shape[2]))
+        simDipoles[0] = np.dot(dipoles_A3b, abs(potentialsEA3b))
+
+        for E in range(4):
+            simDipoles[E+1] = np.dot(np.concatenate([dipoles_A1[E]]), abs(potentialsEA1[E]))
+            simDipoles[E+5] = np.dot(np.concatenate([dipoles_ES2[E]]), abs(potentialsES2[E]))
+
+        dipole_computation_end = time.time()
+        print(f"Computed simulated dipoles in {dipole_computation_end - dipole_computation_start:.2f} seconds.")
+
+        return simDipoles
+    
+
+    def plot_dipoles(self, simDipoles, raw_info):
+        
+        time = np.arange(simDipoles.shape[1]) / raw_info["sfreq"]
+        area_groups = {
+            "A3b": [0],
+            "A1": [1, 2, 3, 4],
+            "S2": [5, 6, 7, 8],
+        }
+        labels = {
+            "A3b": ["E"],
+            "A1": ["L1_E", "L4_E", "L5_E", "L6_E"],
+            "S2": ["L1_E", "L4_E", "L5_E", "L6_E"],
+        }
+
+        fig, axes = plt.subplots(3, 1, figsize=(12, 9), sharex=True)
+        for ax, area in zip(axes, ["A3b", "A1", "S2"]):
+            area_indices = area_groups[area]
+            for idx, label in zip(area_indices, labels[area]):
+                ax.plot(time, simDipoles[idx], label=label, linewidth=1.5)
+            sum_trace = simDipoles[area_indices].sum(axis=0)
+            ax.plot(time, sum_trace, color="black", linewidth=3.0, label="Sum")
+            ax.set_title(f"Computed Dipoles - {area}")
+            ax.set_ylabel("Dipole (Am)")
+            ax.grid(alpha=0.3)
+            ax.legend(loc="upper right", frameon=False)
+
+        axes[-1].set_xlabel("Time (s)")
+        fig.suptitle("Computed Dipoles for E Populations", fontsize=14)
+        fig.tight_layout(rect=[0, 0, 1, 0.98])
+
+        figuredir = os.path.join('.', 'Figures')
+        os.makedirs(figuredir, exist_ok=True)
+        fig.savefig(os.path.join(figuredir, 'computed_dipoles_by_area.png'), dpi=300, bbox_inches='tight')
+        plt.show(fig)
+
+
+    def simulate_eeg(self):
+        raise NotImplementedError("EEG simulation not implemented yet.")
+
 
 
 

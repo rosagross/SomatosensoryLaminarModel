@@ -17,7 +17,7 @@ import json
 import h5py
 import sys
 import matplotlib.pyplot as plt
-
+import time
 
 location = "laptop"
 if location == "laptop":
@@ -50,6 +50,8 @@ raw = mne.io.read_raw_edf(raw_fname, preload=True)
 # Read and set the EEG electrode locations, which are already in fsaverage's
 # space (MNI space) for standard_1020:
 eegbci.standardize(raw)
+
+# TODO: this should be the actual montage which we used for the experiment
 montage = mne.channels.make_standard_montage("standard_1005")
 raw.set_montage(montage)
 
@@ -60,6 +62,7 @@ potentials = read_3D_potential(os.path.join(SIMDIR, 'simulation_results', sim_fi
 print(f"Potentials size: {potentials.shape[0]} x {potentials.shape[1]}")
 
 #%%
+start = time.time()
 # defining the dipole characteristics
 # Read in preprocessing parameters
 with open(os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters.json'), 'r') as json_file:
@@ -98,7 +101,7 @@ dipole_orientation_ES2 = dipole_orientation['S2']
 resistance_factor = 1
 cellcounts_A3b = cellcounts[:4]
 cellcounts_A3b_relative = cellcounts_A3b/np.sum(cellcounts_A3b)
-cellcounts_A1 = cellcounts[5:17]
+cellcounts_A1 = cellcounts[4:17]
 cellcounts_A1_relative = cellcounts_A1/np.sum(cellcounts_A1)
 cellcounts_S2 = cellcounts[17:]
 cellcounts_S2_relative = cellcounts_S2/np.sum(cellcounts_S2)
@@ -157,10 +160,13 @@ for E in range(4):
     simDipoles[E+1] = np.dot(np.concatenate([dipoles_A1[E]]), abs(potentialsEA1[E]))
     simDipoles[E+5] = np.dot(np.concatenate([dipoles_ES2[E]]), abs(potentialsES2[E]))
 
+end = time.time()
+print(f"Total time for dipole computation: {end - start:.2f} seconds.")
+
 # %%
 # plot the dipoles 
 
-time = np.arange(simDipoles.shape[1]) / raw.info["sfreq"]
+times = np.arange(simDipoles.shape[1]) / raw.info["sfreq"]
 area_groups = {
     "A3b": [0],
     "A1": [1, 2, 3, 4],
@@ -176,9 +182,9 @@ fig, axes = plt.subplots(3, 1, figsize=(12, 9), sharex=True)
 for ax, area in zip(axes, ["A3b", "A1", "S2"]):
     area_indices = area_groups[area]
     for idx, label in zip(area_indices, labels[area]):
-        ax.plot(time, simDipoles[idx], label=label, linewidth=1.5)
+        ax.plot(times, simDipoles[idx], label=label, linewidth=1.5)
     sum_trace = simDipoles[area_indices].sum(axis=0)
-    ax.plot(time, sum_trace, color="black", linewidth=3.0, label="Sum")
+    ax.plot(times, sum_trace, color="black", linewidth=3.0, label="Sum")
     ax.set_title(f"Computed Dipoles - {area}")
     ax.set_ylabel("Dipole (Am)")
     ax.grid(alpha=0.3)
@@ -196,7 +202,7 @@ fig.savefig(os.path.join(figuredir, 'computed_dipoles_by_area.png'), dpi=300, bb
 
 # %%
 ####################################
-# Now I computed the dipoles for all E populations in the model
+# I computed the dipoles for all E populations in the model
 # Now I need to compute forward solution for each area.
 # 1. pick one area
 # 2. compute source time course
@@ -216,8 +222,8 @@ src_free = fwd["src"]
 src_fixed = fwd_fixed["src"]
 
 # %%
-
-n_events = 100
+start = time.time()
+n_events = 1
 events = np.zeros((n_events, 3), int)
 events[:, 0] = 200 + 500 * np.arange(n_events)  # Events sample.
 events[:, 2] = 1  # All events have the sample id.
@@ -246,6 +252,9 @@ raw_simulated = mne.simulation.simulate_raw(raw.info, source_simulator, forward=
 # %%
 epochs = mne.Epochs(raw_simulated, events, 1, baseline=None)#, tmin=-0.05, tmax=0.2)
 evoked = epochs.average()
+end = time.time()
+print(f"Total time for forward simulation: {end - start:.2f} seconds.")
+
 fig = evoked.plot(show=False)
 figuredir = os.path.join('.', 'Figures')
 os.makedirs(figuredir, exist_ok=True)
