@@ -236,7 +236,7 @@ selected_label_soma_rh = mne.read_label(label_file_soma_rh, 'fsaverage')
 raw.resample(200)
 tstep = 1.0 / raw.info["sfreq"]
 dipoles_downsampled = simDipoles[:, ::5]  # Downsample to match the time step
-source_simulator = mne.simulation.SourceSimulator(src_free, tstep=tstep)
+source_simulator = mne.simulation.SourceSimulator(src_fixed, tstep=tstep)
 source_simulator.add_data(selected_label_soma_rh, dipoles_downsampled[0], events)
 source_simulator.add_data(selected_label_soma_rh, np.sum(dipoles_downsampled[1:4], axis=0), events)
 source_simulator.add_data(selected_label_soma_rh, np.sum(dipoles_downsampled[5:8], axis=0), events)

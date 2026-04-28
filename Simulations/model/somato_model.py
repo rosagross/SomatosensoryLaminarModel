@@ -8,6 +8,7 @@ import time
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import mne
 from parameters import Parameter
 
 location = "laptop"
@@ -765,9 +766,9 @@ class SomatoModel():
 
         # I have the dipole models computed for each area/layer
         # Now it needs to be convolved with the simulated data
-        potentialsEA3b = self.potentials[exc_pops[0], :-2]
-        potentialsEA1 = self.potentials[exc_pops[1:5], :-2]
-        potentialsES2 = self.potentials[exc_pops[-4:], :-2]
+        potentialsEA3b = self.potential[exc_pops[0], :-2]
+        potentialsEA1 = self.potential[exc_pops[1:5], :-2]
+        potentialsES2 = self.potential[exc_pops[-4:], :-2]
 
         # for each time point, compute the simulated dipole
         nE = 9
@@ -820,8 +821,73 @@ class SomatoModel():
         plt.show(fig)
 
 
-    def simulate_eeg(self):
-        raise NotImplementedError("EEG simulation not implemented yet.")
+    def simulate_eeg(self, raw, data_path_labels, simDipoles, fwd, src_fixed):
+        n_events = 1
+        events = np.zeros((n_events, 3), int)
+        events[:, 0] = 200 + 500 * np.arange(n_events)  # Events sample.
+        events[:, 2] = 1  # All events have the sample id.
+
+        # Area 3b
+        label_file_soma_rh = os.path.join(data_path_labels, 'subjects', 'fsaverage', 'label','rh.BA3b.label')
+        selected_label_soma_rh = mne.read_label(label_file_soma_rh, 'fsaverage')
+        #times = np.arange(0, 10, 0.001)  # Simulate for 10 seconds at 1000 Hz
+        raw.resample(200)
+        tstep = 1.0 / raw.info["sfreq"]
+        dipoles_downsampled = simDipoles[:, ::5]  # Downsample to match the time step
+        source_simulator = mne.simulation.SourceSimulator(src_fixed, tstep=tstep)
+        source_simulator.add_data(selected_label_soma_rh, dipoles_downsampled[0], events)
+        source_simulator.add_data(selected_label_soma_rh, np.sum(dipoles_downsampled[1:4], axis=0), events)
+        source_simulator.add_data(selected_label_soma_rh, np.sum(dipoles_downsampled[5:8], axis=0), events)
+
+        # TODO: this needs to be fixed in mne.make_forward_solution() 
+        # it should be possible to have a non type fwd, since our raw info also 
+        # is NonType
+        raw.info["dev_head_t"] = fwd["info"]["dev_head_t"]
+        raw_simulated = mne.simulation.simulate_raw(raw.info, source_simulator, forward=fwd)
+        
+        # create 
+        epochs = mne.Epochs(raw_simulated, events, 1, baseline=None)#, tmin=-0.05, tmax=0.2)
+        evoked = epochs.average()
+
+        return evoked, epochs
+    
+
+    def plot_eeg(self, evoked, epochs):
+        """Plot simulated EEG results."""
+        fig = evoked.plot(show=False)
+        figuredir = os.path.join('.', 'Figures')
+        os.makedirs(figuredir, exist_ok=True)
+        fig.savefig(os.path.join(figuredir, 'nullingbf_recon_simulated_evoked.pdf'), format='pdf', bbox_inches='tight')
+        plt.show(fig)
+
+        freqs = np.arange(8, 41, 2)
+        n_cycles = np.full_like(freqs, 2.0, dtype=float)
+        tfr = mne.time_frequency.tfr_morlet(
+            epochs,
+            freqs=freqs,
+            n_cycles=n_cycles,
+            return_itc=False,
+            average=True,
+            picks="eeg",
+        )
+        power = tfr.data.mean(axis=0)
+
+        tfr_fig, tfr_ax = plt.subplots(figsize=(12, 6))
+        mesh = tfr_ax.pcolormesh(tfr.times, tfr.freqs, power, shading="auto", cmap="viridis")
+        tfr_ax.set_title("Simulated Epochs Time-Frequency Power")
+        tfr_ax.set_xlabel("Time (s)")
+        tfr_ax.set_ylabel("Frequency (Hz)")
+        tfr_fig.colorbar(mesh, ax=tfr_ax, label="Power ")
+        tfr_fig.tight_layout()
+        tfr_fig.savefig(os.path.join(figuredir, 'nullingbf_recon_simulated_tfr.png'), dpi=300, bbox_inches='tight')
+        plt.show(tfr_fig)
+
+        topo_times = np.linspace(evoked.times[0], evoked.times[-1], 3)
+        topo_fig = evoked.plot_topomap(times=topo_times, show=False)
+        topo_fig.savefig(os.path.join(figuredir, 'nullingbf_recon_simulated_topomaps.png'), dpi=300, bbox_inches='tight')
+        plt.show(topo_fig)
+
+
 
 
 

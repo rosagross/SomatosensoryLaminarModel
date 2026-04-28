@@ -17,6 +17,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import time
 import csv
+import mne
+from mne.datasets import sample
+from mne.datasets import eegbci
 
 location = "laptop"
 if location == "laptop":
@@ -37,7 +40,7 @@ figure_dir = os.path.join(SIMDIR, "Figures")
 # add model to datapath
 sys.path.append(os.path.join(WDDIR, 'Simulations', 'model'))
 from somato_model import SomatoModel, read_simulation_params
-from somato_model_pyrates_no_conn_operators_complete_pycobi import SomatoModelPyrates, read_simulation_params
+#from somato_model_pyrates_no_conn_operators_complete_pycobi import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 
 # %%   
@@ -58,11 +61,11 @@ def parse_params():
 
 # load EEG data and forward model computation
 # setup sample data for forward modelling
-data_path = sample.data_path()
+data_path_labels = sample.data_path()
 subject = "fsaverage"
 trans = "fsaverage"
-src = data_path / "subjects" / "fsaverage" / "bem" / "fsaverage-ico-5-src.fif"
-bem = data_path / "subjects" / "fsaverage" / "bem" / "fsaverage-5120-5120-5120-bem-sol.fif"
+src = data_path_labels / "subjects" / "fsaverage" / "bem" / "fsaverage-ico-5-src.fif"
+bem = data_path_labels / "subjects" / "fsaverage" / "bem" / "fsaverage-5120-5120-5120-bem-sol.fif"
 (raw_fname,) = eegbci.load_data(subjects=1, runs=[6])
 raw = mne.io.read_raw_edf(raw_fname, preload=True)
 # Read and set the EEG electrode locations, which are already in fsaverage's
@@ -71,6 +74,23 @@ eegbci.standardize(raw)
 montage = mne.channels.make_standard_montage("standard_1005")
 raw.set_montage(montage)
 
+# %%
+# TODO: read the forward solution instead of computing
+# forward solution and leadfield computation
+fwd = mne.make_forward_solution(
+    raw.info, trans=trans, src=src, bem=bem, eeg=True, mindist=5.0, n_jobs=None
+)
+leadfield = fwd["sol"]["data"]
+print(f"Leadfield size : {leadfield.shape[0]} sensors x {leadfield.shape[1]} dipoles")
+
+# reduce forward solution to one orientation
+fwd_fixed = mne.convert_forward_solution(
+    fwd, surf_ori=True, force_fixed=True, use_cps=True
+)
+src_free = fwd["src"]
+src_fixed = fwd_fixed["src"]
+
+#%%
 # Assign variables from loaded parameters
 params = read_simulation_params()
 input_onset = params['input_onset']
@@ -91,8 +111,8 @@ if not os.path.exists(filedir):
 # set parameters to loop over 
 coupling_strengths = [15] #np.arange(0,55,5) #[100, 120, 140, 160]
 backgrndI_strengths = [1] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
-input_durations = [0] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [0] #np.arange(0,50,10)
+input_durations = [0.3] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [15] #np.arange(0,50,10)
 strength_I = [0.26] #np.arange(0.2,0.44,0.02) #, 0.25, 0.26, 0.36]
 ginters = [0.5] #np.arange(0,2,0.01)
 area = 'all'
@@ -142,7 +162,10 @@ for ginter in ginters:
                         #   model.analyse_signal(save_spectrum=True)
 
                         # compute dipoles
-                        model.compute_dipoles()
+                        sim_dip = model.compute_dipoles()
+                        model.plot_dipoles(sim_dip, raw.info)
+                        evoked, epochs = model.simulate_eeg(raw, data_path_labels, sim_dip, fwd, src_fixed)
+                        model.plot_eeg(evoked, epochs)
 
                         # print important parameters
                         """
