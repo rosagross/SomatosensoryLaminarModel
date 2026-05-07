@@ -2341,7 +2341,7 @@ model:
   - - VIPS1/connectivity_VIPS1/m_out
     - E3b/RPO_VIPS1/m_in
     - 
-    - weight: 3.958166666666667
+    - weight: 3.958166666666666
   - - E2S1/connectivity_E2S1/m_out
     - E3b/RPO_E2S1/m_in
     - 
@@ -2365,7 +2365,7 @@ model:
   - - SST3S1/connectivity_SST3S1/m_out
     - E3b/RPO_SST3S1/m_in
     - 
-    - weight: 5.473890052356022
+    - weight: 5.473890052356021
   - - E4S1/connectivity_E4S1/m_out
     - E3b/RPO_E4S1/m_in
     - 
@@ -2461,7 +2461,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - PV3b/RPO_SST3b/m_in
     - 
-    - weight: 5.908537795623369
+    - weight: 5.90853779562337
   - - VIP3b/connectivity_VIP3b/m_out
     - PV3b/RPO_VIP3b/m_in
     - 
@@ -2481,11 +2481,11 @@ model:
   - - VIPS1/connectivity_VIPS1/m_out
     - PV3b/RPO_VIPS1/m_in
     - 
-    - weight: 2.9094999999999995
+    - weight: 2.9095
   - - E2S1/connectivity_E2S1/m_out
     - PV3b/RPO_E2S1/m_in
     - 
-    - weight: 239.3443588235294
+    - weight: 239.34435882352935
   - - PV2S1/connectivity_PV2S1/m_out
     - PV3b/RPO_PV2S1/m_in
     - 
@@ -2497,7 +2497,7 @@ model:
   - - E3S1/connectivity_E3S1/m_out
     - PV3b/RPO_E3S1/m_in
     - 
-    - weight: 38.94335294117648
+    - weight: 38.94335294117647
   - - PV3S1/connectivity_PV3S1/m_out
     - PV3b/RPO_PV3S1/m_in
     - 
@@ -2509,7 +2509,7 @@ model:
   - - E4S1/connectivity_E4S1/m_out
     - PV3b/RPO_E4S1/m_in
     - 
-    - weight: 84.5988705882353
+    - weight: 84.59887058823529
   - - PV4S1/connectivity_PV4S1/m_out
     - PV3b/RPO_PV4S1/m_in
     - 
@@ -2601,7 +2601,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - SST3b/RPO_SST3b/m_in
     - 
-    - weight: 1.1365268618155135
+    - weight: 1.1365268618155133
   - - VIP3b/connectivity_VIP3b/m_out
     - SST3b/RPO_VIP3b/m_in
     - 
@@ -2649,7 +2649,7 @@ model:
   - - E4S1/connectivity_E4S1/m_out
     - SST3b/RPO_E4S1/m_in
     - 
-    - weight: 15.772505119453928
+    - weight: 15.772505119453925
   - - PV4S1/connectivity_PV4S1/m_out
     - SST3b/RPO_PV4S1/m_in
     - 
@@ -2741,7 +2741,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - VIP3b/RPO_SST3b/m_in
     - 
-    - weight: 9.086982935153586
+    - weight: 9.086982935153584
   - - VIP3b/connectivity_VIP3b/m_out
     - VIP3b/RPO_VIP3b/m_in
     - 
@@ -2873,7 +2873,7 @@ model:
   - - E3b/connectivity_E3b/m_out
     - E1S1/RPO_E3b/m_in
     - 
-    - weight: 52.65472081151833
+    - weight: 52.65472081151832
   - - PV3b/connectivity_PV3b/m_out
     - E1S1/RPO_PV3b/m_in
     - 
@@ -3021,7 +3021,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - PV1S1/RPO_SST3b/m_in
     - 
-    - weight: 3.072976109215017
+    - weight: 3.0729761092150176
   - - VIP3b/connectivity_VIP3b/m_out
     - PV1S1/RPO_VIP3b/m_in
     - 
@@ -3301,7 +3301,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - VIPS1/RPO_SST3b/m_in
     - 
-    - weight: 9.086982935153586
+    - weight: 9.086982935153584
   - - VIP3b/connectivity_VIP3b/m_out
     - VIPS1/RPO_VIP3b/m_in
     - 
@@ -3441,7 +3441,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - E2S1/RPO_SST3b/m_in
     - 
-    - weight: 4.973105802047782
+    - weight: 4.973105802047783
   - - VIP3b/connectivity_VIP3b/m_out
     - E2S1/RPO_VIP3b/m_in
     - 
@@ -3717,11 +3717,11 @@ model:
   - - PV3b/connectivity_PV3b/m_out
     - SST2S1/RPO_PV3b/m_in
     - 
-    - weight: 8.620482352941178
+    - weight: 8.620482352941176
   - - SST3b/connectivity_SST3b/m_out
     - SST2S1/RPO_SST3b/m_in
     - 
-    - weight: 2.5769287372013654
+    - weight: 2.576928737201365
   - - VIP3b/connectivity_VIP3b/m_out
     - SST2S1/RPO_VIP3b/m_in
     - 
@@ -3861,7 +3861,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - E3S1/RPO_SST3b/m_in
     - 
-    - weight: 8.423940341296928
+    - weight: 8.423940341296927
   - - VIP3b/connectivity_VIP3b/m_out
     - E3S1/RPO_VIP3b/m_in
     - 
@@ -4281,7 +4281,7 @@ model:
   - - SST3b/connectivity_SST3b/m_out
     - E4S1/RPO_SST3b/m_in
     - 
-    - weight: 3.019279863481229
+    - weight: 3.0192798634812283
   - - VIP3b/connectivity_VIP3b/m_out
     - E4S1/RPO_VIP3b/m_in
     - 
@@ -4413,7 +4413,7 @@ model:
   - - E3b/connectivity_E3b/m_out
     - PV4S1/RPO_E3b/m_in
     - 
-    - weight: 118.97011426701572
+    - weight: 118.9701142670157
   - - PV3b/connectivity_PV3b/m_out
     - PV4S1/RPO_PV3b/m_in
     - 
