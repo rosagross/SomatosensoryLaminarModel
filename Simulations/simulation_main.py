@@ -109,11 +109,11 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [15] #np.arange(0,55,5) #[100, 120, 140, 160]
+coupling_strengths = [10] #np.arange(0,55,5) #[100, 120, 140, 160]
 backgrndI_strengths = [1] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
-input_durations = [0.3] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [15] #np.arange(0,50,10)
-strength_I = [0.26] #np.arange(0.2,0.44,0.02) #, 0.25, 0.26, 0.36]
+input_durations = [0.02] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [40] #np.arange(0,50,10)
+strength_I = [0.24] #np.arange(0.2,0.44,0.02) #, 0.25, 0.26, 0.36]
 ginters = [0.5] #np.arange(0,2,0.01)
 area = 'all'
 pyrates = False
@@ -159,7 +159,7 @@ for ginter in ginters:
                         print("Simulation duration (in s):", duration)
 
                         # analyse signal (frequency spectra)
-                        #   model.analyse_signal(save_spectrum=True)
+                        model.analyse_signal(save_spectrum=True)
 
                         # compute dipoles
                         sim_dip = model.compute_dipoles()

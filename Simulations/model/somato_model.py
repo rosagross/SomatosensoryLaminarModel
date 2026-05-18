@@ -60,6 +60,7 @@ class SomatoModel():
         self.simulation_dur = 2 # in s
         self.step_size = 0.001 # in s
         self.resolution_tstep = 0.001 # in s
+        self.sfreq_saved = 1 / self.resolution_tstep 
         self.input_onset = 1.001
         self.thal_connect = [0,0,0,0]
         self.extI_cellcounts = 1000
@@ -476,6 +477,21 @@ class SomatoModel():
         )
 
         return spectra, freqs
+    
+
+    def compute_full_spectrum(self):
+        """
+        Compute full signal frequency spectra for all populations.
+        """
+        analysis_params = read_analysis_params()
+        sampling_params = analysis_params['sampling']
+
+        rates_df, potentials_df = self.prepare_dataframes()
+        spectra, freqs = hf.compute_spectra_full(rates_df, potentials_df, self.step_size)
+        
+        print("spectra", spectra.shape, "freqs", freqs.shape)
+
+        return spectra, freqs
 
     def save_frequency_spectra(self, filedir, filename=None, spectra=None, freqs=None, window_prefix="lateLongterm"):
         """
@@ -533,17 +549,20 @@ class SomatoModel():
         """
         spectra, freqs = self.compute_late_longterm_spectrum()
 
-
-        self.plot_freq_spectrum(spectra, freqs)
+        self.plot_freq_spectrum(spectra, freqs, min_freq_hz=3, max_freq_hz=50)
         self.plot_freq_spectrum_all_populations(spectra, freqs)
 
+        spectra_full, freqs_full = self.compute_full_spectrum()
+        self.plot_freq_spectrum(spectra_full, freqs_full, min_freq_hz=3, max_freq_hz=50)
+        self.plot_freq_spectrum_all_populations(spectra_full, freqs_full)
+        
         if save_spectrum:
             spectrum_dir = os.path.join(SIMDIR, "spectrum_results")
             path = self.save_frequency_spectra(spectrum_dir, spectra=spectra, freqs=freqs)
             print(f"saved spectra: {path}")
 
 
-    def plot_freq_spectrum(self, spectra, freqs, pop_idx=0, pop_name=None, max_freq_hz=100):
+    def plot_freq_spectrum(self, spectra, freqs, pop_idx=0, pop_name=None, min_freq_hz=0, max_freq_hz=100):
         """
         Plot frequency spectrum for a single population.
 
@@ -770,6 +789,7 @@ class SomatoModel():
         potentialsEA1 = self.potential[exc_pops[1:5], :-2]
         potentialsES2 = self.potential[exc_pops[-4:], :-2]
 
+
         # for each time point, compute the simulated dipole
         nE = 9
         simDipoles = np.zeros((nE, potentialsEA1.shape[2]))
@@ -781,13 +801,14 @@ class SomatoModel():
 
         dipole_computation_end = time.time()
         print(f"Computed simulated dipoles in {dipole_computation_end - dipole_computation_start:.2f} seconds.")
+        print("Simulated dipoles shape:", simDipoles.shape)
 
         return simDipoles
     
 
     def plot_dipoles(self, simDipoles, raw_info):
-        
-        time = np.arange(simDipoles.shape[1]) / raw_info["sfreq"]
+        time = np.arange(simDipoles.shape[1]) / self.sfreq_saved
+        print("times", len(time), time)
         area_groups = {
             "A3b": [0],
             "A1": [1, 2, 3, 4],
@@ -822,6 +843,70 @@ class SomatoModel():
 
 
     def simulate_eeg(self, raw, data_path_labels, simDipoles, fwd, src_fixed):
+        """
+        Simulate EEG directly from dipoles using the forward model.
+        No raw data, no SourceSimulator, no event bookkeeping needed.
+        """
+        # --- 1. Build source estimate (stc) directly ---
+        # simDipoles shape: (n_dipole_groups, n_times)
+        # Combine your dipole groups as before
+        combined_dipoles = (
+            simDipoles[0]
+            + np.sum(simDipoles[1:4], axis=0)
+            + np.sum(simDipoles[5:8], axis=0)
+        )  # shape: (n_times,)
+
+        # Get vertices for the label
+        label_file = os.path.join(
+            data_path_labels, 'subjects', 'fsaverage', 'label', 'rh.BA3b.label'
+        )
+        label = mne.read_label(label_file, 'fsaverage')
+
+        # Find which source space vertices are in the label
+        src_rh = src_fixed[1]  # right hemisphere
+        label_verts = np.intersect1d(label.vertices, src_rh['vertno'])
+
+        # Build source data: broadcast the dipole signal to all label vertices
+        # shape: (n_label_verts, n_times)
+        n_times = combined_dipoles.shape[0]
+        source_data_rh = np.outer(
+            np.ones(len(label_verts)),  # all verts get the same signal
+            combined_dipoles
+        )
+
+        # Construct a SourceEstimate
+        # lh vertices empty, rh vertices = label verts
+        stc = mne.SourceEstimate(
+            data=np.vstack([
+                np.zeros((len(src_fixed[0]['vertno']), n_times)),  # lh: zeros
+                source_data_rh
+            ]),
+            vertices=[src_fixed[0]['vertno'], label_verts],
+            tmin=0.0,
+            tstep=1.0 / self.sfreq_saved,
+            subject='fsaverage'
+        )
+
+        # --- 2. Apply forward model: stc → EEG sensor data ---
+        # result shape: (n_channels, n_times)
+        eeg_data = mne.apply_forward(fwd, stc, raw.info).data
+
+        # --- 3. Wrap in EpochsArray (1 epoch, no noise) ---
+        info = fwd['info'].copy()
+        raw.resample(self.sfreq_saved)
+        
+        # EpochsArray expects shape: (n_epochs, n_channels, n_times)
+        epochs = mne.EpochsArray(
+            eeg_data[np.newaxis, :, :],
+            info=raw.info,
+            tmin=0.0,
+            baseline=None
+        )
+        evoked = epochs.average()
+
+        return evoked, epochs
+
+    def simulate_eeg_mnesimulator(self, raw, data_path_labels, simDipoles, fwd, src_fixed):
         n_events = 1
         events = np.zeros((n_events, 3), int)
         events[:, 0] = 200 + 500 * np.arange(n_events)  # Events sample.
@@ -831,9 +916,9 @@ class SomatoModel():
         label_file_soma_rh = os.path.join(data_path_labels, 'subjects', 'fsaverage', 'label','rh.BA3b.label')
         selected_label_soma_rh = mne.read_label(label_file_soma_rh, 'fsaverage')
         #times = np.arange(0, 10, 0.001)  # Simulate for 10 seconds at 1000 Hz
-        raw.resample(200)
-        tstep = 1.0 / raw.info["sfreq"]
-        dipoles_downsampled = simDipoles[:, ::5]  # Downsample to match the time step
+        tstep = 1.0 / self.sfreq_saved
+        dipoles_downsampled = simDipoles  #[:, ::5]  # Downsample to match the time step
+        print("shape of dipoles:", dipoles_downsampled.shape)
         source_simulator = mne.simulation.SourceSimulator(src_fixed, tstep=tstep)
         source_simulator.add_data(selected_label_soma_rh, dipoles_downsampled[0], events)
         source_simulator.add_data(selected_label_soma_rh, np.sum(dipoles_downsampled[1:4], axis=0), events)
@@ -860,7 +945,7 @@ class SomatoModel():
         fig.savefig(os.path.join(figuredir, 'nullingbf_recon_simulated_evoked.pdf'), format='pdf', bbox_inches='tight')
         plt.show(fig)
 
-        freqs = np.arange(8, 41, 2)
+        freqs = np.arange(8, 50, 2)
         n_cycles = np.full_like(freqs, 2.0, dtype=float)
         tfr = mne.time_frequency.tfr_morlet(
             epochs,
@@ -886,6 +971,51 @@ class SomatoModel():
         topo_fig = evoked.plot_topomap(times=topo_times, show=False)
         topo_fig.savefig(os.path.join(figuredir, 'nullingbf_recon_simulated_topomaps.png'), dpi=300, bbox_inches='tight')
         plt.show(topo_fig)
+
+    def compute_timefreq(self, simulated_eeg):
+        """
+        Compute time-frequency representation of the simulated EEG signal.
+        Parameters:
+            simulated_eeg (mne.Evoked): Simulated EEG evoked response
+        Returns:
+            numpy array: Time-frequency power data of shape (n_freqs, n_times)
+        """
+        
+        # questions: 
+        # - of what do I compute the time frequency? dipoles or epochs?
+        #      answer: epochs, but compare it to source reconstructed time freq
+        # - what is the "equivalent" source reconstructed activity? 
+
+
+
+    def load_target_timefreq(self, data_path):
+        """
+        Load time frequency data that I computed from real EEG data.
+        Returns:
+            numpy array: Time-frequency power data of shape (n_freqs, n_times)
+        """
+        raise NotImplementedError("This function is a placeholder. Implement loading of real EEG time-frequency data here.")
+    
+    def compute_error_timefreq(self, simulated_tfr, target_tfr):
+        """
+        Compute error between simulated and target time-frequency representations.
+        Parameters:
+            simulated_tfr (numpy array): Simulated time-frequency power (n_freqs x n_times)
+            target_tfr (numpy array): Target time-frequency power from real data (n_freqs x n_times)
+        Returns:
+            float: Error metric (e.g., mean squared error)
+        """
+        if simulated_tfr.shape != target_tfr.shape:
+            raise ValueError("Simulated and target TFR must have the same shape.")
+        
+        error = np.mean((simulated_tfr - target_tfr) ** 2)
+        return error
+
+
+
+    
+
+
 
 
 
