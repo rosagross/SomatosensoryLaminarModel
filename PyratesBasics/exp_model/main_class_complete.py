@@ -66,15 +66,40 @@ equilibrium_df.to_csv("equilibrium_df_complete.csv", index=False)
 output_dir = os.path.join(WDDIR, 'PyratesBasics', 'exp_model','complete_model_continuations')
 os.makedirs(output_dir, exist_ok=True) 
 params = read_simulation_params()
-range_par = [0.0, 4.0]
+range_par = [6.0, 8.0]
 modello_prova = SomatoModelPyrates(params)
 cont_param = 'G/g_definition/g_input'
-auto_dir_path = "/data/u_mecozzi_software/miniforge3/envs/pyrates_project/auto-07p"
-modello_prova.pycobi_continuation(cont_param,range_par,auto_dir_path,"/data/p_02989/Modelling/mecozzi_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model/equilibrium_df_complete.csv")
+auto_dir_path = "/data/u_grossmannr_software/auto-07p/"
+#auto_dir_path = "/data/u_mecozzi_software/miniforge3/envs/pyrates_project/auto-07p"
+continuation_file_path = "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/PyratesBasics/exp_model/equilibrium_df_complete.csv"
+modello_prova.pycobi_continuation(
+    cont_param,
+    range_par,
+    auto_dir_path,
+    continuation_file_path,
+    coarse_scan=True,
+    bidirectional=False,
+    ds=1e-4,
+    dsmin=1e-6,
+    dsmax=1e-2,
+    get_eigenvals=False,
+    get_stability=True,
+    iid=2, # 1
+)
 cont_df = modello_prova.continuation_df(cont_param)
 # csv saving
 filename = "complete_model_bifurcation_sI026.csv"
 filepath = os.path.join(output_dir, filename)
 cont_df.to_csv(filepath, index=False)
+
+# also save u_sols
+filename_usols = "u_sols_complete_model_bifurcation_sI026.csv"
+filepath_usols = os.path.join(output_dir, filename_usols)
+modello_prova.u_sols.to_csv(filepath, index=False)
+
+# bifurcation plot export (single representative variable)
+representative_var = "E2S1"
+plot_filepath = os.path.join(output_dir, "complete_model_bifurcation_sI026_E2S1.png")
+modello_prova.pycobi_bifurcation_plot(cont_param, cont_df, representative_var, plot_filepath)
 print("Simulation finished")
 # %%

@@ -726,7 +726,21 @@ class SomatoModelPyrates():
         with h5py.File(filename, "w") as f:
             f.create_dataset(dataset_name, data=self.potential, compression="gzip")
     
-    def pycobi_continuation(self, cont_param, range, auto_dir_path,equilibrium_csv_path = None):
+    def pycobi_continuation(
+        self,
+        cont_param,
+        range,
+        auto_dir_path,
+        equilibrium_csv_path=None,
+        coarse_scan=True,
+        bidirectional=False,
+        ds=1e-4,
+        dsmin=1e-6,
+        dsmax=1e-1,
+        get_eigenvals=None,
+        get_stability=None,
+        iid=None,
+    ):
         if equilibrium_csv_path is not None:
             equilibrium_df = pd.read_csv(equilibrium_csv_path)
             equilibrium_df.columns = (equilibrium_df.columns
@@ -736,50 +750,209 @@ class SomatoModelPyrates():
                 self.model.update_var(node_vars={var: equilibrium_df[var].values[0]})
             print("equilibrium values")
 
+        if dsmin > ds:
+            print(f"Adjusted DSMIN from {dsmin} to DS={ds} to keep DSMIN <= DS.")
+            dsmin = ds
+
+        if coarse_scan:
+            if get_eigenvals is None:
+                get_eigenvals = False
+            if get_stability is None:
+                get_stability = False
+            if iid is None:
+                iid = 0
+        else:
+            if get_eigenvals is None:
+                get_eigenvals = True
+            if get_stability is None:
+                get_stability = True
+            if iid is None:
+                iid = 2
+
+        # AUTO diagnostics level:
+        # - IID >= 1 for stability parsing
+        # - IID >= 2 for eigenvalue parsing
+        if get_eigenvals and (iid is None or iid < 2):
+            print(f"Adjusted IID from {iid} to 2 because eigenvalue output was requested.")
+            iid = 2
+        elif get_stability and (iid is None or iid < 1):
+            print(f"Adjusted IID from {iid} to 1 because stability output was requested.")
+            iid = 1
+
+        # Seed continuation at the lower bound of the requested interval.
+        # Without this, AUTO starts from the default g_input (often 0.0),
+        # which can terminate immediately when RL0 > 0.
+        self.model.update_var(node_vars={cont_param: float(range[0])})
+
         self.model_auto = ODESystem.from_template(self.model, auto_dir = auto_dir_path, init_cont=False)
         # time continuation
         self.t_sols, self.t_cont = self.model_auto.run(
             c='ivp',  name='time', DS=1e-3, DSMIN=1e-5, EPSL=1e-05, EPSU=1e-05, EPSS=1e-03,
-            DSMAX=1e-1, NMX=1000000, UZR={14: self.simulation_dur}, STOP={'UZ1'})
+            DSMAX=1e-1, NMX=5000, UZR={14: self.simulation_dur}, STOP={'UZ1'})
+
+        ndim = self._read_auto_ndim()
+
+        # PyCoBi eigenvalue parsing can fail for very high-dimensional systems.
+        if get_eigenvals and ndim is not None and ndim >= 100:
+            print(
+                f"Disabling get_eigenvals for NDIM={ndim}: "
+                "PyCoBi eigenvalue parsing is unreliable for large systems."
+            )
+            get_eigenvals = False
+
+        # PyCoBi stability parsing can also fail for very high-dimensional systems.
+        # In this case we run AUTO with diagnostics enabled but parse stability
+        # manually from fort.7/fort.9 after continuation.
+        manual_stability_parse = False
+        get_stability_for_run = get_stability
+        if get_stability and ndim is not None and ndim >= 100:
+            manual_stability_parse = True
+            get_stability_for_run = False
+            print(
+                f"Using manual stability parsing for NDIM={ndim}: "
+                "bypassing PyCoBi stability parser."
+            )
+
         self.u_sols, self.u_cont = self.model_auto.run(
             origin=self.t_cont, 
             starting_point='UZ', 
             name='u', # Name of continuation parameter (variable to vary) 
-            bidirectional=True, #  Continue both forward and backward from starting point
+            bidirectional=bidirectional, # Continue both forward and backward from starting point
             ICP=cont_param,
             RL0=range[0], RL1=range[1], # Lower and upper bounds for continuation parameter(s)
             IPS=1, # Problem type: 1=Equilibrium, 2=Periodic orbit continuation
             ILP=1, # Detect limit points (folds): 1=Yes, 0=No 
             ISP=2, # Bifurcation detection level: 0=none, 1=some, 2=more 
-            get_eigenvals=True,
-            get_stability=True,
+            get_eigenvals=get_eigenvals,
+            get_stability=get_stability_for_run,
             ISW=1, 
-            NTST=400,
-            NCOL=4, # recommended in the auto docs
+            #NTST=400, # mostly important when doing orbit/periodic continuation
+            #NCOL=4, # recommended in the auto docs
             IAD=3, # recommended in the auto docs
             IPLT=0, 
             NBC=0, 
             NINT=0, 
-            NMX=1000000, 
-            NPR=100, # Print/report frequency (every NPR steps)
+            NMX=20000,
+            NPR= 50, #100, # Print/report frequency (every NPR steps)
             MXBF={}, # Maximum number of bifurcations to locate
-            IID=2,
-            ITMX=1000, # max.num. of iterations allowed in the accurate location of special solutions
-            ITNW=40, 
-            NWTN=12, 
+            IID=iid,
+            ITMX=20, #1000, # max.num. of iterations allowed in the accurate location of special solutions
+            ITNW=10, #40, 
+            NWTN=8, #12, 
             JAC=0, 
-            EPSL=1e-07, 
-            EPSU=1e-07, 
-            EPSS=1e-05, # approx.100/1000 times EPSL,EPSU
-            DS=1e-04, # initial continuation step size (0.5)
-            DSMIN=1e-8, # minimum allowed step size
-            DSMAX=1e-03, # maximum allowed step size (4)
+            EPSL=1e-06, #1e-07, 
+            EPSU=1e-06, #1e-07, 
+            EPSS=1e-04, #1e-05, # approx.100/1000 times EPSL,EPSU
+            DS=ds, # initial continuation step size
+            DSMIN=dsmin, # minimum allowed step size
+            DSMAX=dsmax, # maximum allowed step size
             IADS=1, 
             THL={}, 
             THU={}, 
             UZR={}, 
             STOP={}
         )
+
+
+        if manual_stability_parse:
+            self._inject_stability_from_auto(cont_param=cont_param, ndim=ndim)
+        
+
+    def _read_auto_ndim(self):
+        try:
+            with open("c.ivp", "r") as c_file:
+                for line in c_file:
+                    if line.startswith("NDIM"):
+                        return int(line.split("=")[1].strip())
+        except (OSError, ValueError, IndexError):
+            return None
+        return None
+
+    def _inject_stability_from_auto(self, cont_param, ndim):
+        import re
+
+        pt_to_stable_by_branch = {}
+        pt_to_stable_abs = {}
+        try:
+            with open("fort.9", "r") as f9:
+                for line in f9:
+                    m = re.match(r"^\s*(\d+)\s+(-?\d+)\s+Eigenvalues\s+:\s+Stable:(\d+)", line)
+                    if m:
+                        br = int(m.group(1))
+                        pt_abs = abs(int(m.group(2)))
+                        stable_dims = int(m.group(3))
+                        pt_to_stable_by_branch[(br, pt_abs)] = stable_dims
+                        pt_to_stable_abs[pt_abs] = stable_dims
+        except OSError:
+            pt_to_stable_by_branch = {}
+            pt_to_stable_abs = {}
+
+        fort_points = []
+        try:
+            with open("fort.7", "r") as f7:
+                for line in f7:
+                    parts = line.split()
+                    if len(parts) < 6:
+                        continue
+                    try:
+                        br = int(parts[0])
+                        pt = int(parts[1])
+                        par = float(parts[4])
+                        fort_points.append((br, pt, par))
+                    except ValueError:
+                        continue
+        except OSError:
+            fort_points = []
+
+        stable_points = []
+        for br, pt, par in fort_points:
+            s = pt_to_stable_by_branch.get((br, abs(pt)))
+            if s is None:
+                s = pt_to_stable_abs.get(abs(pt))
+            if s is not None:
+                stable_points.append((par, s))
+
+        stable_dims = []
+        matched = 0
+        for g in self.u_sols[f"{cont_param}"].values:
+            if not fort_points:
+                stable_dims.append(np.nan)
+                continue
+
+            br, pt, par = min(fort_points, key=lambda x: abs(x[2] - g))
+            tol = max(1e-6, 1e-4 * max(1.0, abs(g)))
+            s = None
+            if abs(par - g) <= tol:
+                s = pt_to_stable_by_branch.get((br, abs(pt)))
+                if s is None:
+                    s = pt_to_stable_abs.get(abs(pt))
+
+            # Endpoint-safe fallback: use nearest point that has a stability value.
+            if s is None and stable_points:
+                par_s, s_near = min(stable_points, key=lambda x: abs(x[0] - g))
+                fallback_tol = max(1e-3, 5.0 * tol)
+                if abs(par_s - g) <= fallback_tol:
+                    s = s_near
+
+            if s is None:
+                stable_dims.append(np.nan)
+            else:
+                stable_dims.append(float(s))
+                matched += 1
+
+        stable_dims = np.array(stable_dims, dtype=float)
+        self.u_sols["stable_dims"] = stable_dims
+        stability_labels = []
+        for s in stable_dims:
+            if np.isnan(s):
+                stability_labels.append(np.nan)
+            elif s >= float(ndim):
+                stability_labels.append("stable")
+            else:
+                stability_labels.append("unstable")
+        self.u_sols["stability"] = stability_labels
+        unmatched = len(stable_dims) - matched
+        print(f"Manual stability mapping: matched={matched}, unmatched={unmatched}")
     
     def continuation_df(self,cont_param):
         self.u_sols = self.u_sols.copy()
@@ -803,8 +976,8 @@ class SomatoModelPyrates():
         all_pot_cont = np.array(all_pot_cont).T
         pot_cont_df = pd.DataFrame(all_pot_cont, columns=self.cells)
         pot_cont_df.insert(0, cont_param, self.u_sols[f'{cont_param}'].values)
-        pot_cont_df['stability'] = self.u_sols['stability'].values
-        pot_cont_df['bifurcation'] = self.u_sols['bifurcation'].values
+        pot_cont_df['stability'] = self.u_sols['stability'].values if 'stability' in self.u_sols.columns else np.nan
+        pot_cont_df['bifurcation'] = self.u_sols['bifurcation'].values if 'bifurcation' in self.u_sols.columns else ''
         return pot_cont_df
 
     def pycobi_plot(self,cont_param,pot_cont_df):
@@ -831,6 +1004,44 @@ class SomatoModelPyrates():
         plt.tight_layout(rect=[0, 0, 1, 0.95])
         plt.show()
         plt.close()
+
+    def pycobi_bifurcation_plot(self, cont_param, pot_cont_df, y_var, output_path):
+        if y_var not in pot_cont_df.columns:
+            raise ValueError(f"Unknown y_var '{y_var}'. Available columns include: {list(pot_cont_df.columns[:10])} ...")
+
+        x = pot_cont_df[cont_param].to_numpy()
+        y = pot_cont_df[y_var].to_numpy()
+
+        stability = pot_cont_df["stability"] if "stability" in pot_cont_df.columns else pd.Series(np.nan, index=pot_cont_df.index)
+        bifurcation = pot_cont_df["bifurcation"] if "bifurcation" in pot_cont_df.columns else pd.Series("", index=pot_cont_df.index)
+
+        stable_mask = stability.astype(str).str.lower() == "stable"
+        unstable_mask = stability.astype(str).str.lower() == "unstable"
+        unknown_mask = ~(stable_mask | unstable_mask)
+
+        fig, ax = plt.subplots(figsize=(10, 6))
+        if stable_mask.any():
+            ax.scatter(x[stable_mask], y[stable_mask], s=18, color="tab:blue", label="stable")
+        if unstable_mask.any():
+            ax.scatter(x[unstable_mask], y[unstable_mask], s=22, color="tab:red", marker="x", label="unstable")
+        if unknown_mask.any():
+            ax.scatter(x[unknown_mask], y[unknown_mask], s=14, color="0.65", label="unknown")
+
+        bif_labels = bifurcation.fillna("").astype(str)
+        bif_mask = (bif_labels != "") & (bif_labels != "RG")
+        if bif_mask.any():
+            ax.scatter(x[bif_mask], y[bif_mask], s=70, facecolors="none", edgecolors="black", linewidths=1.2, label="bifurcation point")
+            for xi, yi, lbl in zip(x[bif_mask], y[bif_mask], bif_labels[bif_mask]):
+                ax.annotate(lbl, (xi, yi), xytext=(5, 4), textcoords="offset points", fontsize=8)
+
+        ax.set_xlabel(cont_param)
+        ax.set_ylabel(f"{y_var} [mV]")
+        ax.set_title(f"Bifurcation diagram: {y_var} vs {cont_param}")
+        ax.legend(loc="best")
+        ax.grid(True, alpha=0.2)
+        fig.tight_layout()
+        fig.savefig(output_path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
 
         
 # %%
