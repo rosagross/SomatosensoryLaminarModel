@@ -1,3 +1,4 @@
+# %%
 import os
 import numpy as np
 import pandas as pd
@@ -9,8 +10,14 @@ import matplotlib.pyplot as plt
 # ============================================================
 WDDIR = os.getenv("WDDIR")
 output_dir = os.path.join(WDDIR, 'PyratesBasics', 'exp_model','complete_model_continuations')
-csv_name = "complete_model_bifurcation_sI026_stability_only_g0_10.csv"
+csv_name = "complete_model_bifurcation_sI026_sara.csv"
 csv_path = os.path.join(output_dir, csv_name)
+
+# using checkpoint csv
+#checkpoint_folder = "20260521T120714"
+#csv_name = "checkpoint_fort_export.csv"
+#csv_path = os.path.join(output_dir, "checkpoints", checkpoint_folder, csv_name)
+
 
 # variable to plot on y-axis
 y_var = "E3S2"

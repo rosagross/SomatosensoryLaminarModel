@@ -65,8 +65,10 @@ equilibrium_df.to_csv("equilibrium_df_complete.csv", index=False)
 # equilibrium csv: "equilibrium_df_complete.csv"
 output_dir = os.path.join(WDDIR, 'PyratesBasics', 'exp_model','complete_model_continuations')
 os.makedirs(output_dir, exist_ok=True) 
+checkpoint_dir = os.path.join(output_dir, "checkpoints")
+os.makedirs(checkpoint_dir, exist_ok=True)
 params = read_simulation_params()
-range_par = [6.0, 8.0]
+range_par = [1, 4]
 modello_prova = SomatoModelPyrates(params)
 cont_param = 'G/g_definition/g_input'
 auto_dir_path = "/data/u_grossmannr_software/auto-07p/"
@@ -85,6 +87,8 @@ modello_prova.pycobi_continuation(
     get_eigenvals=False,
     get_stability=True,
     iid=2, # 1
+    checkpoint_dir=checkpoint_dir,
+    checkpoint_interval_s=300,
 )
 cont_df = modello_prova.continuation_df(cont_param)
 # csv saving

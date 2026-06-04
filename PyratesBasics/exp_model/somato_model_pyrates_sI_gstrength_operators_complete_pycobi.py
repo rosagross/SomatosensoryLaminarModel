@@ -20,10 +20,14 @@ from pyrates.frontend.template import CircuitTemplate
 from pyrates.frontend.fileio.yaml import dump_to_yaml
 from pyrates.frontend import OperatorTemplate, NodeTemplate, EdgeTemplate, CircuitTemplate
 from copy import deepcopy
+import glob
+import h5py
 import matplotlib.pyplot as plt
 import numpy as np
-import h5py
 import pandas as pd
+import shutil
+import threading
+import time
 from pprint import pprint
 from pycobi import ODESystem
 #from parameters import Parameter
@@ -740,7 +744,56 @@ class SomatoModelPyrates():
         get_eigenvals=None,
         get_stability=None,
         iid=None,
+        checkpoint_dir=None,
+        checkpoint_interval_s=300,
     ):
+        checkpoint_stop = None
+        checkpoint_thread = None
+
+        def _snapshot_auto_files():
+            if not checkpoint_dir:
+                return
+            timestamp = time.strftime("%Y%m%dT%H%M%S")
+            dest_dir = os.path.join(checkpoint_dir, timestamp)
+            os.makedirs(dest_dir, exist_ok=True)
+            patterns = ["fort.*", "c.*", "s.*", "d.*"]
+            copied = 0
+            for pattern in patterns:
+                for src in glob.glob(pattern):
+                    if not os.path.isfile(src):
+                        continue
+                    try:
+                        shutil.copy2(src, os.path.join(dest_dir, os.path.basename(src)))
+                        copied += 1
+                    except OSError as exc:
+                        print(f"Checkpoint copy failed for {src}: {exc}")
+            if copied == 0:
+                try:
+                    os.rmdir(dest_dir)
+                except OSError:
+                    pass
+
+        if checkpoint_dir:
+            os.makedirs(checkpoint_dir, exist_ok=True)
+            if checkpoint_interval_s is not None and checkpoint_interval_s > 0:
+                checkpoint_stop = threading.Event()
+
+                def _checkpoint_loop():
+                    next_time = time.time()
+                    while not checkpoint_stop.is_set():
+                        now = time.time()
+                        if now >= next_time:
+                            _snapshot_auto_files()
+                            next_time = now + float(checkpoint_interval_s)
+                        checkpoint_stop.wait(1.0)
+
+                _snapshot_auto_files()
+                checkpoint_thread = threading.Thread(
+                    target=_checkpoint_loop,
+                    name="auto-checkpoint",
+                    daemon=True,
+                )
+                checkpoint_thread.start()
         if equilibrium_csv_path is not None:
             equilibrium_df = pd.read_csv(equilibrium_csv_path)
             equilibrium_df.columns = (equilibrium_df.columns
@@ -784,75 +837,81 @@ class SomatoModelPyrates():
         # which can terminate immediately when RL0 > 0.
         self.model.update_var(node_vars={cont_param: float(range[0])})
 
-        self.model_auto = ODESystem.from_template(self.model, auto_dir = auto_dir_path, init_cont=False)
-        # time continuation
-        self.t_sols, self.t_cont = self.model_auto.run(
-            c='ivp',  name='time', DS=1e-3, DSMIN=1e-5, EPSL=1e-05, EPSU=1e-05, EPSS=1e-03,
-            DSMAX=1e-1, NMX=5000, UZR={14: self.simulation_dur}, STOP={'UZ1'})
-
-        ndim = self._read_auto_ndim()
-
-        # PyCoBi eigenvalue parsing can fail for very high-dimensional systems.
-        if get_eigenvals and ndim is not None and ndim >= 100:
-            print(
-                f"Disabling get_eigenvals for NDIM={ndim}: "
-                "PyCoBi eigenvalue parsing is unreliable for large systems."
-            )
-            get_eigenvals = False
-
-        # PyCoBi stability parsing can also fail for very high-dimensional systems.
-        # In this case we run AUTO with diagnostics enabled but parse stability
-        # manually from fort.7/fort.9 after continuation.
         manual_stability_parse = False
-        get_stability_for_run = get_stability
-        if get_stability and ndim is not None and ndim >= 100:
-            manual_stability_parse = True
-            get_stability_for_run = False
-            print(
-                f"Using manual stability parsing for NDIM={ndim}: "
-                "bypassing PyCoBi stability parser."
+        try:
+            self.model_auto = ODESystem.from_template(self.model, auto_dir = auto_dir_path, init_cont=False)
+            # time continuation
+            self.t_sols, self.t_cont = self.model_auto.run(
+                c='ivp',  name='time', DS=1e-3, DSMIN=1e-5, EPSL=1e-05, EPSU=1e-05, EPSS=1e-03,
+                DSMAX=1e-1, NMX=5000, UZR={14: self.simulation_dur}, STOP={'UZ1'})
+
+            ndim = self._read_auto_ndim()
+
+            # PyCoBi eigenvalue parsing can fail for very high-dimensional systems.
+            if get_eigenvals and ndim is not None and ndim >= 100:
+                print(
+                    f"Disabling get_eigenvals for NDIM={ndim}: "
+                    "PyCoBi eigenvalue parsing is unreliable for large systems."
+                )
+                get_eigenvals = False
+
+            # PyCoBi stability parsing can also fail for very high-dimensional systems.
+            # In this case we run AUTO with diagnostics enabled but parse stability
+            # manually from fort.7/fort.9 after continuation.
+            get_stability_for_run = get_stability
+            if get_stability and ndim is not None and ndim >= 100:
+                manual_stability_parse = True
+                get_stability_for_run = False
+                print(
+                    f"Using manual stability parsing for NDIM={ndim}: "
+                    "bypassing PyCoBi stability parser."
+                )
+
+            self.u_sols, self.u_cont = self.model_auto.run(
+                origin=self.t_cont, 
+                starting_point='UZ', 
+                name='u', # Name of continuation parameter (variable to vary) 
+                bidirectional=bidirectional, # Continue both forward and backward from starting point
+                ICP=cont_param,
+                RL0=range[0], RL1=range[1], # Lower and upper bounds for continuation parameter(s)
+                IPS=1, # Problem type: 1=Equilibrium, 2=Periodic orbit continuation
+                ILP=1, # Detect limit points (folds): 1=Yes, 0=No 
+                ISP=2, # Bifurcation detection level: 0=none, 1=some, 2=more 
+                get_eigenvals=get_eigenvals,
+                get_stability=get_stability_for_run,
+                ISW=1, 
+                #NTST=400, # mostly important when doing orbit/periodic continuation
+                #NCOL=4, # recommended in the auto docs
+                IAD=3, # recommended in the auto docs
+                IPLT=0, 
+                NBC=0, 
+                NINT=0, 
+                NMX=20000,
+                NPR= 50, #100, # Print/report frequency (every NPR steps)
+                MXBF={}, # Maximum number of bifurcations to locate
+                IID=iid,
+                ITMX=20, #1000, # max.num. of iterations allowed in the accurate location of special solutions
+                ITNW=10, #40, 
+                NWTN=8, #12, 
+                JAC=0, 
+                EPSL=1e-06, #1e-07, 
+                EPSU=1e-06, #1e-07, 
+                EPSS=1e-04, #1e-05, # approx.100/1000 times EPSL,EPSU
+                DS=ds, # initial continuation step size
+                DSMIN=dsmin, # minimum allowed step size
+                DSMAX=dsmax, # maximum allowed step size
+                IADS=1, 
+                THL={}, 
+                THU={}, 
+                UZR={}, 
+                STOP={}
             )
-
-        self.u_sols, self.u_cont = self.model_auto.run(
-            origin=self.t_cont, 
-            starting_point='UZ', 
-            name='u', # Name of continuation parameter (variable to vary) 
-            bidirectional=bidirectional, # Continue both forward and backward from starting point
-            ICP=cont_param,
-            RL0=range[0], RL1=range[1], # Lower and upper bounds for continuation parameter(s)
-            IPS=1, # Problem type: 1=Equilibrium, 2=Periodic orbit continuation
-            ILP=1, # Detect limit points (folds): 1=Yes, 0=No 
-            ISP=2, # Bifurcation detection level: 0=none, 1=some, 2=more 
-            get_eigenvals=get_eigenvals,
-            get_stability=get_stability_for_run,
-            ISW=1, 
-            #NTST=400, # mostly important when doing orbit/periodic continuation
-            #NCOL=4, # recommended in the auto docs
-            IAD=3, # recommended in the auto docs
-            IPLT=0, 
-            NBC=0, 
-            NINT=0, 
-            NMX=20000,
-            NPR= 50, #100, # Print/report frequency (every NPR steps)
-            MXBF={}, # Maximum number of bifurcations to locate
-            IID=iid,
-            ITMX=20, #1000, # max.num. of iterations allowed in the accurate location of special solutions
-            ITNW=10, #40, 
-            NWTN=8, #12, 
-            JAC=0, 
-            EPSL=1e-06, #1e-07, 
-            EPSU=1e-06, #1e-07, 
-            EPSS=1e-04, #1e-05, # approx.100/1000 times EPSL,EPSU
-            DS=ds, # initial continuation step size
-            DSMIN=dsmin, # minimum allowed step size
-            DSMAX=dsmax, # maximum allowed step size
-            IADS=1, 
-            THL={}, 
-            THU={}, 
-            UZR={}, 
-            STOP={}
-        )
-
+        finally:
+            if checkpoint_stop is not None:
+                checkpoint_stop.set()
+                if checkpoint_thread is not None:
+                    checkpoint_thread.join(timeout=5)
+                _snapshot_auto_files()
 
         if manual_stability_parse:
             self._inject_stability_from_auto(cont_param=cont_param, ndim=ndim)

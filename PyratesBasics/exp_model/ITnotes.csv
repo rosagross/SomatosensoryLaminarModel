@@ -1,0 +1,5 @@
+echo $? -> this shows the exit code of my program (if it is 1 it failed and if it is 0 it worked out)
+
+(tmax is similar to screen, in neurophysics they use it)
+just using screen is not enough
+screen -r (take background session and show it)
