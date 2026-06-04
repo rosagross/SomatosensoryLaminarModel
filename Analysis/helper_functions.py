@@ -22,10 +22,14 @@ def compute_freq_spectrum(signal, step_size, window="hann"):
     - frequencies
     - power spectrum density
     """
+    print("size signal", len(signal), signal.size)
+    print("step size", step_size)   
+
     if signal is None:
         return np.nan, np.nan
+    
     signal = np.asarray(signal)
-    n = signal.size
+    n = len(signal)
     if n < 2:
         return np.nan, np.nan
 
@@ -42,8 +46,11 @@ def compute_freq_spectrum(signal, step_size, window="hann"):
     freqs = np.fft.rfftfreq(n, d=step_size)
 
     # compute power spectrum density
-    n = len(signal)
     powersd = (np.abs(fft_vals) ** 2) / n**2
+
+    print("signal", n)
+    print("step_size", step_size)
+    print("frequencies:", len(freqs), freqs)
 
     return freqs, powersd
 
@@ -127,6 +134,24 @@ def compute_window_frequency(df, rates_df, potentials_df, start_idx, stop_idx, p
     spectra = np.array(spectra)
 
     return spectra, freqs_ref
+
+def compute_spectra_full(rates_df, potentials_df, step_size):
+
+    spectra = []
+    freqs_ref = None
+    
+    for pop in rates_df.columns:
+        freqs, power = compute_freq_spectrum(potentials_df[pop].values, step_size)
+
+        if freqs_ref is None:
+            freqs_ref = freqs  # same for all populations
+
+        spectra.append(power)
+    
+    spectra = np.array(spectra)
+
+    return spectra, freqs_ref
+
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, strength_I,  
                         backgroundI_strengths, step_size, sample_delay_immediate, sample_delay_late, input_onset, sample_dur, cortex_type, input_type,
