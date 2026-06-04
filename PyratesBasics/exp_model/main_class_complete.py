@@ -99,7 +99,7 @@ cont_df.to_csv(filepath, index=False)
 # also save u_sols
 filename_usols = "u_sols_complete_model_bifurcation_sI026.csv"
 filepath_usols = os.path.join(output_dir, filename_usols)
-modello_prova.u_sols.to_csv(filepath, index=False)
+modello_prova.u_sols.to_csv(filepath_usols, index=False)
 
 # bifurcation plot export (single representative variable)
 representative_var = "E2S1"
