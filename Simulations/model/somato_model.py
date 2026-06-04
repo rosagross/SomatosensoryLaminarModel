@@ -241,7 +241,41 @@ class SomatoModel():
         """
         Compute the firing rates of all populations.
         """
-        v_sum = np.sum(self.v_current, axis=1)
+
+        non_pyr = [0,1,2,3,    # A3b
+                   4,5,6,7,  8,9,10,  12,13, 14,15,16,  # A1
+                   17,18,19,20,  21,22,23,  25,26,  27,28,29, # S2
+                   30,31]  # thalE, thalI
+        pyr = [0, 11, 24]   # E3 / layer 5 pyramidal cells
+
+        v_sum[non_pyr] = np.sum(self.v_current[non_pyr], axis=1)
+
+        # Dendritic integration: 
+        # not only (!) simple summing of inputs to the same neuron
+        # at pyramidal cells in layer 5, multiplication of distal an proximal input
+        # is closer to reality. Still simple summation is maintained
+        
+
+        # (L4, L2/3 feedforward, thal)
+        # proximal sources targeting .. 
+        proxi_A3b = [0, 1, 3]  # .. A3b pyramidal cell
+        proxi_A1 = [0, 8, 11, 13]  # .. A1 layer 5 pyramidal cell
+        proxi_S2 = [0, 21, 24, 26, 27] # .. A3b pyramidal cell
+
+        # distal sources (L2/3 feedback, L6, cross-area feedback)
+        distal_A3b = [2, 4, 11, 24]
+        distal_A1 = [0, 4, 12, 17, 24]
+        distal_A1 = [0, 4, 11, 17, 26]
+
+        # Zhang et al. Eq. 25 global shunting form:
+        kappa = 0.1 # suggested value in Zhang et al. (2013) is 0.1 
+
+        for pL5 in pyr:
+            v_basal = 
+            v_apical = 
+            v_eff_ET = v_basal + v_apical + v_SST + kappa * v_SST * v_apical
+
+
 
         self.rate_current = self.sigm[:,2] / (
             1 + np.exp(self.sigm[:,0] * (self.sigm[:,1] - v_sum))
