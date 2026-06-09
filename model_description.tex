@@ -1,0 +1,317 @@
+\documentclass[12pt, a4paper]{article}
+
+\usepackage{amsmath, amssymb}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{parskip}
+\usepackage{xcolor}
+\usepackage{caption}
+
+\geometry{margin=2.5cm}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue!60!black,
+    citecolor=blue!60!black,
+    urlcolor=blue!60!black
+}
+
+\title{\textbf{Extended Jansen--Rit Neural Mass Model}\\[0.5em]
+\large Model Description, Equations, and Parameters}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\vspace{1em}
+\hrule
+\vspace{1.5em}
+
+% ============================================================
+\section{Overview}
+% ============================================================
+
+This document describes a multi-population neural mass model that extends the seminal
+Jansen--Rit (JR) formalism \cite{JansenRit1995} to a cortical column architecture
+comprising multiple excitatory and inhibitory cell types across four cortical layers,
+supplemented by a thalamic relay circuit.  The original JR model described a single
+cortical column with three interacting populations---pyramidal cells, excitatory
+interneurons, and inhibitory interneurons---and reproduced spontaneous alpha rhythms
+as well as visually evoked potentials.  The present implementation generalises this
+framework to $N_\text{pop}$ populations (including Layer~1--4 excitatory cells,
+parvalbumin-positive (PV), somatostatin-positive (SST), and vasoactive
+intestinal peptide-positive (VIP) interneurons across two cortical areas plus a
+thalamic excitatory/inhibitory pair), while retaining the core second-order
+differential equation formulation and sigmoidal firing-rate transfer function of
+the original model.
+
+% ============================================================
+\section{Model Equations}
+% ============================================================
+
+\subsection{State Variables}
+
+Each population $i$ ($i = 1,\dots,N_\text{pop}$) receives synaptic drive from every
+other population $j$ as well as from background and external inputs.  The resulting
+\emph{post-synaptic potential} (PSP) contribution $v_{ij}(t)$ and its first-order
+time derivative $u_{ij}(t)$ constitute the state variables of the system.
+
+\subsection{Firing-Rate Transfer Function (Sigmoid)}
+
+Population firing rates are related to the total membrane potential via a
+sigmoidal (Heaviside-like) function:
+
+\begin{equation}
+    r_i(t) \;=\; \frac{m_{\max,i}}{1 + \exp\!\bigl(r_i\,\bigl(v_{\text{thr},i} - V_i(t)\bigr)\bigr)},
+    \label{eq:sigmoid}
+\end{equation}
+
+\noindent where $V_i(t) = \sum_{j} v_{ij}(t)$ is the summed membrane potential of
+population $i$, and the sigmoid parameters $(r_i,\, v_{\text{thr},i},\, m_{\max,i})$
+are population-specific.
+
+\subsection{Synaptic Convolution (Second-Order ODE)}
+
+Following Jansen \& Rit~\cite{JansenRit1995}, synaptic transmission is modelled as
+a linear convolution of the pre-synaptic firing rate with an alpha-function impulse
+response.  This is equivalently expressed as a system of two first-order ODEs.  For
+the PSP contribution $v_{ij}$ from population $j$ onto population $i$:
+
+\begin{align}
+    \dot{v}_{ij}(t) &= u_{ij}(t), \label{eq:v_dot}\\[4pt]
+    \dot{u}_{ij}(t) &= \frac{H_{ij}}{\tau_{ij}}\,W_{ij}\,r_j(t)
+                      - \frac{2}{\tau_{ij}}\,u_{ij}(t)
+                      - \frac{1}{\tau_{ij}^2}\,v_{ij}(t), \label{eq:u_dot}
+\end{align}
+
+\noindent where $H_{ij}$ is a synaptic gain coefficient, $\tau_{ij}$ is the synaptic
+time constant, and $W_{ij}$ is the effective connectivity weight from population $j$
+to population $i$.  Equations~\eqref{eq:v_dot}--\eqref{eq:u_dot} implement the
+classic alpha-kernel impulse response
+$h(t) = \frac{H}{\tau}\,t\,e^{-t/\tau}\,\Theta(t)$
+in differential form.
+
+\subsection{Background and External Inputs}
+
+Two additional input channels are appended to every population.
+
+\paragraph{Background input ($I_b$).}
+A tonic, constant drive supplied to \emph{all} populations throughout the simulation:
+\begin{equation}
+    \dot{v}_{i,b}(t) = u_{i,b}(t), \qquad
+    \dot{u}_{i,b}(t) = \frac{H_{i,b}}{\tau_{i,b}}\,W_{i,b}\,I_b
+                       - \frac{2}{\tau_{i,b}}\,u_{i,b}(t)
+                       - \frac{1}{\tau_{i,b}^2}\,v_{i,b}(t).
+    \label{eq:bg}
+\end{equation}
+
+\paragraph{External (thalamic/brain-stem) input ($I_\text{ext}$).}
+A time-varying stimulus delivered via the thalamic route:
+\begin{equation}
+    \dot{v}_{i,\text{ext}}(t) = u_{i,\text{ext}}(t), \qquad
+    \dot{u}_{i,\text{ext}}(t) = \frac{H_{i,\text{ext}}}{\tau_{i,\text{ext}}}\,W_{i,\text{ext}}\,I_\text{ext}(t)
+                                - \frac{2}{\tau_{i,\text{ext}}}\,u_{i,\text{ext}}(t)
+                                - \frac{1}{\tau_{i,\text{ext}}^2}\,v_{i,\text{ext}}(t).
+    \label{eq:ext}
+\end{equation}
+
+\noindent For a \emph{step} stimulus of strength $s_\text{ext}$, onset $t_0$, and
+duration $\Delta t$:
+\begin{equation}
+    I_\text{ext}(t) = s_\text{ext}\,\bigl[\Theta(t-t_0) - \Theta(t-t_0-\Delta t)\bigr].
+    \label{eq:Iext}
+\end{equation}
+
+\subsection{Connectivity Weights}
+
+Effective synaptic weights $W_{ij}$ are derived from anatomical connectivity
+strengths $S_{ij}$, connection probabilities $P_{ij}$, and cell counts $C_j$, scaled
+by excitatory/inhibitory coupling parameters:
+
+\begin{equation}
+    W_{ij} = g_\alpha \cdot S_{ij} \cdot P_{ij} \cdot C_j,
+    \label{eq:weights}
+\end{equation}
+
+\noindent where $g_\alpha \in \{g_E,\, g_I,\, g_{E,\text{thal}},\, g_{I,\text{thal}}\}$
+is selected according to whether the projection originates from an excitatory or
+inhibitory cortical/thalamic population.  The coupling gains are decomposed as:
+
+\begin{equation}
+    g_E = g \cdot \beta_{EI}, \qquad g_I = g \cdot (1 - \beta_{EI}),
+    \label{eq:gains}
+\end{equation}
+
+\noindent and analogously for the thalamic gains with $\beta_{EI}^{\text{thal}}$.
+
+\subsection{Numerical Integration}
+
+The system is integrated with the explicit forward-Euler scheme at a fixed step size
+$\Delta t_s$:
+
+\begin{align}
+    v_{ij}(t+\Delta t_s) &= v_{ij}(t) + \dot{v}_{ij}(t)\,\Delta t_s, \\
+    u_{ij}(t+\Delta t_s) &= u_{ij}(t) + \dot{u}_{ij}(t)\,\Delta t_s.
+\end{align}
+
+All state variables are initialised to zero.
+
+% ============================================================
+\section{Model Parameters}
+% ============================================================
+
+\begin{longtable}{@{}lp{5.5cm}p{3.2cm}l@{}}
+\caption{Model parameters, their descriptions, default values, and units.}
+\label{tab:params}\\
+\toprule
+\textbf{Symbol / Name} & \textbf{Description} & \textbf{Default Value} & \textbf{Unit} \\
+\midrule
+\endfirsthead
+\multicolumn{4}{c}{\tablename~\thetable{} (continued)}\\
+\toprule
+\textbf{Symbol / Name} & \textbf{Description} & \textbf{Default Value} & \textbf{Unit} \\
+\midrule
+\endhead
+\bottomrule
+\endlastfoot
+
+% --- Simulation control ---
+\multicolumn{4}{l}{\textit{Simulation control}} \\[2pt]
+$T$ & Total simulation duration & 2 & s \\
+$\Delta t_s$ & Integration step size & 0.001 & s \\
+$t_0$ & Onset time of external input & 1.001 & s \\[6pt]
+
+% --- Input parameters ---
+\multicolumn{4}{l}{\textit{Input parameters}} \\[2pt]
+$I_\text{ext}$ & External (step/background) input signal & --- & a.u. \\
+$s_\text{ext}$ & Strength of external input & 10 & a.u. \\
+$\Delta t_\text{ext}$ & Duration of external input & 0.5 & s \\
+\texttt{input\_type} & Input waveform type (\texttt{step} or \texttt{background}) & \texttt{step} & --- \\
+$I_b$ & Tonic background input & --- & a.u. \\
+$s_b$ & Strength of background input & 7 & a.u. \\[6pt]
+
+% --- Coupling parameters ---
+\multicolumn{4}{l}{\textit{Coupling and gain parameters}} \\[2pt]
+$g$ & Total cortical coupling strength & 10 & a.u. \\
+$\beta_{EI}$ & Excitatory--inhibitory balance (cortical) & 0.7 & --- \\
+$g_E$ & Effective excitatory cortical gain ($g \cdot \beta_{EI}$) & 7 & a.u. \\
+$g_I$ & Effective inhibitory cortical gain ($g(1-\beta_{EI})$) & 3 & a.u. \\
+$g_\text{thal}$ & Total thalamic coupling strength & 2 & a.u. \\
+$\beta_{EI}^{\text{thal}}$ & Excitatory--inhibitory balance (thalamic) & 0.5 & --- \\
+$g_{E,\text{thal}}$ & Effective excitatory thalamic gain & 1 & a.u. \\
+$g_{I,\text{thal}}$ & Effective inhibitory thalamic gain & 1 & a.u. \\[6pt]
+
+% --- Cell counts ---
+\multicolumn{4}{l}{\textit{Cell counts}} \\[2pt]
+$C_\text{ext}$ & Number of external input cells & 1000 & cells \\
+$C_{b,I}$ & Number of background inhibitory cells & 100 & cells \\
+$C_\text{thal}$ & Number of thalamic relay cells & 500 & cells \\[6pt]
+
+% --- Population/connectivity ---
+\multicolumn{4}{l}{\textit{Population and connectivity}} \\[2pt]
+$N_\text{pop}$ & Total number of neural populations & 32 & --- \\
+$\tau_{ij}$ & Synaptic time constant (population pair $i,j$) & pop.-specific & s \\
+$H_{ij}$ & Synaptic gain coefficient (population pair $i,j$) & 1 (default) & --- \\
+$W_{ij}$ & Effective connectivity weight from $j$ to $i$ & derived & a.u. \\
+$S_{ij}$ & Anatomical connection strength & from \texttt{Parameter} & a.u. \\
+$P_{ij}$ & Connection probability & from \texttt{Parameter} & --- \\
+$C_j$ & Cell count of source population $j$ & from \texttt{Parameter} & cells \\[6pt]
+
+% --- Sigmoid (transfer function) ---
+\multicolumn{4}{l}{\textit{Sigmoid transfer function (per population $i$)}} \\[2pt]
+$r_i$ & Slope (steepness) of sigmoid & pop.-specific & mV$^{-1}$ \\
+$v_{\text{thr},i}$ & Threshold potential & pop.-specific & mV \\
+$m_{\max,i}$ & Maximum firing rate & pop.-specific & spikes/s \\[6pt]
+
+% --- Thalamic connectivity ---
+\multicolumn{4}{l}{\textit{Thalamic connectivity switch}} \\[2pt]
+\texttt{thal\_connect} & Boolean vector enabling thalamic projections & [0,0,0,0] & --- \\
+\texttt{area} & Target cortical area (\texttt{all} or specific) & \texttt{all} & --- \\
+\end{longtable}
+
+% ============================================================
+\section{Model Workflow}
+% ============================================================
+
+\subsection{Conceptual Background}
+
+The Jansen--Rit model \cite{JansenRit1995} is a neural mass model that describes the
+mean-field activity of a cortical column.  Rather than simulating individual neurons,
+it tracks the \emph{average membrane potential} and \emph{average firing rate} of
+interacting neuronal populations.  The core insight is that synaptic dynamics can be
+represented as a linear convolution (alpha kernel), while the relationship between
+membrane potential and firing rate is captured by a sigmoidal function---both biologically
+motivated simplifications that yield surprisingly rich dynamics including alpha oscillations
+and epileptic-like discharges.
+
+\subsection{Initialisation}
+
+\begin{enumerate}
+    \item \textbf{Parameter loading.}  All anatomical and biophysical constants
+    (time constants $\tau$, sigmoid parameters, connection strengths $S$,
+    connection probabilities $P$, and cell counts $C$) are loaded from the
+    \texttt{Parameter} object.
+
+    \item \textbf{Input construction.}  The external input $I_\text{ext}(t)$
+    (Eq.~\ref{eq:Iext}) and background drive $I_b$ are generated as discrete
+    time series of length $T/\Delta t_s$ and tiled across all populations.
+
+    \item \textbf{Weight matrix computation.}  The full $N_\text{pop} \times
+    (N_\text{pop}+2)$ connectivity matrix $W$ is assembled from anatomical
+    parameters and the coupling gains $g_E$, $g_I$, $g_{E,\text{thal}}$,
+    $g_{I,\text{thal}}$ (Eq.~\ref{eq:weights}).  The two extra columns correspond
+    to the background and external input channels.
+\end{enumerate}
+
+\subsection{Simulation Loop}
+
+At each discrete time step $t$:
+
+\begin{enumerate}
+    \item \textbf{Rate update.}  The current firing rate $r_i(t)$ of every
+    population is computed from the summed membrane potential $V_i(t) =
+    \sum_j v_{ij}(t)$ via the sigmoid (Eq.~\ref{eq:sigmoid}).
+
+    \item \textbf{State saving.}  Rates and potentials are written to output
+    matrices at the current time index.
+
+    \item \textbf{Potential update (recurrent loop).}  For each population pair
+    $(i,j)$, the membrane potential $v_{ij}$ and its derivative $u_{ij}$ are
+    advanced one step using forward Euler (Eqs.~\ref{eq:v_dot}--\ref{eq:u_dot}).
+
+    \item \textbf{Input channels.}  The same second-order update is applied to
+    the external ($I_\text{ext}$, Eq.~\ref{eq:ext}) and background ($I_b$,
+    Eq.~\ref{eq:bg}) channels for each population.
+\end{enumerate}
+
+\subsection{Post-Processing and Output}
+
+After the simulation loop completes, results are downsampled to a resolution of
+10\,ms and saved in HDF5 format.  Two datasets are stored: (i)~the population
+firing rates $r_i(t)$ and (ii)~the summed post-synaptic potentials
+$V_i(t) = \sum_j v_{ij}(t)$, the latter serving as a proxy for the local field
+potential (LFP) or electrocorticography (ECoG) signal.  Optionally the full
+per-pathway potential tensor can be written to a separate file.  Model parameters
+can additionally be exported to a YAML file for reproducibility.
+
+% ============================================================
+\section*{References}
+% ============================================================
+
+\begin{thebibliography}{9}
+
+\bibitem{JansenRit1995}
+Jansen, B.\,H.\ \& Rit, V.\,G.\ (1995).
+\textit{Electroencephalogram and visual evoked potential generation in a
+mathematical model of coupled cortical columns.}
+Biological Cybernetics, \textbf{73}(4), 357--366.
+\url{https://doi.org/10.1007/BF00199471}
+
+\end{thebibliography}
+
+\end{document}

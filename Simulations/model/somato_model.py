@@ -11,7 +11,7 @@ import pandas as pd
 import mne
 from parameters import Parameter
 
-location = "laptop"
+location = "mpi"
 if location == "laptop":
     WDDIR = r"C:\Users\gross\OneDrive - UvA\Documents\IMPRS_Leipzig\MyProject\Modelling\ChienReplication\SomatosensoryLaminarModel"
     SIMDIR = os.path.join(WDDIR, "output")

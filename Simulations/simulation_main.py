@@ -19,9 +19,8 @@ import time
 import csv
 import mne
 from mne.datasets import sample
-from mne.datasets import eegbci
 
-location = "laptop"
+location = "mpi"
 if location == "laptop":
     WDDIR = r"C:\Users\gross\OneDrive - UvA\Documents\IMPRS_Leipzig\MyProject\Modelling\ChienReplication\SomatosensoryLaminarModel"
     SIMDIR = os.path.join(WDDIR, "output")
@@ -59,36 +58,36 @@ def parse_params():
 
     return g
 
-# load EEG data and forward model computation
-# setup sample data for forward modelling
-data_path_labels = sample.data_path()
-subject = "fsaverage"
-trans = "fsaverage"
-src = data_path_labels / "subjects" / "fsaverage" / "bem" / "fsaverage-ico-5-src.fif"
-bem = data_path_labels / "subjects" / "fsaverage" / "bem" / "fsaverage-5120-5120-5120-bem-sol.fif"
-(raw_fname,) = eegbci.load_data(subjects=1, runs=[6])
-raw = mne.io.read_raw_edf(raw_fname, preload=True)
-# Read and set the EEG electrode locations, which are already in fsaverage's
-# space (MNI space) for standard_1020:
-eegbci.standardize(raw)
-montage = mne.channels.make_standard_montage("standard_1005")
-raw.set_montage(montage)
+# load EEG data and forward solution from real subject derivatives
+subID    = 15           # example subject; edit to change
+modality = 'mecha'      # 'mecha' or 'elec'
+l_freq_orig = 0.1
+l_freq      = 1
+h_freq      = 40
+suffix      = '_preprestim_corrected'
 
-# %%
-# TODO: read the forward solution instead of computing
-# forward solution and leadfield computation
-fwd = mne.make_forward_solution(
-    raw.info, trans=trans, src=src, bem=bem, eeg=True, mindist=5.0, n_jobs=None
-)
-leadfield = fwd["sol"]["data"]
-print(f"Leadfield size : {leadfield.shape[0]} sensors x {leadfield.shape[1]} dipoles")
+sub_dir = os.path.join(DATADIR, 'derivatives', 'eeg-preproc',
+                       f'sub-0{subID}', f'ses-{modality}')
+epoch_fif = os.path.join(sub_dir,
+    f"sub-0{subID}_ses-{modality}_task-NT_"
+    f"lfreqori-{l_freq_orig}_lfreq-{l_freq}_hfreq-{h_freq}_epochs{suffix}.fif")
+fwd_file  = os.path.join(sub_dir, f'sub-0{subID}_ico-5_ses-{modality}_fwd.fif')
 
-# reduce forward solution to one orientation
+epochs = mne.read_epochs(epoch_fif, preload=True)
+
+fwd = mne.read_forward_solution(fwd_file)
 fwd_fixed = mne.convert_forward_solution(
     fwd, surf_ori=True, force_fixed=True, use_cps=True
 )
-src_free = fwd["src"]
+
+leadfield = fwd["sol"]["data"]
+print(f"Leadfield size : {leadfield.shape[0]} sensors x {leadfield.shape[1]} dipoles")
+
+src_free  = fwd["src"]
 src_fixed = fwd_fixed["src"]
+
+# needed for rh.BA3b.label lookup inside simulate_eeg()
+data_path_labels = sample.data_path()
 
 #%%
 # Assign variables from loaded parameters
@@ -163,9 +162,9 @@ for ginter in ginters:
 
                         # compute dipoles
                         sim_dip = model.compute_dipoles()
-                        model.plot_dipoles(sim_dip, raw.info)
-                        evoked, epochs = model.simulate_eeg(raw, data_path_labels, sim_dip, fwd, src_fixed)
-                        model.plot_eeg(evoked, epochs)
+                        model.plot_dipoles(sim_dip, epochs.info)
+                        evoked, epochs_sim = model.simulate_eeg(epochs, data_path_labels, sim_dip, fwd, src_fixed)
+                        model.plot_eeg(evoked, epochs_sim)
 
                         # print important parameters
                         """
