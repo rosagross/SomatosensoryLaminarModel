@@ -746,9 +746,11 @@ class SomatoModelPyrates():
         iid=None,
         checkpoint_dir=None,
         checkpoint_interval_s=300,
+        run_dir=None,
     ):
         checkpoint_stop = None
         checkpoint_thread = None
+        old_cwd = None
 
         def _snapshot_auto_files():
             if not checkpoint_dir:
@@ -773,27 +775,6 @@ class SomatoModelPyrates():
                 except OSError:
                     pass
 
-        if checkpoint_dir:
-            os.makedirs(checkpoint_dir, exist_ok=True)
-            if checkpoint_interval_s is not None and checkpoint_interval_s > 0:
-                checkpoint_stop = threading.Event()
-
-                def _checkpoint_loop():
-                    next_time = time.time()
-                    while not checkpoint_stop.is_set():
-                        now = time.time()
-                        if now >= next_time:
-                            _snapshot_auto_files()
-                            next_time = now + float(checkpoint_interval_s)
-                        checkpoint_stop.wait(1.0)
-
-                _snapshot_auto_files()
-                checkpoint_thread = threading.Thread(
-                    target=_checkpoint_loop,
-                    name="auto-checkpoint",
-                    daemon=True,
-                )
-                checkpoint_thread.start()
         if equilibrium_csv_path is not None:
             equilibrium_df = pd.read_csv(equilibrium_csv_path)
             equilibrium_df.columns = (equilibrium_df.columns
@@ -839,11 +820,45 @@ class SomatoModelPyrates():
 
         manual_stability_parse = False
         try:
+            # Isolate AUTO working files (fort.*, c.*, s.*, d.*) inside this run's folder so
+            # concurrent runs don't clobber each other and checkpoints snapshot only this run.
+            if run_dir is not None:
+                run_dir = os.path.abspath(run_dir)
+                os.makedirs(run_dir, exist_ok=True)
+                old_cwd = os.getcwd()
+                os.chdir(run_dir)
+
+            # Start checkpointing now that cwd is the run folder, so snapshots only ever
+            # capture this run's AUTO working files (never stale files from the launch dir).
+            if checkpoint_dir:
+                os.makedirs(checkpoint_dir, exist_ok=True)
+                if checkpoint_interval_s is not None and checkpoint_interval_s > 0:
+                    checkpoint_stop = threading.Event()
+
+                    def _checkpoint_loop():
+                        next_time = time.time()
+                        while not checkpoint_stop.is_set():
+                            now = time.time()
+                            if now >= next_time:
+                                _snapshot_auto_files()
+                                next_time = now + float(checkpoint_interval_s)
+                            checkpoint_stop.wait(1.0)
+
+                    _snapshot_auto_files()
+                    checkpoint_thread = threading.Thread(
+                        target=_checkpoint_loop,
+                        name="auto-checkpoint",
+                        daemon=True,
+                    )
+                    checkpoint_thread.start()
+
             self.model_auto = ODESystem.from_template(self.model, auto_dir = auto_dir_path, init_cont=False)
             # time continuation
-            self.t_sols, self.t_cont = self.model_auto.run(
-                c='ivp',  name='time', DS=1e-3, DSMIN=1e-5, EPSL=1e-05, EPSU=1e-05, EPSS=1e-03,
-                DSMAX=1e-1, NMX=5000, UZR={14: self.simulation_dur}, STOP={'UZ1'})
+            time_run_kwargs = dict(
+                c='ivp', name='time', DS=1e-3, DSMIN=1e-5, EPSL=1e-05, EPSU=1e-05, EPSS=1e-03,
+                DSMAX=1e-1, NMX=5000, UZR={14: self.simulation_dur}, STOP={'UZ1'},
+            )
+            self.t_sols, self.t_cont = self.model_auto.run(**time_run_kwargs)
 
             ndim = self._read_auto_ndim()
 
@@ -867,44 +882,67 @@ class SomatoModelPyrates():
                     "bypassing PyCoBi stability parser."
                 )
 
-            self.u_sols, self.u_cont = self.model_auto.run(
-                origin=self.t_cont, 
-                starting_point='UZ', 
-                name='u', # Name of continuation parameter (variable to vary) 
-                bidirectional=bidirectional, # Continue both forward and backward from starting point
+            # AUTO continuation kwargs collected into a dict so the exact parameters used can
+            # be persisted (below) without any drift from the actual run() call.
+            u_run_kwargs = dict(
+                starting_point='UZ',            # Name of continuation parameter (variable to vary)
+                name='u',
+                bidirectional=bidirectional,    # Continue both forward and backward from starting point
                 ICP=cont_param,
-                RL0=range[0], RL1=range[1], # Lower and upper bounds for continuation parameter(s)
-                IPS=1, # Problem type: 1=Equilibrium, 2=Periodic orbit continuation
-                ILP=1, # Detect limit points (folds): 1=Yes, 0=No 
-                ISP=2, # Bifurcation detection level: 0=none, 1=some, 2=more 
+                RL0=range[0], RL1=range[1],     # Lower and upper bounds for continuation parameter(s)
+                IPS=1,                          # Problem type: 1=Equilibrium, 2=Periodic orbit continuation
+                ILP=1,                          # Detect limit points (folds): 1=Yes, 0=No
+                ISP=2,                          # Bifurcation detection level: 0=none, 1=some, 2=more
                 get_eigenvals=get_eigenvals,
                 get_stability=get_stability_for_run,
-                ISW=1, 
-                #NTST=400, # mostly important when doing orbit/periodic continuation
-                #NCOL=4, # recommended in the auto docs
-                IAD=3, # recommended in the auto docs
-                IPLT=0, 
-                NBC=0, 
-                NINT=0, 
+                ISW=1,
+                IAD=3,                          # recommended in the auto docs
+                IPLT=0,
+                NBC=0,
+                NINT=0,
                 NMX=20000,
-                NPR= 50, #100, # Print/report frequency (every NPR steps)
-                MXBF={}, # Maximum number of bifurcations to locate
+                NPR=50,                         # Print/report frequency (every NPR steps)
+                MXBF={},                        # Maximum number of bifurcations to locate
                 IID=iid,
-                ITMX=20, #1000, # max.num. of iterations allowed in the accurate location of special solutions
-                ITNW=10, #40, 
-                NWTN=8, #12, 
-                JAC=0, 
-                EPSL=1e-06, #1e-07, 
-                EPSU=1e-06, #1e-07, 
-                EPSS=1e-04, #1e-05, # approx.100/1000 times EPSL,EPSU
-                DS=ds, # initial continuation step size
-                DSMIN=dsmin, # minimum allowed step size
-                DSMAX=dsmax, # maximum allowed step size
-                IADS=1, 
-                THL={}, 
-                THU={}, 
-                UZR={}, 
-                STOP={}
+                ITMX=20,                        # max num. of iterations to locate special solutions
+                ITNW=10,
+                NWTN=8,
+                JAC=0,
+                EPSL=1e-06,
+                EPSU=1e-06,
+                EPSS=1e-04,                     # approx.100/1000 times EPSL,EPSU
+                DS=ds,                          # initial continuation step size
+                DSMIN=dsmin,                    # minimum allowed step size
+                DSMAX=dsmax,                    # maximum allowed step size
+                IADS=1,
+                THL={}, THU={}, UZR={}, STOP={},
+            )
+
+            # Persist the exact bifurcation parameters for this run, before the long
+            # continuation, so they survive even if AUTO crashes mid-run.
+            if run_dir is not None:
+                bifurcation_parameters = {
+                    "cont_param": cont_param,
+                    "range": [range[0], range[1]],
+                    "coarse_scan": coarse_scan,
+                    "bidirectional": bidirectional,
+                    "ds": ds, "dsmin": dsmin, "dsmax": dsmax,
+                    "get_eigenvals": get_eigenvals,
+                    "get_stability": get_stability,
+                    "iid": iid,
+                    "ndim": ndim,
+                    "simulation_dur": self.simulation_dur,
+                    "auto_dir_path": auto_dir_path,
+                    "equilibrium_csv_path": equilibrium_csv_path,
+                    "time_continuation_kwargs": time_run_kwargs,
+                    "continuation_kwargs": u_run_kwargs,
+                }
+                with open(os.path.join(run_dir, "bifurcation_parameters.json"), "w") as f:
+                    json.dump(bifurcation_parameters, f, indent=2, default=str)
+
+            self.u_sols, self.u_cont = self.model_auto.run(
+                origin=self.t_cont,
+                **u_run_kwargs
             )
         finally:
             if checkpoint_stop is not None:
@@ -912,6 +950,9 @@ class SomatoModelPyrates():
                 if checkpoint_thread is not None:
                     checkpoint_thread.join(timeout=5)
                 _snapshot_auto_files()
+            # Restore cwd last, after the final snapshot has globbed this run's files.
+            if old_cwd is not None:
+                os.chdir(old_cwd)
 
         if manual_stability_parse:
             print('Starting manual stability read')

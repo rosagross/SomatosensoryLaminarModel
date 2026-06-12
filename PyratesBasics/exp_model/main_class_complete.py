@@ -8,6 +8,7 @@ SIMDIR = os.getenv("SIMDIR")
 #os.chdir(os.path.join(WDDIR,"PyratesBasics","exp_model")) 
 import sys
 import json
+import time
 from ruamel.yaml import YAML
 from pyrates.frontend.template import CircuitTemplate
 from pyrates.frontend.fileio.yaml import dump_to_yaml
@@ -63,11 +64,14 @@ equilibrium_df.to_csv("equilibrium_df_complete.csv", index=False)
 # %%
 # equilibrium csv: "equilibrium_df_complete.csv"
 output_dir = os.path.join(WDDIR, 'PyratesBasics', 'exp_model','complete_model_continuations')
-os.makedirs(output_dir, exist_ok=True) 
-checkpoint_dir = os.path.join(output_dir, "checkpoints")
+# Each run gets its own uniquely named folder (start date&time) holding the
+# bifurcation parameters, result CSVs/plot, and an isolated checkpoints subfolder.
+run_timestamp = time.strftime("%Y%m%dT%H%M%S")
+run_dir = os.path.join(output_dir, f"run_{run_timestamp}")
+checkpoint_dir = os.path.join(run_dir, "checkpoints")
 os.makedirs(checkpoint_dir, exist_ok=True)
 params = read_simulation_params()
-range_par = [1, 1.5]
+range_par = [1, 1.005]
 modello_prova = SomatoModelPyrates(params)
 cont_param = 'G/g_definition/g_input'
 auto_dir_path = "/data/u_grossmannr_software/auto-07p/"
@@ -80,7 +84,7 @@ modello_prova.pycobi_continuation(
     continuation_file_path,
     coarse_scan=True,
     bidirectional=False,
-    ds=1e-4,
+    ds=1e-4,    
     dsmin=1e-6,
     dsmax=1e-2,
     get_eigenvals=False,
@@ -88,21 +92,22 @@ modello_prova.pycobi_continuation(
     iid=2, # 1
     checkpoint_dir=checkpoint_dir,
     checkpoint_interval_s=300,
+    run_dir=run_dir,
 )
 cont_df = modello_prova.continuation_df(cont_param)
-# csv saving
+# csv saving (into this run's folder)
 filename = "complete_model_bifurcation_sI026.csv"
-filepath = os.path.join(output_dir, filename)
+filepath = os.path.join(run_dir, filename)
 cont_df.to_csv(filepath, index=False)
 
 # also save u_sols
 filename_usols = "u_sols_complete_model_bifurcation_sI026.csv"
-filepath_usols = os.path.join(output_dir, filename_usols)
+filepath_usols = os.path.join(run_dir, filename_usols)
 modello_prova.u_sols.to_csv(filepath_usols, index=False)
 
 # bifurcation plot export (single representative variable)
 representative_var = "E2S1"
-plot_filepath = os.path.join(output_dir, "complete_model_bifurcation_sI026_E2S1.png")
+plot_filepath = os.path.join(run_dir, "complete_model_bifurcation_sI026_E2S1.png")
 modello_prova.pycobi_bifurcation_plot(cont_param, cont_df, representative_var, plot_filepath)
 print("Simulation finished")
 # %%
