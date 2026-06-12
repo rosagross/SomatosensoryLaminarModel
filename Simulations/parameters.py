@@ -18,17 +18,17 @@ class Parameter():
         nPopA3b = 4 # E, PV, SST, VIP
         nPopS1 = 13 # 4*E, 4*PV, 4*SST, 1*VIP
         nPopS2 = 13 # 4*E, 4*PV, 4*SST, 1*VIP
-        nPopThal = 2 # one forward excitatory and one inhibitory feedback neuron
+        nPopThal = 3 # one forward excitatory, one inhibitory feedback (reticulus nucleus), one higher order thalamus E population 
         nPopTotal = nPopS1+nPopS2+nPopA3b+nPopThal
 
         # SYNAPTIC DECAY (depends on the connection type excitatory/inhibitory)
         # Based on visual cortex values
         # the last two values are used for the external input and background input
-        # with nPopTotal = 32 the shape of tau should be (32, 32) 
+        # with nPopTotal = 33 the shape of tau should be (33, 33) 
         # order: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 
         tauA3b = np.tile(np.array([6,3,20,15])*1e-3, (nPopTotal,1)) # sec
         tauS1 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20])*1e-3, (nPopTotal,1)) # sec
-        tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3])*1e-3, (nPopTotal,1)) # sec
+        tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
         # add delay to long range connections
@@ -297,53 +297,87 @@ class Parameter():
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))
         W0 = np.hstack((np.vstack((W_A3bA3b, W_S1A3b, W_S2A3b)), W0))
 
+        # Synaptic strength
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        S_thalToS1 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
-                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # no thal E/I target (integrated in last two entries of below S2 array) 
+
+        # the A3b values will be summed below so that they fit the 4 population structure
+        S_thalToA3b = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # no connections from thal I to S1 
+                            [0.5, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0]]) 
         
-        S_A3bto_thal = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
-        S_S1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-        S_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])
-        S_to_thal = np.hstack((S_A3bto_thal, S_S1to_thal,S_S2to_thal))
+        S_thalToA1 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # no connections from thal I to S1 
+                              [0.5, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0]]) # POm to S1 (mainly to L2/3 and L5a pyramidal cells) 
+        
+        S_thalToS2 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S2, using S1 values but reduce them later!
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # no connections from thal I to S2
+                              [0.3, 0, 0, 0, 0.5, 0, 0, 0.3, 0, 0, 0, 0, 0]]) # POm to S2 (mainly to L2/3 and L5a pyramidal cells, but also L4 which is driving in S2) 
+        
+        # approximation of synpatic strength: 0.5 for driver, 0.3 for modulator
+
+        S_A3bto_thal = np.array([[0.3, 0, 0, 0], [0, 0, 0, 0], [0.8, 0, 0, 0]])
+        S_A1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0], # to thal E 
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # to thal I (reticular nucleus)
+                                [0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0.3, 0, 0]]) # S1 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
+        S_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0], 
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                                [0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0.3, 0, 0]]) # S2 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
+        S_to_thal = np.hstack((S_A3bto_thal, S_A1to_thal, S_S2to_thal))
 
         # connection probabilities
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        P_thalToS1 = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0], # thalamus excitatory
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticlar nucleus inhibitory (estimation)
+        P_thalToA3b = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0], # thalamus excitatory
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
+                                [30, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0]])*1e-2 # POm to S2
+        
+        P_thalToA1 = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0]*0.7, # thal E to A1 (less strong than to A3b, therefore 0.7!)
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
+                                [30, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0]])*1e-2 # POm to S1
+
+        P_thalToS2 = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0]*0.2, # thal E to S2 (even weaker, therefore 0.2!)
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
+                                [30, 0, 0, 0, 30, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S2
 
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        P_A3bto_thal = np.array([[0, 0, 0, 0], [0, 0, 0, 0]])
-        P_S1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
-        P_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]]) # this is only from the cortex!
-        P_to_thal = np.hstack((P_A3bto_thal, P_S1to_thal,P_S2to_thal))
+        P_A3bto_thal = np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
+        P_S1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0], # S1 to Thal E (some projections from L6 to VPM)
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 20, 0, 0]]) # S1 to POm (L5b driver)
+        P_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0], 
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 20, 0, 0]]) # S2 to POm (L5b driver, 6 modulator)
+        P_to_thal = np.hstack((P_A3bto_thal, P_S1to_thal, P_S2to_thal))
         
         # calculate final thalamus connectivity
         PS_to_thal = np.multiply(P_to_thal, S_to_thal)
         a3b_C = np.array([np.sum(C[idx_S1_E]), np.sum(C[idx_S1_P]), np.sum(C[idx_S1_S]), np.sum(C[idx_S1_V])])
         C_all = np.concatenate((a3b_C, C))
         W_to_thal = np.multiply(PS_to_thal, C_all)
-        # thalamus input to S1 connectivity  
-        PS_from_thal_S1 = np.multiply(P_thalToS1, S_thalToS1)
-        cell_count_thal = thal_cellcount # it is 230 in Jiang et al. 2023 but for us it might be different!
-        W_from_thal_S1 = np.multiply(PS_from_thal_S1, cell_count_thal)
 
-        # now that we have the connectivity from- and to thalamus and S1/S2,
-        # we can collapse it to get input array to area 3b 
-        W_A3bThal_E = np.sum(W_from_thal_S1[:,idx_S1_E], axis=1)
-        W_A3bThal_P = np.sum(W_from_thal_S1[:,idx_S1_P], axis=1)
-        W_A3bThal_S = np.sum(W_from_thal_S1[:,idx_S1_S], axis=1)
-        W_A3bThal_V = np.sum(W_from_thal_S1[:,idx_S1_V], axis=1)
+        # thalamus input to S1 connectivity  
+        PS_from_thal_A3b = np.multiply(P_thalToA3b, S_thalToA3b)
+        PS_from_thal_A1 = np.multiply(P_thalToA1, S_thalToA1)
+        PS_from_thal_S2 = np.multiply(P_thalToS2, S_thalToS2)
+        cell_count_thal = thal_cellcount # it is 230 in Jiang et al. 2023 but for us it might be different!
+        
+        # TODO: check if it should be different cellcounts for reticulares and POm!
+        W_from_thal_A3b = np.multiply(PS_from_thal_A3b, cell_count_thal)
+        W_from_thal_A1 = np.multiply(PS_from_thal_A1, cell_count_thal)
+        W_from_thal_S2 = np.multiply(PS_from_thal_S2, cell_count_thal)
+
+        # we now collapse the connectivity for A3b to 4 populations
+        W_A3bThal_E = np.sum(W_from_thal_A3b[:,idx_S1_E], axis=1) # thal to a3b
+        W_A3bThal_P = np.sum(W_from_thal_A3b[:,idx_S1_P], axis=1)
+        W_A3bThal_S = np.sum(W_from_thal_A3b[:,idx_S1_S], axis=1)
+        W_A3bThal_V = np.sum(W_from_thal_A3b[:,idx_S1_V], axis=1)
         W_A3bThal = np.vstack((W_A3bThal_E, W_A3bThal_P, W_A3bThal_S, W_A3bThal_V))
 
-        # adjust input from thalamus to S1 (should be slightly weaker compared to A3b)
-        W_from_thal_S1 = W_from_thal_S1 * 0.8
-        # thalamus input to S2 is just a fifth of what A3b receives 
-        W_from_thal_S2 = W_from_thal_S1 * 0.2
         # join area 3b, S1 and S2 input arrays
-        W_from_thal = np.hstack((W_A3bThal.T, W_from_thal_S1, W_from_thal_S2))
+        W_from_thal = np.hstack((W_A3bThal.T, W_from_thal_A1, W_from_thal_S2))
         # add within thalamus (E and I) connectivity 
         tEE, tEI, tIE, tII = thal_connect
-        W_from_thal = np.hstack((W_from_thal, [[tEE,tEI],[tIE,tII]]))
+        # POm connectivity to other thalamic neurons is not present (=0)
+        W_from_thal = np.hstack((W_from_thal, [[tEE,tEI,0],[tIE,tII,0],[0,0,0]]))
 
         # Create the external input matrix
         # Only the thalamus E population receives the external input (from the brain stem)
@@ -497,7 +531,8 @@ class Parameter():
                                     [  0.14218422,  40.03107351, 166.82960408],
                                     [  0.07937015,  42.01276379,  56.95305832],
                                     [  0.1,  40,  30], # Thalamus E
-                                    [  0.1,  40,  30]] # Thalamus I
+                                    [  0.1,  40,  30], # Thalamus E
+                                    [  0.1,  40,  30]] # Thalamus E POm
 
         sigmoid_params = np.vstack((sigmoid_params_A3b, sigmoid_params_S1, sigmoid_params_S2))
                                        
