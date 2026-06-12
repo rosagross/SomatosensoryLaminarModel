@@ -32,8 +32,19 @@ if location == "mpi":
     RECONDIR = os.getenv('SUBJECTS_DIR')
     SIMDIR = os.getenv("SIMDIR")
     WDDIR = os.getenv("WDDIR")
+    RESDIR = os.getenv("RESDIR")
     
 figure_dir = os.path.join(SIMDIR, "Figures")
+tf_target_path = os.path.join(
+    RESDIR, "Figures", "Main", "eeg_results", "source_reconstruction",
+    "group", "_preprestim_corrected", "roi_epochswise",
+    "group_roi_tf_morlet_ses-elec_preprestim_corrected.csv"
+)
+tc_target_path = os.path.join(
+    RESDIR, "Figures", "Main", "eeg_results", "source_reconstruction",
+    "group", "_preprestim_corrected", "roi_epochswise",
+    "group_roi_timecourse_pooled_ses-elec_preprestim_corrected.csv"
+)
 
 
 # add model to datapath
@@ -59,8 +70,8 @@ def parse_params():
     return g
 
 # load EEG data and forward solution from real subject derivatives
-subID    = 15           # example subject; edit to change
-modality = 'mecha'      # 'mecha' or 'elec'
+subID    = 29           # example subject; edit to change
+modality = 'elec'      # 'mecha' or 'elec'
 l_freq_orig = 0.1
 l_freq      = 1
 h_freq      = 40
@@ -108,11 +119,11 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [10] #np.arange(0,55,5) #[100, 120, 140, 160]
-backgrndI_strengths = [1] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
+coupling_strengths = np.arange(0,55,5) #[100, 120, 140, 160]
+backgrndI_strengths = np.arange(0,8,2) #[40, 60, 80] #,6,7]
 input_durations = [0.02] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [40] #np.arange(0,50,10)
-strength_I = [0.24] #np.arange(0.2,0.44,0.02) #, 0.25, 0.26, 0.36]
+input_strengths = [5] #np.arange(0,50,10)
+strength_I = np.arange(0.2,0.44,0.02) #, 0.25, 0.26, 0.36]
 ginters = [0.5] #np.arange(0,2,0.01)
 area = 'all'
 pyrates = False
@@ -158,12 +169,32 @@ for ginter in ginters:
                         print("Simulation duration (in s):", duration)
 
                         # analyse signal (frequency spectra)
-                        model.analyse_signal(save_spectrum=True)
+                        #model.analyse_signal(save_spectrum=True)
+
+                        # time-frequency error against measured data
+                        tf_error, tf_sim, tf_target = model.compute_error_timefreq(tf_target_path)
+                        print("TF error (log-MSE):", tf_error)
+                        model.plot_timefreq_comparison(tf_sim, tf_target)
+
+                        # time-course error against measured data
+                        tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path)
+                        print("Time-course error (peak-norm MSE):", tc_error)
+                        model.plot_timecourse_comparison(tc_sim, tc_target)
+
+                        # persist per-run comparison maps/traces + values for later animation
+                        model.save_timefreq_comparison(
+                            os.path.join(SIMDIR, "timefreq_comparison"), tf_sim, tf_target, tf_error)
+                        model.save_timecourse_comparison(
+                            os.path.join(SIMDIR, "timecourse_comparison"), tc_sim, tc_target, tc_error)
+                        model.append_comparison_summary(tf_error=tf_error, tc_error=tc_error)
 
                         # compute dipoles
                         sim_dip = model.compute_dipoles()
-                        model.plot_dipoles(sim_dip, epochs.info)
-                        evoked, epochs_sim = model.simulate_eeg(epochs, data_path_labels, sim_dip, fwd, src_fixed)
+                        #model.plot_dipoles(sim_dip, epochs.info)
+
+                        #error = compute_error_timefreq()
+
+                        stc, evoked, epochs_sim = model.simulate_eeg(epochs, data_path_labels, sim_dip, fwd, src_fixed)
                         model.plot_eeg(evoked, epochs_sim)
 
                         # print important parameters

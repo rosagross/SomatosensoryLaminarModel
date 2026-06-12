@@ -13,3 +13,4 @@ PyratesBasics/exp_model/fort.*
 Figures
 bat/start.shcore
 .venv
+PyratesBasics/exp_model/complete_model_continuations/checkpoints/*
