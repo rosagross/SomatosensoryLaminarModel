@@ -11,7 +11,8 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": false,
-            "cwd": "/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/PyratesBasics/pycobi_prova/"
+            "python": "/data/u_grossmannr_software/miniforge3/envs/pyrates_env/bin/python",
+            "cwd": "${fileDirname}"
         }
     ]
 }

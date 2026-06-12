@@ -914,6 +914,7 @@ class SomatoModelPyrates():
                 _snapshot_auto_files()
 
         if manual_stability_parse:
+            print('Starting manual stability read')
             self._inject_stability_from_auto(cont_param=cont_param, ndim=ndim)
         
 

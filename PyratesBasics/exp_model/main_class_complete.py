@@ -1,4 +1,3 @@
-# %% Main
 """
 Main code to test the model class
 """
@@ -68,7 +67,7 @@ os.makedirs(output_dir, exist_ok=True)
 checkpoint_dir = os.path.join(output_dir, "checkpoints")
 os.makedirs(checkpoint_dir, exist_ok=True)
 params = read_simulation_params()
-range_par = [1, 4]
+range_par = [1, 1.5]
 modello_prova = SomatoModelPyrates(params)
 cont_param = 'G/g_definition/g_input'
 auto_dir_path = "/data/u_grossmannr_software/auto-07p/"

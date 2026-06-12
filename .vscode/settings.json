@@ -1,0 +1,5 @@
+{
+    "python.defaultInterpreterPath": "/data/u_grossmannr_software/miniforge3/envs/pyrates_env/bin/python",
+    "python.condaPath": "/data/u_grossmannr_software/miniforge3/condabin/conda",
+    "python.terminal.activateEnvironment": true
+}
