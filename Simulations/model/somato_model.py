@@ -11,7 +11,7 @@ import pandas as pd
 import mne
 from parameters import Parameter
 
-location = "laptop"
+location = "mpi"
 if location == "laptop":
     WDDIR = r"C:\Users\gross\OneDrive - UvA\Documents\IMPRS_Leipzig\MyProject\Modelling\ChienReplication\SomatosensoryLaminarModel"
     SIMDIR = os.path.join(WDDIR, "output")
@@ -25,6 +25,10 @@ if location == "mpi":
     WDDIR = os.getenv("WDDIR")
     
 figure_dir = os.path.join(SIMDIR, "Figures")
+
+# Structured per-comparison output folders (per-run PNG + HDF5 + summary CSV).
+TIMEFREQ_DIR = os.path.join(SIMDIR, "timefreq_comparison")
+TIMECOURSE_DIR = os.path.join(SIMDIR, "timecourse_comparison")
 
 
 helper_path = os.path.join(WDDIR, 'Analysis')
@@ -547,10 +551,10 @@ class SomatoModel():
         - oscillation frequency peak
         - oscillation yes/no
         """
-        spectra, freqs = self.compute_late_longterm_spectrum()
+        #spectra, freqs = self.compute_late_longterm_spectrum()
 
-        self.plot_freq_spectrum(spectra, freqs, min_freq_hz=3, max_freq_hz=50)
-        self.plot_freq_spectrum_all_populations(spectra, freqs)
+        #self.plot_freq_spectrum(spectra, freqs, min_freq_hz=3, max_freq_hz=50)
+        #self.plot_freq_spectrum_all_populations(spectra, freqs)
 
         spectra_full, freqs_full = self.compute_full_spectrum()
         self.plot_freq_spectrum(spectra_full, freqs_full, min_freq_hz=3, max_freq_hz=50)
@@ -558,7 +562,7 @@ class SomatoModel():
         
         if save_spectrum:
             spectrum_dir = os.path.join(SIMDIR, "spectrum_results")
-            path = self.save_frequency_spectra(spectrum_dir, spectra=spectra, freqs=freqs)
+            path = self.save_frequency_spectra(spectrum_dir, spectra=spectra_full, freqs=freqs_full)
             print(f"saved spectra: {path}")
 
 
@@ -707,6 +711,7 @@ class SomatoModel():
         }
         
         return mapping
+
     
     def prepDipoles(self, dipole_length, dipole_orientation, resistance_factor, cellcountsE_relative):
 
@@ -808,7 +813,6 @@ class SomatoModel():
 
     def plot_dipoles(self, simDipoles, raw_info):
         time = np.arange(simDipoles.shape[1]) / self.sfreq_saved
-        print("times", len(time), time)
         area_groups = {
             "A3b": [0],
             "A1": [1, 2, 3, 4],
@@ -839,7 +843,7 @@ class SomatoModel():
         figuredir = os.path.join('.', 'Figures')
         os.makedirs(figuredir, exist_ok=True)
         fig.savefig(os.path.join(figuredir, 'computed_dipoles_by_area.png'), dpi=300, bbox_inches='tight')
-        plt.show(fig)
+        plt.show()
 
 
     def simulate_eeg(self, raw, data_path_labels, simDipoles, fwd, src_fixed):
@@ -893,18 +897,22 @@ class SomatoModel():
 
         # --- 3. Wrap in EpochsArray (1 epoch, no noise) ---
         info = fwd['info'].copy()
+        # Pick EEG channels from raw.info to match eeg_data
         raw.resample(self.sfreq_saved)
+        eeg_picks = mne.pick_types(raw.info, meg=False, eeg=True)
+        eeg_info = mne.pick_info(raw.info, eeg_picks)
         
         # EpochsArray expects shape: (n_epochs, n_channels, n_times)
         epochs = mne.EpochsArray(
             eeg_data[np.newaxis, :, :],
-            info=raw.info,
+            info=eeg_info,
             tmin=0.0,
             baseline=None
         )
         evoked = epochs.average()
 
-        return evoked, epochs
+        return stc, evoked, epochs
+        
 
     def simulate_eeg_mnesimulator(self, raw, data_path_labels, simDipoles, fwd, src_fixed):
         n_events = 1
@@ -942,7 +950,7 @@ class SomatoModel():
         fig = evoked.plot(show=False)
         figuredir = os.path.join('.', 'Figures')
         os.makedirs(figuredir, exist_ok=True)
-        fig.savefig(os.path.join(figuredir, 'nullingbf_recon_simulated_evoked.pdf'), format='pdf', bbox_inches='tight')
+        #fig.savefig(os.path.join(figuredir, 'simulated_evoked.pdf'))
         plt.show(fig)
 
         freqs = np.arange(8, 50, 2)
@@ -964,56 +972,444 @@ class SomatoModel():
         tfr_ax.set_ylabel("Frequency (Hz)")
         tfr_fig.colorbar(mesh, ax=tfr_ax, label="Power ")
         tfr_fig.tight_layout()
-        tfr_fig.savefig(os.path.join(figuredir, 'nullingbf_recon_simulated_tfr.png'), dpi=300, bbox_inches='tight')
+        tfr_fig.savefig(os.path.join(figuredir, 'simulated_tfr_epochs.png'), dpi=300, bbox_inches='tight')
         plt.show(tfr_fig)
 
         topo_times = np.linspace(evoked.times[0], evoked.times[-1], 3)
         topo_fig = evoked.plot_topomap(times=topo_times, show=False)
-        topo_fig.savefig(os.path.join(figuredir, 'nullingbf_recon_simulated_topomaps.png'), dpi=300, bbox_inches='tight')
+        topo_fig.savefig(os.path.join(figuredir, 'simulated_topomaps_epochs.png'), dpi=300, bbox_inches='tight')
         plt.show(topo_fig)
 
-    def compute_timefreq(self, simulated_eeg):
-        """
-        Compute time-frequency representation of the simulated EEG signal.
-        Parameters:
-            simulated_eeg (mne.Evoked): Simulated EEG evoked response
-        Returns:
-            numpy array: Time-frequency power data of shape (n_freqs, n_times)
-        """
-        
-        # questions: 
-        # - of what do I compute the time frequency? dipoles or epochs?
-        #      answer: epochs, but compare it to source reconstructed time freq
-        # - what is the "equivalent" source reconstructed activity? 
 
+
+    def compute_timefreq(self, simulated_dip):
+        """
+        Compute Morlet TF power for simulated dipoles per ROI.
+
+        Returns:
+            dict: roi label → (n_freqs=40, n_times=451) array, time axis -500..400 ms at 2 ms steps.
+        """
+        sfreq    = self.sfreq_saved                              # 1000 Hz
+        stim_idx = round(self.input_onset / self.step_size) - 1  # 0-based stimulus index
+
+        a3b_dip = simulated_dip[0]
+        a1_dip  = np.sum(simulated_dip[1:5], axis=0)
+        s2_dip  = np.sum(simulated_dip[5:9], axis=0)
+
+        tf_freqs    = np.arange(1, 41, 1).astype(float)
+        tf_n_cycles = tf_freqs / 2
+        window_start = 0
+        tf_out = {}
+        for roi_label, dip in [("A3b", a3b_dip), ("A1", a1_dip), ("S2", s2_dip)]:
+            segment = dip
+
+            power = mne.time_frequency.tfr_array_morlet(
+                segment[np.newaxis, np.newaxis, :],
+                sfreq=sfreq, freqs=tf_freqs,
+                n_cycles=tf_n_cycles, output="power",
+                decim=1, n_jobs=1,
+            )[0, 0]  # (n_freqs=40, 1901)
+
+            # Trim padding → (n_freqs=40, 901), downsample to 2 ms → (n_freqs=40, 451)
+            power = power[:, window_start:]
+            tf_out[roi_label] = power[:,::2]
+
+        return tf_out
 
 
     def load_target_timefreq(self, data_path):
         """
-        Load time frequency data that I computed from real EEG data.
+        Load raw Morlet TF power for electrical stimulation from the CSV produced by
+        step009_plot_roi_epochswise_response_intensity.py.
+
         Returns:
-            numpy array: Time-frequency power data of shape (n_freqs, n_times)
+            dict: model roi label → (n_freqs=40, n_times=451) array
         """
-        raise NotImplementedError("This function is a placeholder. Implement loading of real EEG time-frequency data here.")
-    
-    def compute_error_timefreq(self, simulated_tfr, target_tfr):
+        df = pd.read_csv(data_path)
+        df = df[(df["modality"] == "elec") & (df["norm_mode"] == "raw")]
+
+        roi_map = {"BA3b": "A3b", "BA1": "A1", "S2": "S2"}
+        tf_target = {}
+
+        for csv_roi, model_roi in roi_map.items():
+            roi_df = df[df["roi"] == csv_roi].sort_values(["freq_hz", "time_ms"])
+            freqs  = np.sort(roi_df["freq_hz"].unique())
+            times  = np.sort(roi_df["time_ms"].unique())
+            power  = roi_df["power"].to_numpy().reshape(len(freqs), len(times))
+            tf_target[model_roi] = power  # (n_freqs=40, n_times=451)
+
+        return tf_target
+
+
+    def compute_error_timefreq(self, data_path):
         """
-        Compute error between simulated and target time-frequency representations.
-        Parameters:
-            simulated_tfr (numpy array): Simulated time-frequency power (n_freqs x n_times)
-            target_tfr (numpy array): Target time-frequency power from real data (n_freqs x n_times)
+        Compute the dimensionless TF error between simulation and measured data.
+
+        Both maps are normalized by their own baseline (-500 to -430 ms per frequency),
+        then compared in log10 space via MSE. This makes the error scale-invariant —
+        robust to the absolute amplitude difference between simulated and measured dipoles.
+
         Returns:
-            float: Error metric (e.g., mean squared error)
+            tuple: (float error, tf_sim dict, tf_target dict)
+                - float: Mean log10-normalized MSE across ROIs (A3b, A1, S2).
+                - tf_sim: roi label → (n_freqs=40, n_times=451) simulated power array
+                - tf_target: roi label → (n_freqs=40, n_times=451) measured power array
         """
-        if simulated_tfr.shape != target_tfr.shape:
-            raise ValueError("Simulated and target TFR must have the same shape.")
-        
-        error = np.mean((simulated_tfr - target_tfr) ** 2)
-        return error
+        sim_dip   = self.compute_dipoles()
+        tf_sim    = self.compute_timefreq(simulated_dip=sim_dip)
+        tf_target = self.load_target_timefreq(data_path)
+
+        # Baseline: -500 to -430 ms → indices 0:36 at 2 ms steps (35 * 2 = 70 ms / 2 = 35+1=36 pts)
+        baseline_slice = slice(150, 200)
+        # Analysis: -200 ms onward → index 150 on the 2 ms / -500..400 axis.
+        # Baseline is still normalized against -500..-430 ms; only the error window is trimmed.
+        analysis_slice = slice(200, 400)
+        eps = 1e-10
+
+        errors = []
+        for roi in ("A3b", "A1", "S2"):
+            if roi not in tf_sim or roi not in tf_target:
+                raise RuntimeError(f"Missing TF data for ROI '{roi}'.")
+            P_sim = tf_sim[roi]    # (n_freqs, n_times)
+            P_tgt = tf_target[roi]
+
+            if P_sim.shape != P_tgt.shape:
+
+                # cut simulated signal to same size
+                P_sim = P_sim[:, :P_tgt.shape[1]]
 
 
+            bl_sim = P_sim[:, baseline_slice].mean(axis=1, keepdims=True)
+            bl_tgt = P_tgt[:, baseline_slice].mean(axis=1, keepdims=True)
 
-    
+            log_sim = np.log10(P_sim[:, analysis_slice] / (bl_sim + eps) + eps)
+            log_tgt = np.log10(P_tgt[:, analysis_slice] / (bl_tgt + eps) + eps)
+
+            errors.append(float(np.mean((log_sim - log_tgt) ** 2)))
+
+        return float(np.mean(errors)), tf_sim, tf_target
+
+
+    def plot_timefreq_comparison(self, tf_sim, tf_target):
+        """
+        Plot simulated vs. measured Morlet TF power side-by-side for each ROI.
+
+        Layout: 2 rows (Simulated / Measured) × 3 cols (A3b, A1, S2).
+        Both rows share the same colour scale per ROI (95th-percentile of simulated power).
+        Saves to ./Figures/tf_comparison_g-<g>_sI-<sI>_area-<area>.png.
+        """
+        rois      = ("A3b", "A1", "S2")
+        row_labels = ("Simulated", "Measured")
+        tf_freqs  = np.arange(1, 41, 1).astype(float)
+
+        # Time axis: -500 ms to +400 ms at 2 ms steps → 451 points.
+        # Display window trimmed to -200 ms onward (index 150); baseline at -500..-430 kept upstream.
+        start_idx = 200
+        stop_idx = 400
+        t_ms = np.linspace(-500, 400, 451)[start_idx:stop_idx]
+
+        figuredir = TIMEFREQ_DIR
+        os.makedirs(figuredir, exist_ok=True)
+
+        fig, axes = plt.subplots(2, 3, figsize=(13, 6), sharex=True, sharey=True)
+        fig.suptitle(
+            f"TF power — g={self.coupling_strength}, sI={self.strength_I}, area={self.area}",
+            fontsize=11,
+        )
+
+        for col, roi in enumerate(rois):
+            P_sim = tf_sim[roi][:, start_idx:stop_idx]    # (n_freqs=40, n_times_trimmed)
+            P_tgt = tf_target[roi][:, start_idx:stop_idx]
+            vmax  = float(np.percentile(P_sim, 95))
+            vmin  = 0.0
+
+            for row, (data, label) in enumerate(
+                zip((P_sim, P_tgt), row_labels)
+            ):
+                ax = axes[row, col]
+                im = ax.imshow(
+                    data,
+                    aspect="auto",
+                    origin="lower",
+                    extent=[t_ms[0], t_ms[-1], tf_freqs[0], tf_freqs[-1]],
+                    cmap="hot_r",
+                    vmin=vmin,
+                    vmax=vmax,
+                )
+                ax.axvline(0, color="white", lw=0.8, ls="--")
+                if row == 0:
+                    ax.set_title(roi)
+                if col == 0:
+                    ax.set_ylabel(f"{label}\nFrequency (Hz)")
+                if row == 1:
+                    ax.set_xlabel("Time (ms)")
+                plt.colorbar(im, ax=ax, label="Power (a.u.²)", fraction=0.046, pad=0.04)
+
+        fig.tight_layout()
+        fname = (
+            f"tf_comparison_g-{self.coupling_strength}"
+            f"_sI-{self.strength_I}"
+            f"_area-{self.area}.png"
+        )
+        fig.savefig(os.path.join(figuredir, fname), dpi=300, bbox_inches="tight")
+        plt.show()
+
+
+    def compute_timecourse(self, simulated_dip):
+        """
+        Extract the simulated dipole time course per ROI (no Morlet).
+
+        Mirrors compute_timefreq's windowing/grouping. Returns the full
+        -500..+400 ms window (baseline kept) so the analysis/plot window can be
+        trimmed to -200 ms later while still normalizing against the
+        -500..-430 ms baseline.
+
+        Returns:
+            dict: roi label -> (n_times=451,) baseline-corrected trace,
+                  time axis -500..+400 ms at 2 ms steps.
+        """
+        stim_idx = round(self.input_onset / self.step_size) - 1  # 0-based stimulus index
+
+        a3b_dip = simulated_dip[0]
+        a1_dip  = np.sum(simulated_dip[1:5], axis=0)
+        s2_dip  = np.sum(simulated_dip[5:9], axis=0)
+
+        # Window of interest: -500 ms to +400 ms relative to stimulus onset (901 samples at 1 kHz)
+        win_start = stim_idx - 500
+        win_end   = stim_idx + 401
+
+        # Baseline window: -500 to -430 ms -> indices 0:36 on the 2 ms axis.
+        baseline_slice = slice(0, 36)
+
+        tc_out = {}
+        for roi_label, dip in [("A3b", a3b_dip), ("A1", a1_dip), ("S2", s2_dip)]:
+            segment = dip[win_start:win_end][::2]                  # (451,) at 2 ms steps
+            segment = segment - segment[baseline_slice].mean()     # baseline-correct to -500..-430 ms
+            tc_out[roi_label] = segment
+
+        return tc_out
+
+
+    def load_target_timecourse(self, data_path):
+        """
+        Load the measured group-average ROI time course for electrical stimulation
+        from the CSV produced by step009_plot_roi_epochswise_response_intensity.py.
+
+        Returns:
+            dict: model roi label -> (n_times=451,) baseline-corrected trace.
+        """
+        df = pd.read_csv(data_path)
+        df = df[df["modality"] == "elec"]
+
+        roi_map = {"BA3b": "A3b", "BA1": "A1", "S2": "S2"}
+        baseline_slice = slice(0, 36)  # -500..-430 ms
+        tc_target = {}
+
+        for csv_roi, model_roi in roi_map.items():
+            roi_df = df[df["roi"] == csv_roi].sort_values("time_s")
+            trace  = roi_df["amplitude"].to_numpy()
+            # Already baseline-corrected upstream; re-subtract for symmetry with the simulation.
+            trace  = trace - trace[baseline_slice].mean()
+            tc_target[model_roi] = trace
+
+        return tc_target
+
+
+    def compute_error_timecourse(self, data_path):
+        """
+        Compute the dimensionless time-course error between simulation and measured data.
+
+        Each trace is peak-normalized (divided by its max absolute value over the
+        analysis window) before comparison, making the error scale-invariant —
+        the simulated dipoles and measured nAm amplitudes are on different scales.
+        The error focuses on waveform shape and timing.
+
+        Returns:
+            tuple: (float error, tc_sim dict, tc_target dict)
+                - float: Mean peak-normalized MSE across ROIs (A3b, A1, S2).
+                - tc_sim: roi label -> (n_times=451,) simulated trace
+                - tc_target: roi label -> (n_times=451,) measured trace
+        """
+        sim_dip   = self.compute_dipoles()
+        tc_sim    = self.compute_timecourse(simulated_dip=sim_dip)
+        tc_target = self.load_target_timecourse(data_path)
+
+        # Analysis window: -200 ms onward -> index 150 on the 2 ms / -500..400 axis.
+        analysis_slice = slice(150, None)
+        eps = 1e-10
+
+        errors = []
+        for roi in ("A3b", "A1", "S2"):
+            if roi not in tc_sim or roi not in tc_target:
+                raise RuntimeError(f"Missing time-course data for ROI '{roi}'.")
+            x_sim = tc_sim[roi][analysis_slice]
+            x_tgt = tc_target[roi][analysis_slice]
+
+            if x_sim.shape != x_tgt.shape:
+                # cut simulated signal to same size
+                x_sim = x_sim[:x_tgt.shape[0]]
+
+            x_sim = x_sim / (np.max(np.abs(x_sim)) + eps)
+            x_tgt = x_tgt / (np.max(np.abs(x_tgt)) + eps)
+
+            errors.append(float(np.mean((x_sim - x_tgt) ** 2)))
+
+        return float(np.mean(errors)), tc_sim, tc_target
+
+
+    def plot_timecourse_comparison(self, tc_sim, tc_target):
+        """
+        Plot simulated vs. measured ROI time courses (peak-normalized) per ROI.
+
+        Layout: 1 row x 3 cols (A3b, A1, S2). Raw scales differ too much to share
+        an axis, so each trace is peak-normalized over the -200..+400 ms window —
+        the same quantity the error is computed on.
+        Saves to ./Figures/tc_comparison_g-<g>_sI-<sI>_area-<area>.png.
+        """
+        rois = ("A3b", "A1", "S2")
+        eps  = 1e-10
+
+        # Time axis: -500..+400 ms at 2 ms steps, trimmed to -200 ms onward.
+        t_ms = np.linspace(-500, 400, 451)[150:]
+
+        figuredir = TIMECOURSE_DIR
+        os.makedirs(figuredir, exist_ok=True)
+
+        fig, axes = plt.subplots(1, 3, figsize=(13, 3.4), sharex=True, sharey=True)
+        fig.suptitle(
+            f"Time course — g={self.coupling_strength}, sI={self.strength_I}, area={self.area}",
+            fontsize=11,
+        )
+
+        for ax, roi in zip(axes, rois):
+            x_sim = tc_sim[roi][150:]
+            x_tgt = tc_target[roi][150:]
+            x_sim = x_sim / (np.max(np.abs(x_sim)) + eps)
+            x_tgt = x_tgt / (np.max(np.abs(x_tgt)) + eps)
+
+            ax.plot(t_ms, x_sim, color="C1", lw=1.5, label="Simulated")
+            ax.plot(t_ms, x_tgt, color="black", lw=1.5, label="Measured")
+            ax.axvline(0, color="grey", lw=0.8, ls="--")
+            ax.axhline(0, color="k", lw=0.5, alpha=0.3)
+            ax.set_title(roi)
+            ax.set_xlabel("Time (ms)")
+            if ax is axes[0]:
+                ax.set_ylabel("Peak-normalized amplitude")
+            ax.legend(frameon=False, fontsize=8)
+
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+        fname = (
+            f"tc_comparison_g-{self.coupling_strength}"
+            f"_sI-{self.strength_I}"
+            f"_area-{self.area}.png"
+        )
+        fig.savefig(os.path.join(figuredir, fname), dpi=300, bbox_inches="tight")
+        plt.show()
+
+
+    def _comparison_param_attrs(self):
+        """Parameter metadata stored on every saved comparison file (mirrors save_frequency_spectra)."""
+        return {
+            "g_intercortical": self.g_intercortical,
+            "coupling_strength": self.coupling_strength,
+            "strength_I": self.strength_I,
+            "Ib_strength": self.Ib_strength,
+            "Iext_strength": self.Iext_strength,
+            "Iext_duration": self.Iext_duration,
+            "step_size": self.step_size,
+            "input_onset": self.input_onset,
+            "area": self.area,
+            "input_type": self.input_type,
+        }
+
+    def _comparison_stem(self, prefix):
+        """Per-run filename stem encoding the full parameter set (uniqueness across the sweep)."""
+        return (
+            f"{prefix}_ginter{self.g_intercortical}_g{self.coupling_strength}_sI{self.strength_I}"
+            f"_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_{self.input_type}Iexts{self.Iext_strength}"
+            f"_area{self.area}"
+        )
+
+    def append_comparison_summary(self, tf_error=None, tc_error=None):
+        """Append one summary row (params + scalar errors) to SIMDIR/comparison_summary.csv (call once per run)."""
+        summary_path = os.path.join(SIMDIR, "comparison_summary.csv")
+        row = self._comparison_param_attrs()
+        row["tf_error"] = tf_error
+        row["tc_error"] = tc_error
+        pd.DataFrame([row]).to_csv(
+            summary_path,
+            mode="a",
+            header=not os.path.exists(summary_path),
+            index=False,
+        )
+
+    def save_timefreq_comparison(self, filedir, tf_sim, tf_target, tf_error, filename=None):
+        """
+        Save the simulated/measured TF maps + scalar error for one run to HDF5.
+
+        Layout: groups 'sim' and 'target', each with datasets A3b/A1/S2 (40 x 451);
+        plus 'freqs' (1-40 Hz) and 'times_ms' (-500..+400 ms). Parameter metadata is
+        stored as attrs so the animation can filter on them.
+        """
+        os.makedirs(filedir, exist_ok=True)
+        if filename is None:
+            filename = self._comparison_stem("tf_comparison") + ".hdf5"
+        elif not filename.endswith(".hdf5"):
+            filename = filename + ".hdf5"
+
+        freqs = np.arange(1, 41, 1).astype(float)
+        # Derive the time axis from the actual map width so the stored axis always
+        # matches the data (the TF window spans -500..+400 ms by design).
+        n_times  = np.asarray(tf_sim["A3b"]).shape[1]
+        times_ms = np.linspace(-500, 400, n_times)
+
+        filepath = os.path.join(filedir, filename)
+        with h5py.File(filepath, "w") as h5f:
+            sim_grp = h5f.create_group("sim")
+            tgt_grp = h5f.create_group("target")
+            for roi in ("A3b", "A1", "S2"):
+                sim_grp.create_dataset(roi, data=np.asarray(tf_sim[roi]))
+                tgt_grp.create_dataset(roi, data=np.asarray(tf_target[roi]))
+            h5f.create_dataset("freqs", data=freqs)
+            h5f.create_dataset("times_ms", data=times_ms)
+            h5f.attrs["tf_error"] = float(tf_error)
+            for key, value in self._comparison_param_attrs().items():
+                h5f.attrs[key] = value
+
+        return filepath
+
+    def save_timecourse_comparison(self, filedir, tc_sim, tc_target, tc_error, filename=None):
+        """
+        Save the simulated/measured TC traces + scalar error for one run to HDF5.
+
+        Layout: groups 'sim' and 'target', each with datasets A3b/A1/S2 (451,);
+        plus 'times_ms' (-500..+400 ms). Parameter metadata stored as attrs.
+        """
+        os.makedirs(filedir, exist_ok=True)
+        if filename is None:
+            filename = self._comparison_stem("tc_comparison") + ".hdf5"
+        elif not filename.endswith(".hdf5"):
+            filename = filename + ".hdf5"
+
+        # Derive the time axis from the trace length (TC window spans -500..+400 ms).
+        n_times  = np.asarray(tc_sim["A3b"]).shape[0]
+        times_ms = np.linspace(-500, 400, n_times)
+
+        filepath = os.path.join(filedir, filename)
+        with h5py.File(filepath, "w") as h5f:
+            sim_grp = h5f.create_group("sim")
+            tgt_grp = h5f.create_group("target")
+            for roi in ("A3b", "A1", "S2"):
+                sim_grp.create_dataset(roi, data=np.asarray(tc_sim[roi]))
+                tgt_grp.create_dataset(roi, data=np.asarray(tc_target[roi]))
+            h5f.create_dataset("times_ms", data=times_ms)
+            h5f.attrs["tc_error"] = float(tc_error)
+            for key, value in self._comparison_param_attrs().items():
+                h5f.attrs[key] = value
+
+        return filepath
+
+
 
 
 

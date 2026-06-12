@@ -1,16 +1,20 @@
 {
-    // Use IntelliSense to learn about possible attributes.
-    // Hover to view descriptions of existing attributes.
-    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Python Debugger: Current File",
+            "name": "Debug (pyrates_env)",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
+            "python": "/data/u_grossmannr_software/miniforge3/envs/pyrates_env/bin/python",
             "console": "integratedTerminal",
-            "justMyCode": false,
+            "env": {
+                "DATADIR": "/data/p_02989/shared_workspace/datadir/",
+                "RESDIR": "/data/p_02989/shared_workspace/results_grossmannr/",
+                "SUBJECTS_DIR": "/data/p_02989/shared_workspace/freesurfer/",
+                "SIMDIR": "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/Simulations",
+                "WDDIR": "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel"
+            }
         }
     ]
 }
