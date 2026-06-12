@@ -22,8 +22,6 @@ def compute_freq_spectrum(signal, step_size, window="hann"):
     - frequencies
     - power spectrum density
     """
-    print("size signal", len(signal), signal.size)
-    print("step size", step_size)   
 
     if signal is None:
         return np.nan, np.nan

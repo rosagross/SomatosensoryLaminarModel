@@ -136,6 +136,7 @@ for ginter in ginters:
                         params['Iext_strength'] = s
                         params['Ib_strength'] = sb
                         params['area'] = area
+                        params['resistance_factor'] = resistance_factor
 
                         # additional parameters (that are usually fixed)
                         params['g_thal'] = 2

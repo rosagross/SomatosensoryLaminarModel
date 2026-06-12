@@ -75,6 +75,7 @@ class SomatoModel():
         self.Ib_strength = 7
         self.Iext_strength = 10
         self.Iext_duration = 0.5
+        self.resistance_factor = 1
 
         # scaling the coupling strength between the cortical areas
         self.g_intercortical = 1
@@ -389,7 +390,6 @@ class SomatoModel():
         cells = self.get_population_labels()
 
         # only safe every X datapoint
-        print("tstep resolution", self.resolution_tstep)
         rates_downsampled = self.rate[:, :: int(1000 * self.resolution_tstep)]
         rates_df = pd.DataFrame(rates_downsampled.T, columns=cells)
 
@@ -661,7 +661,7 @@ class SomatoModel():
 
         dipole_length = dipole_params['dipole_lengths']
         dipole_orientation = dipole_params['dipole_orientation']
-        resistance_factor = 1 
+        resistance_factor = self.resistance_factor
 
         # load cell count parameter
         cellcounts = self.p.get_cellcounts(return_A3b=True)

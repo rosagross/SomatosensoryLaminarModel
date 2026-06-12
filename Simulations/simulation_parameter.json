@@ -30,5 +30,6 @@
     "extI_cellcounts": 1000,
     "bI_cellcounts": 100,
     "thal_cellcounts": 500,
-    "g_intercortical": 0
+    "g_intercortical": 0,
+    "resistance_factor" : 1
 }
