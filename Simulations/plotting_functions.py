@@ -137,8 +137,12 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
         axes[0, 0].set_title("Area 3b")
         axes[0, 0].set_ylabel('mV')
 
-        axes[1, 0].plot(potentials[30:].T)
+        # Thalamus block = last three populations, in array order: Thalamus E/VPM (-3),
+        # Thalamus I/reticular (-2), POm (-1). Order matches get_population_labels().
+        axes[1, 0].plot(potentials[-3:].T)
         axes[1, 0].set_title("Thalamus")
+        axes[1, 0].legend(['Thalamus E', 'Thalamus I', 'POm'], loc='upper right')
+        axes[1, 0].set_ylabel('mV')
 
         # Hide extra rows in col 1 (since only 2 plots)
         for r in range(2, 4):
@@ -227,9 +231,13 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, sI, g,
     axs_extI.set_ylabel('Hz')
     # thalamus
     axs_thal = axs[1][0]
-    axs_thal.plot(steps[start_plot:], rates[-2:-1].T[start_plot:], color='purple')
-    axs_thal.plot(steps[start_plot:], rates[-1:].T[start_plot:], color='grey')
-    axs_thal.legend(['Thalamus E', 'Thalamus I'])
+    # Thalamus block = last three populations, in array order: Thalamus E/VPM (-3,
+    # the externally-driven population), Thalamus I/reticular (-2), POm (-1).
+    # Order matches get_population_labels().
+    axs_thal.plot(steps[start_plot:], rates[-3].T[start_plot:], color='green')
+    axs_thal.plot(steps[start_plot:], rates[-2].T[start_plot:], color='purple')
+    axs_thal.plot(steps[start_plot:], rates[-1].T[start_plot:], color='grey')
+    axs_thal.legend(['Thalamus E', 'Thalamus I', 'POm'])
     axs_thal.set_ylabel('Hz')
 
     # area 3b

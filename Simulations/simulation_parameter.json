@@ -10,11 +10,13 @@
     "coupling_strength": 10,
     "strength_I": 0.5, 
     "g_thal": 2,
+    "g_thalPOm": 2,
     "sI_thal": 0.5,
     "step_size": 0.001,
     "resolution_tstep": 0.001,
+    "delay_factor": 0.005,
     "area": "all",
-    "filedir": "/data/p_02989/Modelling/output_test/",
+    "filedir": "/data/pt_02989/output_test",
     "input_type": "step",
     "input_onset": 1.001,
     "simulation_dur": 2,
@@ -23,13 +25,15 @@
     "Ib_strength": 0,
     "thal_connect": [
         0,
-        0,
+        10,
         0,
         0
     ],
     "extI_cellcounts": 1000,
     "bI_cellcounts": 100,
-    "thal_cellcounts": 500,
+    "thalE_cellcounts": 500,
+    "thalI_cellcounts": 500,
+    "pom_cellcounts": 500,
     "g_intercortical": 0,
     "resistance_factor" : 1
 }

@@ -46,9 +46,9 @@ def compute_freq_spectrum(signal, step_size, window="hann"):
     # compute power spectrum density
     powersd = (np.abs(fft_vals) ** 2) / n**2
 
-    print("signal", n)
-    print("step_size", step_size)
-    print("frequencies:", len(freqs), freqs)
+    #print("signal", n)
+    #print("step_size", step_size)
+    #print("frequencies:", len(freqs), freqs)
 
     return freqs, powersd
 
@@ -153,7 +153,7 @@ def compute_spectra_full(rates_df, potentials_df, step_size):
 
 def read_simulation_data(output_dir, figure_dir, input_durations, input_strengths, coupling_strengths, strength_I,  
                         backgroundI_strengths, step_size, sample_delay_immediate, sample_delay_late, input_onset, sample_dur, cortex_type, input_type,
-                        thal_cellcounts, bI_cellcounts, extI_cellcounts, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1, suffix='Connected'):
+                        thal_cellcounts, bI_cellcounts, extI_cellcounts, load_trajectory, load_full_potentials, load_population_potential = 3, offset=0.1, suffix=''):
     '''
     Parameter:
     sample_dur: duration of sampling baseline and longterm activity in s 
@@ -456,14 +456,15 @@ def load_parameters(WDDIR):
         params = json.load(json_file)
     return params
 
-def load_simulation_data(g, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False, suffix='Connected'):
+def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False, suffix=''):
     """ Read simulation data """
     # read in firing rates in data matrix (datapoints x populations)
     if pyrates:
         filename = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_PYRATES.hdf5"
     else:    
-        filename = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2{suffix}.hdf5"
-
+        filename = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}_thalUncon.hdf5"
+        #print(filename)
+    
     rates_df = pd.read_hdf(os.path.join(data_dir, filename), key='rates')
     
     # read in potentials in data matrix (datapoints x populations)
@@ -481,9 +482,9 @@ def load_hdf_safe(fname):
     potentials_safe = pd.DataFrame(values, columns=cols, index=idx)
     return potentials_safe
 
-def load_derivative(g, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix='Connected'):
+def load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix=''):
     """ load the characteristics/processed data of one simulation """
-    deriv_file = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2{suffix}_processed.csv"
+    deriv_file = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}_thalUncon{suffix}_processed.csv"
     deriv_df = pd.read_csv(os.path.join(deriv_dir, deriv_file))
     return deriv_df
 
@@ -493,7 +494,7 @@ def check_list(sim_param):
 
     return sim_param
 
-def load_all_derivatives(Iext_dur, Iext_str, gs, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix='Connected'):
+def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=''):
     """ load all selected combinations of processed simulation (with their characteristics) into one dataframe
     All parameters can be either lists of single values. If they are single values, 
     convert them into lists with one entry.
@@ -503,6 +504,7 @@ def load_all_derivatives(Iext_dur, Iext_str, gs, sIs, Ib_str, input_onset, thal_
     Iext_dur : float or list of input durations
     Iext_str : float or list of input strengths
     g : float or list of coupling strengths
+    g_inter : float or list of intercortical coupling values
     sI : float or list of E/I balance values
     Ib_str : float or list of background input strengths
     """
@@ -518,9 +520,10 @@ def load_all_derivatives(Iext_dur, Iext_str, gs, sIs, Ib_str, input_onset, thal_
     for d in Iext_dur:
             for s in Iext_str:
                 for g in gs:
-                    for sI in sIs:
-                        for bI in Ib_str:
-                            data_single_df = load_derivative(g, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
-                            data_df = pd.concat([data_df, data_single_df], ignore_index=True)
+                    for g_inter in g_inters:
+                        for sI in sIs:
+                            for bI in Ib_str:
+                                data_single_df = load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+                                data_df = pd.concat([data_df, data_single_df], ignore_index=True)
 
     return data_df

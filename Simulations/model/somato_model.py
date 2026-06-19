@@ -53,7 +53,9 @@ class SomatoModel():
     def __init__(self, params={}, WDDIR=None):
         
         # load in all connectivity parameters, time constants, etc.
-        self.p = Parameter()
+        # delay_factor is read here (before Parameter is built) since it shapes the tau matrix
+        self.delay_factor = params.get('delay_factor', 5e-3)
+        self.p = Parameter(delay_factor=self.delay_factor)
         self.tau = self.p.tau
         self.nPop = self.p.nPop
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
@@ -70,9 +72,12 @@ class SomatoModel():
         self.extI_cellcounts = 1000
         self.strength_I = 0 #0.7
         self.bI_cellcounts = 100
-        self.thal_cellcounts = 500
+        self.thalE_cellcounts = 500
+        self.thalI_cellcounts = 500
+        self.pom_cellcounts = 500
         self.sI_thal = 0.5
         self.g_thal = 2
+        self.g_thalPOm = 1
         self.input_type = 'step'
         self.area = 'all' 
         self.coupling_strength = 10
@@ -92,10 +97,11 @@ class SomatoModel():
         Ib = self.create_Ibackground()
         self.gE = self.coupling_strength
         self.gI = self.coupling_strength * self.strength_I
-        self.gEthal = self.g_thal 
+        self.gEthal = self.g_thal
         self.gIthal = self.g_thal * self.sI_thal
+        self.gPOmthal = self.g_thalPOm
 
-        # Synaptic kernel 
+        # Synaptic kernel
         self.H = np.ones((self.nPop, self.nPop+1))
 
         # define time steps 
@@ -107,7 +113,7 @@ class SomatoModel():
 
         self.filename = (
             f"gthal{self.g_thal}_sIthal{self.sI_thal}_g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
-            f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thal_cellcounts}_"
+            f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thalE_cellcounts}_"
             f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_gInter{self.g_intercortical}_thalUncon"
         )
 
@@ -123,7 +129,7 @@ class SomatoModel():
         self.t = 0.0
 
         # Weight matrix [to x from]
-        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
+        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area) 
 
 
     def initialize_state(self):
@@ -150,10 +156,11 @@ class SomatoModel():
         self.Iext = np.tile(Iext, (self.nPop, 1))
         self.Ib = np.tile(Ib, (self.nPop, 1))
 
-        self.gE = self.coupling_strength 
+        self.gE = self.coupling_strength
         self.gI = self.coupling_strength * self.strength_I
-        self.gEthal = self.g_thal 
+        self.gEthal = self.g_thal
         self.gIthal = self.g_thal * self.sI_thal
+        self.gPOmthal = self.g_thalPOm
 
         # update connectivity with new gains and counts
         self.W = self.p.get_connectivity(
@@ -162,10 +169,13 @@ class SomatoModel():
             self.gI,
             self.gEthal,
             self.gIthal,
+            self.gPOmthal,
             self.thal_connect,
             self.extI_cellcounts,
             self.bI_cellcounts,
-            self.thal_cellcounts,
+            self.thalE_cellcounts,
+            self.thalI_cellcounts,
+            self.pom_cellcounts,
             area=self.area
         )
 
@@ -198,7 +208,7 @@ class SomatoModel():
         S = self.p.get_connectStrength()
         P = self.p.get_connectProb()
         C = self.p.get_cellcounts()
-        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts)
+        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts)
 
         # Convert numpy arrays to lists
         parameters = {
@@ -221,7 +231,7 @@ class SomatoModel():
         Plot connectivity matrix as heatmap.
         """
         
-        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thal_cellcounts, area=self.area) 
+        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area) 
         sns.heatmap(W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
 
 
@@ -373,6 +383,7 @@ class SomatoModel():
             "SST4S2",
             "ThalE",
             "ThalI",
+            "ThalPOm"
         ])
 
     def get_population_spectrum_groups(self):
@@ -951,7 +962,7 @@ class SomatoModel():
         figuredir = os.path.join('.', 'Figures')
         os.makedirs(figuredir, exist_ok=True)
         #fig.savefig(os.path.join(figuredir, 'simulated_evoked.pdf'))
-        plt.show(fig)
+        plt.show()
 
         freqs = np.arange(8, 50, 2)
         n_cycles = np.full_like(freqs, 2.0, dtype=float)
@@ -973,12 +984,12 @@ class SomatoModel():
         tfr_fig.colorbar(mesh, ax=tfr_ax, label="Power ")
         tfr_fig.tight_layout()
         tfr_fig.savefig(os.path.join(figuredir, 'simulated_tfr_epochs.png'), dpi=300, bbox_inches='tight')
-        plt.show(tfr_fig)
+        plt.show()
 
         topo_times = np.linspace(evoked.times[0], evoked.times[-1], 3)
         topo_fig = evoked.plot_topomap(times=topo_times, show=False)
         topo_fig.savefig(os.path.join(figuredir, 'simulated_topomaps_epochs.png'), dpi=300, bbox_inches='tight')
-        plt.show(topo_fig)
+        plt.show()
 
 
 

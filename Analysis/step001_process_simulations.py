@@ -19,8 +19,8 @@ import numpy as np
 from helper_functions import *
 
 # Define paths
-SIMDIR = os.getenv("SIMDIR")
-sim_dir = os.path.join(SIMDIR, "simulation_results")
+SIMDIR = "/data/pt_02989"
+sim_dir = "/data/pt_02989/output_test"
 WDDIR = os.getenv("WDDIR")
 figure_dir = os.path.join(SIMDIR, "Figures", "global_dynamics")
 if not os.path.exists(figure_dir):
@@ -50,6 +50,7 @@ sI_thal = params['sI_thal']
 step_size = params['step_size']
 area = params['area']
 filedir = params['filedir']
+g_intercortical = np.arange(0.2,2,0.2) # params['g_inter']
 
 # inputs
 input_type = params['input_type']
@@ -85,57 +86,58 @@ for d in input_durations:
     for s in input_strengths:
         print('Iexts', s)
         for g in coupling_strengths:
-            #print('coupling', g)
-            for sI in strength_I:
-                #print('sI', sI)
-                for bI in backgroundI_strengths:
-                    #print('bI', bI)
+            for g_inter in g_intercortical:
+                #print('coupling', g)
+                for sI in strength_I:
+                    #print('sI', sI)
+                    for bI in backgroundI_strengths:
+                        #print('bI', bI)
 
-                    df = pd.DataFrame()
-                    
-                    # read data 
-                    rates_df, potentials_df, filename = load_simulation_data(g, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, sim_dir)
+                        df = pd.DataFrame()
+                        
+                        # read data 
+                        rates_df, potentials_df, filename = load_simulation_data(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, sim_dir)
 
-                    # compute characteristics
-                    compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)
-                    compute_longeterm_late(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_late, sample_dur)
-                    compute_input_response(df, rates_df, potentials_df, input_onset, d, step_size, response_window)
-                    compute_baseline(df, rates_df, potentials_df, input_onset, step_size, sample_dur, offset)
-                    compare_longterm_baseline(df)             
-                    classify_response(df)
-                    
-                    # compute oscillation frequency in different windows
-                    baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
-                    baseline_stop = int(baseline_start + sample_dur/step_size)
-                    compute_window_frequency(
-                        df, rates_df, potentials_df,
-                        baseline_start, baseline_stop,
-                        "baseline", step_size,
-                        rate_osc_threshold, potential_osc_threshold
-                    )
+                        # compute characteristics
+                        compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)
+                        compute_longeterm_late(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_late, sample_dur)
+                        compute_input_response(df, rates_df, potentials_df, input_onset, d, step_size, response_window)
+                        compute_baseline(df, rates_df, potentials_df, input_onset, step_size, sample_dur, offset)
+                        compare_longterm_baseline(df)             
+                        classify_response(df)
+                        
+                        # compute oscillation frequency in different windows
+                        baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
+                        baseline_stop = int(baseline_start + sample_dur/step_size)
+                        compute_window_frequency(
+                            df, rates_df, potentials_df,
+                            baseline_start, baseline_stop,
+                            "baseline", step_size,
+                            rate_osc_threshold, potential_osc_threshold
+                        )
 
-                    start_sample_during = int((input_onset)/step_size)
-                    stop_sample_during = int((input_onset+d)/step_size)
-                    compute_window_frequency(
-                        df, rates_df, potentials_df,
-                        start_sample_during, stop_sample_during,
-                        "duringInput", step_size,
-                        rate_osc_threshold, potential_osc_threshold
-                    )
+                        start_sample_during = int((input_onset)/step_size)
+                        stop_sample_during = int((input_onset+d)/step_size)
+                        compute_window_frequency(
+                            df, rates_df, potentials_df,
+                            start_sample_during, stop_sample_during,
+                            "duringInput", step_size,
+                            rate_osc_threshold, potential_osc_threshold
+                        )
 
-                    start_sample_late = int((input_onset+d+sample_delay_late)/step_size)
-                    stop_sample_late = int(start_sample_late + sample_dur/step_size)
-                    compute_window_frequency(
-                        df, rates_df, potentials_df,
-                        start_sample_late, stop_sample_late,
-                        "lateLongterm", step_size,
-                        rate_osc_threshold, potential_osc_threshold
-                    )
+                        start_sample_late = int((input_onset+d+sample_delay_late)/step_size)
+                        stop_sample_late = int(start_sample_late + sample_dur/step_size)
+                        compute_window_frequency(
+                            df, rates_df, potentials_df,
+                            start_sample_late, stop_sample_late,
+                            "lateLongterm", step_size,
+                            rate_osc_threshold, potential_osc_threshold
+                        )
 
-                    set_sim_info(df, potentials_df, g, sI, d, s, bI)
+                        set_sim_info(df, potentials_df, g, sI, d, s, bI)
 
-                    # save to csv
-                    outfilename = filename.replace('.hdf5', '_processed.csv')
-                    outpath = os.path.join(output_dir, outfilename)
-                    df.to_csv(outpath, index=False)
-                    
+                        # save to csv
+                        outfilename = filename.replace('.hdf5', '_processed.csv')
+                        outpath = os.path.join(output_dir, outfilename)
+                        df.to_csv(outpath, index=False)
+                        
