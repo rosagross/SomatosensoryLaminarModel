@@ -461,14 +461,20 @@ def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cel
     # read in firing rates in data matrix (datapoints x populations)
     if pyrates:
         filename = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_PYRATES.hdf5"
-    else:    
-        filename = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}_thalUncon.hdf5"
-        #print(filename)
-    
-    rates_df = pd.read_hdf(os.path.join(data_dir, filename), key='rates')
-    
+        filepath = os.path.join(data_dir, filename)
+    else:
+        # each run now lives in its own folder named by the parameter stem; the
+        # rates/potentials are stored in results.hdf5 inside that folder
+        # (alongside params.json and optional tf/tc comparison files).
+        stem = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}_thalUncon"
+        filename = stem + ".hdf5"
+        filepath = os.path.join(data_dir, stem, "results.hdf5")
+        #print(filepath)
+
+    rates_df = pd.read_hdf(filepath, key='rates')
+
     # read in potentials in data matrix (datapoints x populations)
-    potentials_df = load_hdf_safe(os.path.join(data_dir, filename))
+    potentials_df = load_hdf_safe(filepath)
 
     return rates_df, potentials_df, filename
 
@@ -484,8 +490,10 @@ def load_hdf_safe(fname):
 
 def load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix=''):
     """ load the characteristics/processed data of one simulation """
-    deriv_file = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}_thalUncon{suffix}_processed.csv"
-    deriv_df = pd.read_csv(os.path.join(deriv_dir, deriv_file))
+    # the processed characteristics now live inside the per-run folder (named by
+    # the parameter stem) as processed.csv, next to results.hdf5 / params.json
+    stem = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}_thalUncon{suffix}"
+    deriv_df = pd.read_csv(os.path.join(deriv_dir, stem, "processed.csv"))
     return deriv_df
 
 def check_list(sim_param):

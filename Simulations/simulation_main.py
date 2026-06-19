@@ -187,10 +187,11 @@ for ginter in ginters:
                         model.plot_timecourse_comparison(tc_sim, tc_target)
 
                         # persist per-run comparison maps/traces + values for later animation
+                        run_dir = model.prepare_run_dir(filedir)
                         model.save_timefreq_comparison(
-                            os.path.join(SIMDIR, "timefreq_comparison"), tf_sim, tf_target, tf_error)
+                            run_dir, tf_sim, tf_target, tf_error, filename="tf_comparison")
                         model.save_timecourse_comparison(
-                            os.path.join(SIMDIR, "timecourse_comparison"), tc_sim, tc_target, tc_error)
+                            run_dir, tc_sim, tc_target, tc_error, filename="tc_comparison")
                         model.append_comparison_summary(tf_error=tf_error, tc_error=tc_error)
 
                         # compute dipoles
@@ -226,8 +227,10 @@ for ginter in ginters:
                         print('Iext dur', model.Iext_duration) 
 
                         if save_results:
+                            # create per-run output folder (holds params.json + all HDF5s for this run)
+                            run_dir = model.prepare_run_dir(filedir)
                             start = time.time()
-                            model.save_results_csv(filedir, model.filename, save_full_potentials)
+                            model.save_results_csv(run_dir, "results", save_full_potentials)
                             stop = time.time()
                             duration = stop - start
                             all_durations_saving.append(duration)

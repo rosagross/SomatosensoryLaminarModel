@@ -44,7 +44,8 @@ SIMDIR = "/data/pt_02989"
 WDDIR = os.getenv("WDDIR")
 
 raw_dir = os.path.join(SIMDIR, "output_test")
-processed_dir = os.path.join(SIMDIR, "derivatives")
+# processed characteristics now live inside each per-run folder under raw_dir
+processed_dir = raw_dir
 # read params
 params = load_parameters(WDDIR)
 

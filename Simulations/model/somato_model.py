@@ -92,6 +92,9 @@ class SomatoModel():
         # update parameters based on params dicts
         self.__dict__.update(params)
 
+        # keep a copy of the params used for this run (written to the run folder)
+        self.params = dict(params)
+
         # create input array
         Iext = self.create_Iext()
         Ib = self.create_Ibackground()
@@ -414,6 +417,21 @@ class SomatoModel():
         potential_df = pd.DataFrame(potential_sum_downsampled.T, columns=cells)
 
         return rates_df, potential_df
+
+    def prepare_run_dir(self, base_dir):
+        """Create base_dir/<self.filename>/ for this run, dump params.json, return the path."""
+        run_dir = os.path.join(base_dir, self.filename)
+        os.makedirs(run_dir, exist_ok=True)
+        def _to_jsonable(o):
+            if isinstance(o, np.generic):
+                return o.item()
+            if isinstance(o, np.ndarray):
+                return o.tolist()
+            raise TypeError(f"Object of type {o.__class__.__name__} is not JSON serializable")
+        with open(os.path.join(run_dir, "params.json"), "w") as f:
+            json.dump(self.params, f, indent=2, default=_to_jsonable)
+        self.run_dir = run_dir
+        return run_dir
 
     def save_results_csv(self, filedir, filename, full=False, save_params=False):
         """

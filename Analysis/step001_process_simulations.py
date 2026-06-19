@@ -26,12 +26,6 @@ figure_dir = os.path.join(SIMDIR, "Figures", "global_dynamics")
 if not os.path.exists(figure_dir):
     os.makedirs(figure_dir)
 
-# define output directory
-output_dir = os.path.join(SIMDIR, "derivatives")
-if not os.path.exists(output_dir):
-    os.makedirs(output_dir)
-
-
 # %%
 
 # read params
@@ -136,8 +130,8 @@ for d in input_durations:
 
                         set_sim_info(df, potentials_df, g, sI, d, s, bI)
 
-                        # save to csv
-                        outfilename = filename.replace('.hdf5', '_processed.csv')
-                        outpath = os.path.join(output_dir, outfilename)
+                        # save to csv inside the per-run folder, next to results.hdf5
+                        run_dir = os.path.join(sim_dir, filename.replace('.hdf5', ''))
+                        outpath = os.path.join(run_dir, "processed.csv")
                         df.to_csv(outpath, index=False)
                         
