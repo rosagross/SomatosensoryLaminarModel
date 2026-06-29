@@ -30,6 +30,14 @@ figure_dir = os.path.join(SIMDIR, "Figures")
 TIMEFREQ_DIR = os.path.join(SIMDIR, "timefreq_comparison")
 TIMECOURSE_DIR = os.path.join(SIMDIR, "timecourse_comparison")
 
+# Travel time from the fingertip receptor to the thalamus. The real data is
+# time-locked to the fingertip pulse (t=0), but the model injects its external
+# input directly at the thalamus, so the model's stimulus onset corresponds to
+# real-data t = +RECEPTOR_THALAMUS_DELAY_S (≈ the cortical N20 latency). The
+# simulated error window is shifted earlier by this amount so the model response
+# aligns with the measured response instead of leading it.
+RECEPTOR_THALAMUS_DELAY_S = 0.020  # 20 ms
+
 
 helper_path = os.path.join(WDDIR, 'Analysis')
 
@@ -253,7 +261,6 @@ class SomatoModel():
             self.rate[:, timestep] = self.rate_current
             self.v_current = self.compute_potentials(timestep)
 
-        print('finished loop...')
 
     def compute_rates(self):
         """
@@ -453,7 +460,7 @@ class SomatoModel():
         if full:
             # save all potentials additionally
             psp_filename = "full_" + filename
-            print('full potential file:', psp_filename)
+            #print('full potential file:', psp_filename)
             self.write_3D_csv(os.path.join(filedir, psp_filename))
 
         if save_params:
@@ -522,7 +529,7 @@ class SomatoModel():
         rates_df, potentials_df = self.prepare_dataframes()
         spectra, freqs = hf.compute_spectra_full(rates_df, potentials_df, self.step_size)
         
-        print("spectra", spectra.shape, "freqs", freqs.shape)
+
 
         return spectra, freqs
 
@@ -592,7 +599,7 @@ class SomatoModel():
         if save_spectrum:
             spectrum_dir = os.path.join(SIMDIR, "spectrum_results")
             path = self.save_frequency_spectra(spectrum_dir, spectra=spectra_full, freqs=freqs_full)
-            print(f"saved spectra: {path}")
+            #print(f"saved spectra: {path}")
 
 
     def plot_freq_spectrum(self, spectra, freqs, pop_idx=0, pop_name=None, min_freq_hz=0, max_freq_hz=100):
@@ -765,13 +772,13 @@ class SomatoModel():
         start_loadingtime = time.time()
         dipole_length, dipole_orientation, resistance_factor, cellcounts = self.load_dipole_params()
         end_loadingtime = time.time()
-        print(f"Loaded dipole parameters in {end_loadingtime - start_loadingtime:.2f} seconds.")
+        #print(f"Loaded dipole parameters in {end_loadingtime - start_loadingtime:.2f} seconds.")
 
         # get population mapping
         mapping_time_start = time.time()
         pop_mapping = self.get_population_mapping()
         mapping_time_end = time.time()
-        print(f"Retrieved population mapping in {mapping_time_end - mapping_time_start:.2f} seconds.")    
+        #print(f"Retrieved population mapping in {mapping_time_end - mapping_time_start:.2f} seconds.")    
         
         dipole_computation_start = time.time()
         # Extract excitatory populations (these generate the main EEG signal)
@@ -834,8 +841,8 @@ class SomatoModel():
             simDipoles[E+5] = np.dot(np.concatenate([dipoles_ES2[E]]), abs(potentialsES2[E]))
 
         dipole_computation_end = time.time()
-        print(f"Computed simulated dipoles in {dipole_computation_end - dipole_computation_start:.2f} seconds.")
-        print("Simulated dipoles shape:", simDipoles.shape)
+        #print(f"Computed simulated dipoles in {dipole_computation_end - dipole_computation_start:.2f} seconds.")
+        #print("Simulated dipoles shape:", simDipoles.shape)
 
         return simDipoles
     
@@ -955,7 +962,7 @@ class SomatoModel():
         #times = np.arange(0, 10, 0.001)  # Simulate for 10 seconds at 1000 Hz
         tstep = 1.0 / self.sfreq_saved
         dipoles_downsampled = simDipoles  #[:, ::5]  # Downsample to match the time step
-        print("shape of dipoles:", dipoles_downsampled.shape)
+        #print("shape of dipoles:", dipoles_downsampled.shape)
         source_simulator = mne.simulation.SourceSimulator(src_fixed, tstep=tstep)
         source_simulator.add_data(selected_label_soma_rh, dipoles_downsampled[0], events)
         source_simulator.add_data(selected_label_soma_rh, np.sum(dipoles_downsampled[1:4], axis=0), events)
@@ -1015,6 +1022,10 @@ class SomatoModel():
         """
         Compute Morlet TF power for simulated dipoles per ROI.
 
+        The simulated window is shifted earlier by RECEPTOR_THALAMUS_DELAY_S so the
+        model's thalamic stimulus onset maps to +20 ms in the real-data frame (the
+        target is time-locked to the fingertip pulse, the model to thalamic arrival).
+
         Returns:
             dict: roi label → (n_freqs=40, n_times=451) array, time axis -500..400 ms at 2 ms steps.
         """
@@ -1025,9 +1036,14 @@ class SomatoModel():
         a1_dip  = np.sum(simulated_dip[1:5], axis=0)
         s2_dip  = np.sum(simulated_dip[5:9], axis=0)
 
+        # Window of interest: -500 ms to +400 ms relative to stimulus onset (901 samples
+        # at 1 kHz), shifted 20 ms earlier for the receptor→thalamus travel time.
+        delay_samples = round(RECEPTOR_THALAMUS_DELAY_S / self.step_size)  # 20 samples @ 1 kHz
+        window_start = stim_idx - 500 - delay_samples
+        window_end   = stim_idx + 401 - delay_samples
+
         tf_freqs    = np.arange(1, 41, 1).astype(float)
         tf_n_cycles = tf_freqs / 2
-        window_start = 0
         tf_out = {}
         for roi_label, dip in [("A3b", a3b_dip), ("A1", a1_dip), ("S2", s2_dip)]:
             segment = dip
@@ -1037,10 +1053,10 @@ class SomatoModel():
                 sfreq=sfreq, freqs=tf_freqs,
                 n_cycles=tf_n_cycles, output="power",
                 decim=1, n_jobs=1,
-            )[0, 0]  # (n_freqs=40, 1901)
+            )[0, 0]  # (n_freqs=40, n_samples)
 
-            # Trim padding → (n_freqs=40, 901), downsample to 2 ms → (n_freqs=40, 451)
-            power = power[:, window_start:]
+            # Crop to the stimulus-aligned window → (n_freqs=40, 901), downsample to 2 ms → (40, 451)
+            power = power[:, window_start:window_end]
             tf_out[roi_label] = power[:,::2]
 
         return tf_out
@@ -1203,9 +1219,12 @@ class SomatoModel():
         a1_dip  = np.sum(simulated_dip[1:5], axis=0)
         s2_dip  = np.sum(simulated_dip[5:9], axis=0)
 
-        # Window of interest: -500 ms to +400 ms relative to stimulus onset (901 samples at 1 kHz)
-        win_start = stim_idx - 500
-        win_end   = stim_idx + 401
+        # Window of interest: -500 ms to +400 ms relative to stimulus onset (901 samples at 1 kHz),
+        # shifted 20 ms earlier so the model's thalamic onset aligns with the real cortical
+        # response (which lags the fingertip pulse by the receptor→thalamus travel time).
+        delay_samples = round(RECEPTOR_THALAMUS_DELAY_S / self.step_size)  # 20 samples @ 1 kHz
+        win_start = stim_idx - 500 - delay_samples
+        win_end   = stim_idx + 401 - delay_samples
 
         # Baseline window: -500 to -430 ms -> indices 0:36 on the 2 ms axis.
         baseline_slice = slice(0, 36)

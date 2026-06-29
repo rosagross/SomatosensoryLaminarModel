@@ -17,10 +17,17 @@ Description:
 import numpy as np
 import os
 import sys
+import json
+import matplotlib.pyplot as plt
 
 # ── paths ──────────────────────────────────────────────────────────────────────
 WDDIR  = os.getenv("WDDIR")   # /data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel
 RESDIR = os.getenv("RESDIR")  # /data/p_02989/shared_workspace/results_grossmannr
+SIMDIR = os.getenv("SIMDIR")  # base output dir; optimization diagnostics go in SIMDIR/optimization
+
+# where to store optimization diagnostics (fit comparison plots use the model's own dirs)
+diag_dir = os.path.join(SIMDIR, "optimization")
+os.makedirs(diag_dir, exist_ok=True)
 
 sys.path.append(os.path.join(WDDIR, "Simulations", "model"))
 sys.path.insert(0, "/data/p_02989/Modelling/neuronaldynamics/src")
@@ -75,7 +82,7 @@ opt_config = {
     ],
     "bounds": np.array([
         [0,     50  ],   # coupling_strength
-        [0,      0.5],   # strength_I
+        [0,      0.8],   # strength_I
         [0,      2  ],   # g_intercortical
         [0,     10  ],   # Ib_strength
         [0,    100  ],   # Iext_strength
@@ -92,6 +99,66 @@ opt_config = {
     "verbose":    1,
 }
 
+# ── diagnostics from the fitting process ────────────────────────────────────────
+def plot_fit_diagnostics(ga, config, outdir):
+    """
+    Visualise how the GA progressed: best combined error per iteration and the
+    evolution of each fitted parameter (normalised to its [0, 1] bound range so
+    the differently-scaled parameters are comparable on one axis).
+
+    ga.errors               : list, best combined error per iteration
+    ga.parameter_evolution  : (n_iter, n_param) best parameter set per iteration
+    """
+    names  = config["model_parameters"]
+    bounds = np.asarray(config["bounds"], dtype=float)
+    errors = np.asarray(ga.errors, dtype=float)
+    evo    = np.asarray(ga.parameter_evolution, dtype=float)   # (n_iter, n_param)
+
+    fig, (ax_err, ax_par) = plt.subplots(1, 2, figsize=(12, 4.2))
+
+    # convergence
+    ax_err.plot(np.arange(1, len(errors) + 1), errors, marker="o", color="C3")
+    ax_err.set_xlabel("iteration")
+    ax_err.set_ylabel("best combined error (TF + TC)")
+    ax_err.set_yscale("log")
+    ax_err.set_title("Convergence")
+
+    # parameter evolution, normalised within bounds
+    span = (bounds[:, 1] - bounds[:, 0])
+    span[span == 0] = 1.0
+    evo_norm = (evo - bounds[:, 0]) / span
+    iters = np.arange(1, evo.shape[0] + 1)
+    for j, name in enumerate(names):
+        ax_par.plot(iters, evo_norm[:, j], marker="o", label=name)
+    ax_par.set_ylim(-0.05, 1.05)
+    ax_par.set_xlabel("iteration")
+    ax_par.set_ylabel("value (normalised to bounds)")
+    ax_par.set_title("Parameter evolution")
+    ax_par.legend(fontsize=8, loc="best")
+
+    fig.tight_layout()
+    fig.savefig(os.path.join(outdir, "fit_diagnostics.png"), dpi=300, bbox_inches="tight")
+    plt.show()
+
+
+def plot_best_fit(model, best_params, outdir):
+    """Re-run the model at the optimised parameters and plot/save the fit vs. data."""
+    model.apply_params(best_params)
+    model.initialize_state()
+    model.simulate()
+
+    err_tf, tf_sim, tf_target = model.compute_error_timefreq(tf_data_path)
+    model.plot_timefreq_comparison(tf_sim, tf_target)        # saves to the model's TIMEFREQ_DIR
+
+    err_tc, tc_sim, tc_target = model.compute_error_timecourse(tc_data_path)
+    model.plot_timecourse_comparison(tc_sim, tc_target)      # saves to the model's TIMECOURSE_DIR
+
+    # also persist the comparison maps/traces for this best run
+    model.save_timefreq_comparison(outdir, tf_sim, tf_target, err_tf, filename="best_tf_comparison")
+    model.save_timecourse_comparison(outdir, tc_sim, tc_target, err_tc, filename="best_tc_comparison")
+    return err_tf, err_tc
+
+
 # ── run ────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     ga = GA(opt_config)
@@ -103,4 +170,22 @@ if __name__ == "__main__":
         print(f"  {name}: {val:.4f}")
     print(f"  Best combined error: {ga.errors[-1]:.4f}")
 
+    # diagnostics of the optimisation itself
     ga.plot_fit()
+    plot_fit_diagnostics(ga, opt_config, diag_dir)
+
+    # visualise (and persist) the best-fit simulation against the measured data
+    err_tf, err_tc = plot_best_fit(model, best_params, diag_dir)
+    print(f"  Best-fit re-evaluation: err_tf={err_tf:.4f}  err_tc={err_tc:.4f}")
+
+    # write a small machine-readable summary of the run
+    summary = {
+        "best_params": {k: float(v) for k, v in best_params.items()},
+        "best_combined_error": float(ga.errors[-1]),
+        "error_per_iteration": [float(e) for e in ga.errors],
+        "best_fit_err_tf": float(err_tf),
+        "best_fit_err_tc": float(err_tc),
+    }
+    with open(os.path.join(diag_dir, "optimization_summary.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+    print(f"  Diagnostics written to {diag_dir}")
