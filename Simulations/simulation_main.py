@@ -45,6 +45,11 @@ tc_target_path = os.path.join(
     "group", "_preprestim_corrected", "roi_epochswise",
     "group_roi_timecourse_pooled_ses-elec_preprestim_corrected.csv"
 )
+ps_target_path = os.path.join(
+    RESDIR, "Figures", "Main", "eeg_results", "source_reconstruction",
+    "group", "_preprestim_corrected", "roi_epochswise",
+    "group_roi_prestim_spectrum_ses-elec_preprestim_corrected.csv"
+)
 
 
 # add model to datapath
@@ -177,6 +182,12 @@ for ginter in ginters:
                         tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path, sim_dip)
                         print("Time-course error (peak-norm MSE):", tc_error)
                         model.plot_timecourse_comparison(tc_sim, tc_target)
+
+                        # pre-stimulus spectrum error against measured data
+                        ps_error, ps_sim, ps_target = model.compute_error_prestim_spectrum(
+                            ps_target_path, sim_dip)
+                        print("Pre-stim spectrum error (rel-power MSE):", ps_error)
+                        model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip)  # saves to PRESTIM_SPECTRUM_DIR
 
                         # persist per-run comparison maps/traces + values for later animation
                         run_dir = model.prepare_run_dir(filedir)

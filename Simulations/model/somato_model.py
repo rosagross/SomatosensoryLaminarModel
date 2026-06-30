@@ -29,6 +29,7 @@ figure_dir = os.path.join(SIMDIR, "Figures")
 # Structured per-comparison output folders (per-run PNG + HDF5 + summary CSV).
 TIMEFREQ_DIR = os.path.join(SIMDIR, "timefreq_comparison")
 TIMECOURSE_DIR = os.path.join(SIMDIR, "timecourse_comparison")
+PRESTIM_SPECTRUM_DIR = os.path.join(SIMDIR, "prestim_spectrum_comparison")
 
 # Travel time from the fingertip receptor to the thalamus. The real data is
 # time-locked to the fingertip pulse (t=0), but the model injects its external
@@ -241,9 +242,11 @@ class SomatoModel():
         """
         Plot connectivity matrix as heatmap.
         """
-        
+        pop_names = self.get_population_labels()
         W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area) 
-        sns.heatmap(W, annot=False, cmap='coolwarm', center=0, xticklabels=True, yticklabels=True)
+        W_df = pd.DataFrame(W[:,:-2])
+        W_df.columns = pop_names
+        sns.heatmap(W_df, annot=False, cmap='coolwarm', center=0, xticklabels=pop_names, yticklabels=pop_names)
 
 
     def simulate(self):
@@ -782,8 +785,9 @@ class SomatoModel():
         # compute average norm from all vertices
         mean_normal = normals.mean(axis=0)
         mean_normal /= np.linalg.norm(mean_normal)
-        print(label.name)
-        print(mean_normal)
+        #print(label.name)
+        #print(mean_normal)
+        # TODO: instead of using the mean vertex orientation compute the dipole for each single vertex. 
 
 
         # dipoles
@@ -792,10 +796,10 @@ class SomatoModel():
         for i, s in enumerate(dipole_length):
             dipole = s * np.dot(dipole_orientation[i], mean_normal) * resistance_factor 
             #dipole = s * dipole_orientation[i] * resistance_factor 
-            print("dipole before vertex normal transformation:", s * dipole_orientation[i] * resistance_factor)
-            print(".. after vertex normal transformation:", s * np.dot((dipole_orientation)[i], mean_normal) * resistance_factor)
+            #print("dipole before vertex normal transformation:", s * dipole_orientation[i] * resistance_factor)
+            #print(".. after vertex normal transformation:", s * np.dot((dipole_orientation)[i], mean_normal) * resistance_factor)
             mean_dipole = np.mean(dipole)
-            print('mean dipole:', mean_dipole)
+            #print('mean dipole:', mean_dipole)
             dipole_matrix.append(mean_dipole)
 
         dipole_array = np.array(dipole_matrix)
@@ -863,7 +867,7 @@ class SomatoModel():
             fwd_file = os.path.join(DATADIR, 'derivatives', 'eeg-preproc',
                                     f'sub-0{subID}', 'ses-elec',
                                     f'sub-0{subID}_ico-5_ses-elec_fwd.fif')
-            fwd_vector = mne.read_forward_solution(fwd_file)
+            fwd_vector = mne.read_forward_solution(fwd_file, verbose=0)
             fwd_fixed = mne.convert_forward_solution(
                 fwd_vector, surf_ori=True, force_fixed=True, use_cps=True)
             src_fixed_sub = fwd_fixed['src']
@@ -1083,6 +1087,75 @@ class SomatoModel():
 
 
 
+    def compute_prestim_spectrum(self, sim_dip, fmin=1.0, fmax=40.0):
+        """Power spectrum of the 400 ms pre-stimulus window of the simulated ROI dipoles.
+
+        Mirrors helper_functions.compute_freq_spectrum (detrend + Hann + |rfft|^2 / n^2).
+        The window is the 400 ms ending at stimulus onset; captures ongoing oscillatory
+        activity before stimulation.
+
+        Returns:
+            (freqs, dict roi -> power) restricted to [fmin, fmax] Hz.
+        """
+        rois = {"A3b": sim_dip[0], "A1": np.sum(sim_dip[1:5], axis=0), "S2": np.sum(sim_dip[5:9], axis=0)}
+        stim_idx = round(self.input_onset / self.step_size) - 1
+        n_pre = round(0.4 / self.step_size)                  # 400 ms -> 400 samples @ 1 kHz
+        win = np.hanning(n_pre)
+        freqs = np.fft.rfftfreq(n_pre, d=self.step_size)
+        fmask = (freqs >= fmin) & (freqs <= fmax)
+        spectra = {}
+        for roi, sig in rois.items():
+            seg = sig[stim_idx - n_pre:stim_idx]
+            x = (seg - seg.mean()) * win
+            spectra[roi] = ((np.abs(np.fft.rfft(x)) ** 2) / n_pre**2)[fmask]
+        return freqs[fmask], spectra
+
+
+    def load_target_prestim_spectrum(self, data_path):
+        """Load the measured group pre-stimulus spectrum CSV written by step009.
+
+        Returns:
+            (freqs, dict roi -> power) for the electrical modality.
+        """
+        df = pd.read_csv(data_path)
+        df = df[df["modality"] == "elec"]
+        roi_map = {"BA3b": "A3b", "BA1": "A1", "S2": "S2"}
+        freqs, spectra = None, {}
+        for src, dst in roi_map.items():
+            roi_df = df[df["roi"] == src].sort_values("freq_hz")
+            if freqs is None:
+                freqs = roi_df["freq_hz"].to_numpy()
+            spectra[dst] = roi_df["power"].to_numpy()
+        return freqs, spectra
+
+
+    def compute_error_prestim_spectrum(self, data_path, sim_dip, fmin=1.0, fmax=40.0):
+        """Error between simulated and measured pre-stimulus spectra.
+
+        Each spectrum is normalised to unit sum (relative power) over the compared
+        frequencies — removing the sim/data amplitude-scale mismatch — then compared by
+        MSE, averaged over ROIs. Both signals fall on a shared 5 Hz frequency grid.
+
+        Returns:
+            (float mean MSE over ROIs, sim spectra dict, target spectra dict).
+        """
+        f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
+        f_tgt, spec_tgt = self.load_target_prestim_spectrum(data_path)
+        tmask = (f_tgt >= fmin) & (f_tgt <= fmax)
+        # align on the shared frequency bins (both are multiples of 5 Hz)
+        common = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt[tmask], 6))
+        sim_sel = np.isin(np.round(f_sim, 6), common)
+        tgt_sel = np.isin(np.round(f_tgt, 6), common)
+        eps, errors = 1e-10, []
+        for roi in ("A3b", "A1", "S2"):
+            s = spec_sim[roi][sim_sel]
+            s = s / (s.sum() + eps)
+            t = spec_tgt[roi][tgt_sel]
+            t = t / (t.sum() + eps)
+            errors.append(np.mean((s - t) ** 2))
+        return float(np.mean(errors)), spec_sim, spec_tgt
+
+
     def compute_timefreq(self, simulated_dip):
         """
         Compute Morlet TF power for simulated dipoles per ROI.
@@ -1092,7 +1165,7 @@ class SomatoModel():
         target is time-locked to the fingertip pulse, the model to thalamic arrival).
 
         Returns:
-            dict: roi label → (n_freqs=40, n_times=451) array, time axis -500..400 ms at 2 ms steps.
+            dict: roi label → (n_freqs=40, n_times=376) array, time axis -500..250 ms at 2 ms steps.
         """
         sfreq    = self.sfreq_saved                              # 1000 Hz
         stim_idx = round(self.input_onset / self.step_size) - 1  # 0-based stimulus index
@@ -1101,11 +1174,11 @@ class SomatoModel():
         a1_dip  = np.sum(simulated_dip[1:5], axis=0)
         s2_dip  = np.sum(simulated_dip[5:9], axis=0)
 
-        # Window of interest: -500 ms to +400 ms relative to stimulus onset (901 samples
+        # Window of interest: -500 ms to +250 ms relative to stimulus onset (901 samples
         # at 1 kHz), shifted 20 ms earlier for the receptor→thalamus travel time.
         delay_samples = round(RECEPTOR_THALAMUS_DELAY_S / self.step_size)  # 20 samples @ 1 kHz
         window_start = stim_idx - 500 - delay_samples
-        window_end   = stim_idx + 401 - delay_samples
+        window_end   = stim_idx + 251 - delay_samples
 
         tf_freqs    = np.arange(1, 41, 1).astype(float)
         tf_n_cycles = tf_freqs / 2
@@ -1133,10 +1206,12 @@ class SomatoModel():
         step009_plot_roi_epochswise_response_intensity.py.
 
         Returns:
-            dict: model roi label → (n_freqs=40, n_times=451) array
+            dict: model roi label → (n_freqs=40, n_times=376) array
         """
         df = pd.read_csv(data_path)
         df = df[(df["modality"] == "elec") & (df["norm_mode"] == "raw")]
+        # cap the post-stimulus window at +250 ms (in-model crop; CSV spans -500..+400 ms)
+        df = df[df["time_ms"] <= 250 + 1e-6]
 
         roi_map = {"BA3b": "A3b", "BA1": "A1", "S2": "S2"}
         tf_target = {}
@@ -1211,11 +1286,11 @@ class SomatoModel():
         row_labels = ("Simulated", "Measured")
         tf_freqs  = np.arange(1, 41, 1).astype(float)
 
-        # Time axis: -500 ms to +400 ms at 2 ms steps → 451 points.
-        # Display window trimmed to -200 ms onward (index 150); baseline at -500..-430 kept upstream.
+        # Time axis: -500 ms to +250 ms at 2 ms steps → 376 points.
+        # Display window trimmed to index 200 onward; baseline at -500..-430 kept upstream.
         start_idx = 200
-        stop_idx = 400
-        t_ms = np.linspace(-500, 400, 451)[start_idx:stop_idx]
+        stop_idx = None
+        t_ms = np.linspace(-500, 250, 376)[start_idx:stop_idx]
 
         figuredir = TIMEFREQ_DIR
         os.makedirs(figuredir, exist_ok=True)
@@ -1273,13 +1348,13 @@ class SomatoModel():
         Extract the simulated dipole time course per ROI (no Morlet).
 
         Mirrors compute_timefreq's windowing/grouping. Returns the full
-        -500..+400 ms window (baseline kept) so the analysis/plot window can be
+        -500..+250 ms window (baseline kept) so the analysis/plot window can be
         trimmed to -200 ms later while still normalizing against the
         -500..-430 ms baseline.
 
         Returns:
-            dict: roi label -> (n_times=451,) baseline-corrected trace,
-                  time axis -500..+400 ms at 2 ms steps.
+            dict: roi label -> (n_times=376,) baseline-corrected trace,
+                  time axis -500..+250 ms at 2 ms steps.
         """
         stim_idx = round(self.input_onset / self.step_size) - 1  # 0-based stimulus index
 
@@ -1287,19 +1362,19 @@ class SomatoModel():
         a1_dip  = np.sum(simulated_dip[1:5], axis=0)
         s2_dip  = np.sum(simulated_dip[5:9], axis=0)
 
-        # Window of interest: -500 ms to +400 ms relative to stimulus onset (901 samples at 1 kHz),
+        # Window of interest: -500 ms to +250 ms relative to stimulus onset (751 samples at 1 kHz),
         # shifted 20 ms earlier so the model's thalamic onset aligns with the real cortical
         # response (which lags the fingertip pulse by the receptor→thalamus travel time).
         delay_samples = round(RECEPTOR_THALAMUS_DELAY_S / self.step_size)  # 20 samples @ 1 kHz
         win_start = stim_idx - 500 - delay_samples
-        win_end   = stim_idx + 401 - delay_samples
+        win_end   = stim_idx + 251 - delay_samples
 
         # Baseline window: -500 to -430 ms -> indices 0:36 on the 2 ms axis.
         baseline_slice = slice(0, 36)
 
         tc_out = {}
         for roi_label, dip in [("A3b", a3b_dip), ("A1", a1_dip), ("S2", s2_dip)]:
-            segment = dip[win_start:win_end][::2]                  # (451,) at 2 ms steps
+            segment = dip[win_start:win_end][::2]                  # (376,) at 2 ms steps
             segment = segment - segment[baseline_slice].mean()     # baseline-correct to -500..-430 ms
             tc_out[roi_label] = segment
 
@@ -1312,10 +1387,12 @@ class SomatoModel():
         from the CSV produced by step009_plot_roi_epochswise_response_intensity.py.
 
         Returns:
-            dict: model roi label -> (n_times=451,) baseline-corrected trace.
+            dict: model roi label -> (n_times=376,) baseline-corrected trace.
         """
         df = pd.read_csv(data_path)
         df = df[df["modality"] == "elec"]
+        # cap the post-stimulus window at +250 ms (in-model crop; CSV spans -500..+400 ms)
+        df = df[df["time_s"] <= 0.250 + 1e-9]
 
         roi_map = {"BA3b": "A3b", "BA1": "A1", "S2": "S2"}
         baseline_slice = slice(0, 36)  # -500..-430 ms
@@ -1331,7 +1408,7 @@ class SomatoModel():
         return tc_target
 
 
-    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor):
+    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor=None):
         """
         Compute the dimensionless time-course error between simulation and measured data.
 
@@ -1366,9 +1443,16 @@ class SomatoModel():
                 x_sim = x_sim[:x_tgt.shape[0]]
             sims[roi], tgts[roi] = x_sim, x_tgt
 
-        # one shared peak across all areas per signal -> preserves cross-area ratios
-        sim_peak = max(np.max(np.abs(sims[roi])) for roi in rois) + eps
-        tgt_peak = max(np.max(np.abs(tgts[roi])) for roi in rois) + eps
+
+        if scaling_factor:
+            sim_peak = scaling_factor
+            tgt_peak = 1
+        else:
+            # one shared peak across all areas per signal -> preserves cross-area ratios
+            sim_peak = max(np.max(np.abs(sims[roi])) for roi in rois) + eps
+            tgt_peak = max(np.max(np.abs(tgts[roi])) for roi in rois) + eps
+
+            print("Sim peak", sim_peak)
 
         errors = [
             float(np.mean((sims[roi] / sim_peak - tgts[roi] / tgt_peak) ** 2))
@@ -1378,33 +1462,38 @@ class SomatoModel():
         return float(np.mean(errors)), tc_sim, tc_target
 
 
-    def plot_timecourse_comparison(self, tc_sim, tc_target):
+    def plot_timecourse_comparison(self, tc_sim, tc_target, scaling_factor=None):
         """
         Plot simulated vs. measured ROI time courses (peak-normalized) per ROI.
 
         Layout: 1 row x 3 cols (A3b, A1, S2). All areas share one peak per signal
-        (max across A3b/A1/S2 over the -200..+400 ms window) — the same quantity the
+        (max across A3b/A1/S2 over the -200..+250 ms window) — the same quantity the
         error is computed on — so the amplitude ratios between areas are visible.
         Saves to ./Figures/tc_comparison_g-<g>_sI-<sI>_area-<area>.png.
         """
         rois = ("A3b", "A1", "S2")
         eps  = 1e-10
 
-        # Time axis: -500..+400 ms at 2 ms steps, trimmed to -200 ms onward.
-        t_ms = np.linspace(-500, 400, 451)[150:]
+        # Time axis: -500..+250 ms at 2 ms steps, trimmed to -200 ms onward.
+        t_ms = np.linspace(-500, 250, 376)[150:]
 
         figuredir = TIMECOURSE_DIR
         os.makedirs(figuredir, exist_ok=True)
 
         fig, axes = plt.subplots(1, 3, figsize=(13, 3.4), sharex=True, sharey=True)
         fig.suptitle(
-            f"Time course — g={self.coupling_strength}, sI={self.strength_I}, area={self.area}",
+            f"Time course - g={self.coupling_strength}, sI={self.strength_I}, area={self.area}",
             fontsize=11,
         )
 
-        # one shared peak across all areas per signal -> preserves cross-area ratios
-        sim_peak = max(np.max(np.abs(tc_sim[roi][150:])) for roi in rois) + eps
-        tgt_peak = max(np.max(np.abs(tc_target[roi][150:])) for roi in rois) + eps
+
+        if scaling_factor:
+            sim_peak = scaling_factor
+            tgt_peak = 1
+        else:
+            # one shared peak across all areas per signal -> preserves cross-area ratios
+            sim_peak = max(np.max(np.abs(tc_sim[roi][150:])) for roi in rois) + eps
+            tgt_peak = max(np.max(np.abs(tc_target[roi][150:])) for roi in rois) + eps
 
         for ax, roi in zip(axes, rois):
             x_sim = tc_sim[roi][150:] / sim_peak
@@ -1423,6 +1512,51 @@ class SomatoModel():
         fig.tight_layout(rect=[0, 0, 1, 0.96])
         fname = (
             f"tc_comparison_g-{self.coupling_strength}"
+            f"_sI-{self.strength_I}"
+            f"_area-{self.area}.png"
+        )
+        fig.savefig(os.path.join(figuredir, fname), dpi=300, bbox_inches="tight")
+        plt.show()
+
+
+    def plot_prestim_spectrum_comparison(self, data_path, sim_dip, fmin=1.0, fmax=40.0):
+        """Plot simulated vs measured pre-stim power spectra (unit-sum relative power) per ROI.
+
+        Layout 1x3 (A3b, A1, S2) on the shared 5 Hz grid — the same quantity the error uses.
+        Self-contained (recomputes the sim spectrum and reloads the target) so the target's own
+        frequency grid is available for alignment.
+        Saves to PRESTIM_SPECTRUM_DIR/prestim_spectrum_comparison_g-<g>_sI-<sI>_area-<area>.png.
+        """
+        rois, eps = ("A3b", "A1", "S2"), 1e-10
+        f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
+        f_tgt, spec_tgt = self.load_target_prestim_spectrum(data_path)
+        tmask  = (f_tgt >= fmin) & (f_tgt <= fmax)
+        f_tgt  = f_tgt[tmask]
+        common = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt, 6))
+        sim_sel = np.isin(np.round(f_sim, 6), common)
+        tgt_sel = np.isin(np.round(f_tgt, 6), common)
+
+        figuredir = PRESTIM_SPECTRUM_DIR
+        os.makedirs(figuredir, exist_ok=True)
+        fig, axes = plt.subplots(1, 3, figsize=(13, 3.4), sharex=True, sharey=True)
+        fig.suptitle(
+            f"Pre-stim spectrum - g={self.coupling_strength}, sI={self.strength_I}, area={self.area}",
+            fontsize=11,
+        )
+        for ax, roi in zip(axes, rois):
+            s = spec_sim[roi][sim_sel];        s = s / (s.sum() + eps)
+            t = spec_tgt[roi][tmask][tgt_sel]; t = t / (t.sum() + eps)
+            ax.plot(common, s, color="C1", lw=1.5, marker="o", ms=3, label="Simulated")
+            ax.plot(common, t, color="black", lw=1.5, marker="o", ms=3, label="Measured")
+            ax.set_title(roi)
+            ax.set_xlabel("Frequency (Hz)")
+            if ax is axes[0]:
+                ax.set_ylabel("Relative power (unit-sum normalized)")
+            ax.legend(frameon=False, fontsize=8)
+
+        fig.tight_layout(rect=[0, 0, 1, 0.96])
+        fname = (
+            f"prestim_spectrum_comparison_g-{self.coupling_strength}"
             f"_sI-{self.strength_I}"
             f"_area-{self.area}.png"
         )
@@ -1471,8 +1605,8 @@ class SomatoModel():
         """
         Save the simulated/measured TF maps + scalar error for one run to HDF5.
 
-        Layout: groups 'sim' and 'target', each with datasets A3b/A1/S2 (40 x 451);
-        plus 'freqs' (1-40 Hz) and 'times_ms' (-500..+400 ms). Parameter metadata is
+        Layout: groups 'sim' and 'target', each with datasets A3b/A1/S2 (40 x 376);
+        plus 'freqs' (1-40 Hz) and 'times_ms' (-500..+250 ms). Parameter metadata is
         stored as attrs so the animation can filter on them.
         """
         os.makedirs(filedir, exist_ok=True)
@@ -1506,8 +1640,8 @@ class SomatoModel():
         """
         Save the simulated/measured TC traces + scalar error for one run to HDF5.
 
-        Layout: groups 'sim' and 'target', each with datasets A3b/A1/S2 (451,);
-        plus 'times_ms' (-500..+400 ms). Parameter metadata stored as attrs.
+        Layout: groups 'sim' and 'target', each with datasets A3b/A1/S2 (376,);
+        plus 'times_ms' (-500..+250 ms). Parameter metadata stored as attrs.
         """
         os.makedirs(filedir, exist_ok=True)
         if filename is None:
@@ -1515,9 +1649,9 @@ class SomatoModel():
         elif not filename.endswith(".hdf5"):
             filename = filename + ".hdf5"
 
-        # Derive the time axis from the trace length (TC window spans -500..+400 ms).
+        # Derive the time axis from the trace length (TC window spans -500..+250 ms).
         n_times  = np.asarray(tc_sim["A3b"]).shape[0]
-        times_ms = np.linspace(-500, 400, n_times)
+        times_ms = np.linspace(-500, 250, n_times)
 
         filepath = os.path.join(filedir, filename)
         with h5py.File(filepath, "w") as h5f:
@@ -1548,12 +1682,6 @@ class SomatoModel():
             os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.BA3b_exvivo.label'),
         ]
 
-        visual_label_files = [
-            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'lh.V1_exvivo.label'),
-            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'lh.V2_exvivo.label'),
-            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.V1_exvivo.label'),
-            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.V2_exvivo.label'),
-        ]
 
         # Read labels
         somatosensory_labels = [mne.read_label(label_file) for label_file in somatosensory_label_files]
@@ -1570,7 +1698,7 @@ class SomatoModel():
 
         # S2 label
         sub_name = f"sub-0{subID}"
-        labels = mne.read_labels_from_annot(sub_name, parc='aparc.a2009s', subjects_dir=RECONDIR)
+        labels = mne.read_labels_from_annot(sub_name, parc='aparc.a2009s', subjects_dir=RECONDIR, verbose=0)
         # Relevant labels:
         # 'S_circular_insula_sup' - superior circular sulcus of insula
         # 'G_temp_sup-Plan_polar' 
