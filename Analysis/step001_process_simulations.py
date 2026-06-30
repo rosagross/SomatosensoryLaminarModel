@@ -44,7 +44,7 @@ sI_thal = params['sI_thal']
 step_size = params['step_size']
 area = params['area']
 filedir = params['filedir']
-g_intercortical = np.arange(0.2,2,0.2) # params['g_inter']
+g_intercortical = [1.0] #np.arange(0.2,2,0.2) # params['g_inter']
 
 # inputs
 input_type = params['input_type']

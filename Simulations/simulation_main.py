@@ -82,20 +82,11 @@ sub_dir = os.path.join(DATADIR, 'derivatives', 'eeg-preproc',
 epoch_fif = os.path.join(sub_dir,
     f"sub-0{subID}_ses-{modality}_task-NT_"
     f"lfreqori-{l_freq_orig}_lfreq-{l_freq}_hfreq-{h_freq}_epochs{suffix}.fif")
-fwd_file  = os.path.join(sub_dir, f'sub-0{subID}_ico-5_ses-{modality}_fwd.fif')
 
-epochs = mne.read_epochs(epoch_fif, preload=True)
-
-fwd = mne.read_forward_solution(fwd_file)
-fwd_fixed = mne.convert_forward_solution(
-    fwd, surf_ori=True, force_fixed=True, use_cps=True
-)
-
-leadfield = fwd["sol"]["data"]
-print(f"Leadfield size : {leadfield.shape[0]} sensors x {leadfield.shape[1]} dipoles")
-
-src_free  = fwd["src"]
-src_fixed = fwd_fixed["src"]
+# electrical-modality subjects; compute_dipoles reads each one's forward model
+# (same list as Analysis/SourceReconstruction/step002_inverse_solution_multisub_epochswise.py)
+subID_elec = [15, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 34, 35, 36, 37, 38, 39, 40,
+              42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
 
 # needed for rh.BA3b.label lookup inside simulate_eeg()
 data_path_labels = sample.data_path()
@@ -119,12 +110,12 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = np.arange(0,55,5) #[100, 120, 140, 160]
-backgrndI_strengths = np.arange(0,8,2) #[40, 60, 80] #,6,7]
-input_durations = np.arange(0, 0.02, 0.004) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = np.arange(0,50,10)
-strength_I = np.arange(0.2,0.9,0.02) #, 0.25, 0.26, 0.36]
-ginters = np.arange(0,2,0.2)
+coupling_strengths = [5] # np.arange(0,55,5)#[100, 120, 140, 160]
+backgrndI_strengths = [1] # np.arange(0,8,2)#[40, 60, 80] #,6,7]
+input_durations = [0.01] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [100] # np.arange(0,50,10)
+strength_I = [0.8] # np.arange(0.2,0.9,0.02)#, 0.25, 0.26, 0.36]
+ginters = [2] # np.arange(0,2,0.2)
 resistance_factor = 1
 area = 'all'
 pyrates = False
@@ -140,7 +131,7 @@ for ginter in ginters:
                 for g in coupling_strengths:
                     for sI in strength_I:
                         
-                        params['g_intercortical'] = ginter
+                        params['g_intercortical'] = np.round(ginter, 3)
                         params['coupling_strength'] = g 
                         params['strength_I'] = np.round(sI, 3)
                         params['Iext_duration'] = np.round(d, 3)
@@ -175,14 +166,15 @@ for ginter in ginters:
                         # analyse signal (frequency spectra)
                         #model.analyse_signal(save_spectrum=True)
 
-                        """
+                        
                         # time-frequency error against measured data
-                        tf_error, tf_sim, tf_target = model.compute_error_timefreq(tf_target_path)
+                        sim_dip = model.compute_dipoles(subID_elec)
+                        tf_error, tf_sim, tf_target = model.compute_error_timefreq(tf_target_path, sim_dip)
                         print("TF error (log-MSE):", tf_error)
                         model.plot_timefreq_comparison(tf_sim, tf_target)
 
                         # time-course error against measured data
-                        tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path)
+                        tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path, sim_dip)
                         print("Time-course error (peak-norm MSE):", tc_error)
                         model.plot_timecourse_comparison(tc_sim, tc_target)
 
@@ -197,7 +189,7 @@ for ginter in ginters:
                         # compute dipoles
                         #sim_dip = model.compute_dipoles()
                         #model.plot_dipoles(sim_dip, epochs.info)
-                        """
+                        
 
                         #error = compute_error_timefreq()
 

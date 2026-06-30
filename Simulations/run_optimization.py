@@ -18,12 +18,18 @@ import numpy as np
 import os
 import sys
 import json
+import mne
 import matplotlib.pyplot as plt
 
 # ── paths ──────────────────────────────────────────────────────────────────────
-WDDIR  = os.getenv("WDDIR")   # /data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel
-RESDIR = os.getenv("RESDIR")  # /data/p_02989/shared_workspace/results_grossmannr
-SIMDIR = os.getenv("SIMDIR")  # base output dir; optimization diagnostics go in SIMDIR/optimization
+WDDIR    = os.getenv("WDDIR")   # /data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel
+RESDIR   = os.getenv("RESDIR")  # /data/p_02989/shared_workspace/results_grossmannr
+SIMDIR   = os.getenv("SIMDIR")  # base output dir; optimization diagnostics go in SIMDIR/optimization
+
+# electrical-modality subjects; compute_dipoles reads each one's forward model
+# (same list as Analysis/SourceReconstruction/step002_inverse_solution_multisub_epochswise.py)
+subID_elec = [15, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 34, 35, 36, 37, 38, 39, 40,
+              42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
 
 # where to store optimization diagnostics (fit comparison plots use the model's own dirs)
 diag_dir = os.path.join(SIMDIR, "optimization")
@@ -35,6 +41,17 @@ sys.path.insert(0, "/data/p_02989/Modelling/neuronaldynamics")  # for Utils.py
 
 from somato_model import SomatoModel
 from neuronaldynamics.Optimizers.Optimizer import GA
+
+# neuronaldynamics.Utils forces matplotlib's interactive 'TkAgg' backend on import,
+# whose plt.show() blocks on a window when run headless (e.g. over SSH on the
+# cluster). For a non-interactive run, switch to the Agg backend *after* that
+# import: figures are still saved via savefig but plt.show() becomes a no-op.
+# Set OPT_HEADLESS=1 to force this even under a virtual display (xvfb, where
+# DISPLAY is set so TkAgg can import). Interactive runs leave both unset and keep
+# TkAgg so windows still pop up.
+import matplotlib
+if os.environ.get("OPT_HEADLESS") or not os.environ.get("DISPLAY"):
+    matplotlib.use("Agg")
 
 # ── target data paths ──────────────────────────────────────────────────────────
 _roi_dir = os.path.join(
@@ -56,16 +73,27 @@ base_params = {
 model = SomatoModel(base_params)
 
 # ── objective function ─────────────────────────────────────────────────────────
+# Which error(s) the GA optimizes against: "tf" (time-frequency only),
+# "tc" (time-course only), or "both" (their sum).
+ERROR_MODE = "tc"
+assert ERROR_MODE in ("tf", "tc", "both"), f"invalid ERROR_MODE: {ERROR_MODE!r}"
+
+
 def objective(**params):
     """
-    Run one full simulation and return the combined TF + timecourse error.
-    The GA minimises (0 - objective)**2, i.e. the squared combined error.
+    Run one full simulation and return the selected error (see ERROR_MODE):
+    TF only, timecourse only, or their sum.
+    The GA minimises (0 - objective)**2, i.e. the squared selected error.
     """
     model.apply_params(params)
     model.initialize_state()
     model.simulate()
-    err_tf, _, _ = model.compute_error_timefreq(tf_data_path)
-    err_tc, _, _ = model.compute_error_timecourse(tc_data_path)
+    sim_dip = model.compute_dipoles(subID_elec)
+    err_tf = err_tc = 0.0
+    if ERROR_MODE in ("tf", "both"):
+        err_tf, _, _ = model.compute_error_timefreq(tf_data_path, sim_dip)
+    if ERROR_MODE in ("tc", "both"):
+        err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip)
     combined = err_tf + err_tc
     print(f"  params={params}  →  err_tf={err_tf:.4f}  err_tc={err_tc:.4f}  total={combined:.4f}")
     return combined
@@ -147,10 +175,12 @@ def plot_best_fit(model, best_params, outdir):
     model.initialize_state()
     model.simulate()
 
-    err_tf, tf_sim, tf_target = model.compute_error_timefreq(tf_data_path)
+    sim_dip = model.compute_dipoles(subID_elec)
+
+    err_tf, tf_sim, tf_target = model.compute_error_timefreq(tf_data_path, sim_dip)
     model.plot_timefreq_comparison(tf_sim, tf_target)        # saves to the model's TIMEFREQ_DIR
 
-    err_tc, tc_sim, tc_target = model.compute_error_timecourse(tc_data_path)
+    err_tc, tc_sim, tc_target = model.compute_error_timecourse(tc_data_path, sim_dip)
     model.plot_timecourse_comparison(tc_sim, tc_target)      # saves to the model's TIMECOURSE_DIR
 
     # also persist the comparison maps/traces for this best run
@@ -180,6 +210,7 @@ if __name__ == "__main__":
 
     # write a small machine-readable summary of the run
     summary = {
+        "error_mode": ERROR_MODE,
         "best_params": {k: float(v) for k, v in best_params.items()},
         "best_combined_error": float(ga.errors[-1]),
         "error_per_iteration": [float(e) for e in ga.errors],

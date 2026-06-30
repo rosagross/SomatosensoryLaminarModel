@@ -766,7 +766,47 @@ class SomatoModel():
         return dipoles_weighted
 
 
-    def compute_dipoles(self):
+    def prepDipoles_normal(self, label, src_fixed, dipole_length, dipole_orientation, resistance_factor, cellcountsE_relative):
+        """
+        Differently to the prepDipoles() function, here we consider the vertex normal orientation.
+        Only like this we can actually compare it to the source reconstructed values.
+        """
+
+        # get the vertex normal orientation
+
+        # Find which source space vertices are in the label
+        src_rh = src_fixed[1]  # right hemisphere
+        label_verts = np.intersect1d(label.vertices, src_rh['vertno'])
+        idx = np.searchsorted(src_rh["vertno"], label_verts)
+        normals = src_rh["nn"][idx]
+        # compute average norm from all vertices
+        mean_normal = normals.mean(axis=0)
+        mean_normal /= np.linalg.norm(mean_normal)
+        print(label.name)
+        print(mean_normal)
+
+
+        # dipoles
+        # each dipole set has a value for each source population
+        dipole_matrix = []
+        for i, s in enumerate(dipole_length):
+            dipole = s * np.dot(dipole_orientation[i], mean_normal) * resistance_factor 
+            #dipole = s * dipole_orientation[i] * resistance_factor 
+            print("dipole before vertex normal transformation:", s * dipole_orientation[i] * resistance_factor)
+            print(".. after vertex normal transformation:", s * np.dot((dipole_orientation)[i], mean_normal) * resistance_factor)
+            mean_dipole = np.mean(dipole)
+            print('mean dipole:', mean_dipole)
+            dipole_matrix.append(mean_dipole)
+
+        dipole_array = np.array(dipole_matrix)
+
+        # Weighted by E cell count 
+        dipoles_weighted = dipole_array * cellcountsE_relative
+
+        return dipoles_weighted
+
+
+    def compute_dipoles(self, subjects):
         
         # load dipole parameters
         start_loadingtime = time.time()
@@ -808,44 +848,69 @@ class SomatoModel():
         cellcounts_EA1_relative = cellcounts_A1_relative[np.array(exc_pops[1:5])-4]
         cellcounts_ES2_relative = cellcounts_S2_relative[np.array(exc_pops[-4:])-17]
 
-        # compute dipoles for A3b, A1, S2 
-        dipoles_A3b = self.prepDipoles(dipole_lengths_A3b, dipole_orientation_A3b, resistance_factor, cellcounts_EA3b_relative)
-        dipoles_A1 = []
-        dipoles_ES2 = []
 
-        for i, layer in enumerate(['L1_E', 'L4_E', 'L5_E', 'L6_E']):
-            # compute dipoles for layers in A1
-            dipole_layer_A1 = self.prepDipoles(dipole_lengths_A1[i], dipole_orientation_A1[i], resistance_factor, cellcounts_EA1_relative[i])
-            dipoles_A1.append(dipole_layer_A1)
+        # for each subject compute dipoles for A3b, A1, S2 
+        simDipoles_all = []
 
-            # compute dipoles for layers in S2
-            dipole_layer_S2 = self.prepDipoles(dipole_lengths_ES2[i], dipole_orientation_ES2[i], resistance_factor, cellcounts_ES2_relative[i])
-            dipoles_ES2.append(dipole_layer_S2)
+        for subID in subjects: 
+            soma_labels, _ = self.read_labels(subID)
+            label_A3b = soma_labels[7]
+            label_A1 = soma_labels[4]
+            label_A2 = soma_labels[9]   # RH S2 (Lat_Fis-post-rh)
 
-        all_dipoles = np.concatenate((dipoles_A3b, *dipoles_A1, *dipoles_ES2))
-
-        # I have the dipole models computed for each area/layer
-        # Now it needs to be convolved with the simulated data
-        potentialsEA3b = self.potential[exc_pops[0], :-2]
-        potentialsEA1 = self.potential[exc_pops[1:5], :-2]
-        potentialsES2 = self.potential[exc_pops[-4:], :-2]
+            # read the per-subject elec forward model and take its fixed-orientation source
+            # space, mirroring step002_inverse_solution_multisub_epochswise.py
+            fwd_file = os.path.join(DATADIR, 'derivatives', 'eeg-preproc',
+                                    f'sub-0{subID}', 'ses-elec',
+                                    f'sub-0{subID}_ico-5_ses-elec_fwd.fif')
+            fwd_vector = mne.read_forward_solution(fwd_file)
+            fwd_fixed = mne.convert_forward_solution(
+                fwd_vector, surf_ori=True, force_fixed=True, use_cps=True)
+            src_fixed_sub = fwd_fixed['src']
 
 
-        # for each time point, compute the simulated dipole
-        nE = 9
-        simDipoles = np.zeros((nE, potentialsEA1.shape[2]))
-        simDipoles[0] = np.dot(dipoles_A3b, abs(potentialsEA3b))
+            dipoles_A3b_sub = self.prepDipoles_normal(label_A3b, src_fixed_sub, dipole_lengths_A3b, dipole_orientation_A3b, resistance_factor, cellcounts_EA3b_relative)
+        
+            dipoles_A1_layers = []
+            dipoles_ES2_layers = []
 
-        for E in range(4):
-            simDipoles[E+1] = np.dot(np.concatenate([dipoles_A1[E]]), abs(potentialsEA1[E]))
-            simDipoles[E+5] = np.dot(np.concatenate([dipoles_ES2[E]]), abs(potentialsES2[E]))
+            for i, layer in enumerate(['L1_E', 'L4_E', 'L5_E', 'L6_E']):
+                # compute dipoles for layers in A1
+                dipole_layer_A1 = self.prepDipoles_normal(label_A1, src_fixed_sub, dipole_lengths_A1[i], dipole_orientation_A1[i], resistance_factor, cellcounts_EA1_relative[i])
+                dipoles_A1_layers.append(dipole_layer_A1)
 
-        dipole_computation_end = time.time()
-        #print(f"Computed simulated dipoles in {dipole_computation_end - dipole_computation_start:.2f} seconds.")
-        #print("Simulated dipoles shape:", simDipoles.shape)
+                # compute dipoles for layers in S2
+                dipole_layer_S2 = self.prepDipoles_normal(label_A2, src_fixed_sub, dipole_lengths_ES2[i], dipole_orientation_ES2[i], resistance_factor, cellcounts_ES2_relative[i])
+                dipoles_ES2_layers.append(dipole_layer_S2)
 
-        return simDipoles
-    
+            # I have the dipole models computed for each area/layer
+            # Now it needs to be convolved with the simulated data
+            potentialsEA3b = self.potential[exc_pops[0], :-2]
+            potentialsEA1 = self.potential[exc_pops[1:5], :-2]
+            potentialsES2 = self.potential[exc_pops[-4:], :-2]
+
+
+            # for each time point, compute the simulated dipole
+            nE = 9
+            simDipoles = np.zeros((nE, potentialsEA1.shape[2]))
+            simDipoles[0] = np.dot(dipoles_A3b_sub, potentialsEA3b)
+
+            for E in range(4):
+                simDipoles[E+1] = np.dot(np.concatenate([dipoles_A1_layers[E]]), potentialsEA1[E])
+                simDipoles[E+5] = np.dot(np.concatenate([dipoles_ES2_layers[E]]), potentialsES2[E])
+
+            dipole_computation_end = time.time()
+            #print(f"Computed simulated dipoles in {dipole_computation_end - dipole_computation_start:.2f} seconds.")
+            #print("Simulated dipoles shape:", simDipoles.shape)
+
+            simDipoles_all.append(simDipoles)
+
+        # average over subjects
+        simDipoles_avg = np.mean(np.stack(simDipoles_all, axis=0), axis=0)
+
+
+        return simDipoles_avg
+
 
     def plot_dipoles(self, simDipoles, raw_info):
         time = np.arange(simDipoles.shape[1]) / self.sfreq_saved
@@ -1086,11 +1151,11 @@ class SomatoModel():
         return tf_target
 
 
-    def compute_error_timefreq(self, data_path):
+    def compute_error_timefreq(self, data_path, sim_dip):
         """
         Compute the dimensionless TF error between simulation and measured data.
 
-        Both maps are normalized by their own baseline (-500 to -430 ms per frequency),
+        Each area is normalized by its own baseline (-500 to -430 ms per frequency),
         then compared in log10 space via MSE. This makes the error scale-invariant —
         robust to the absolute amplitude difference between simulated and measured dipoles.
 
@@ -1100,7 +1165,6 @@ class SomatoModel():
                 - tf_sim: roi label → (n_freqs=40, n_times=451) simulated power array
                 - tf_target: roi label → (n_freqs=40, n_times=451) measured power array
         """
-        sim_dip   = self.compute_dipoles()
         tf_sim    = self.compute_timefreq(simulated_dip=sim_dip)
         tf_target = self.load_target_timefreq(data_path)
 
@@ -1119,11 +1183,10 @@ class SomatoModel():
             P_tgt = tf_target[roi]
 
             if P_sim.shape != P_tgt.shape:
-
                 # cut simulated signal to same size
                 P_sim = P_sim[:, :P_tgt.shape[1]]
 
-
+            # each area normalized by its own per-frequency baseline
             bl_sim = P_sim[:, baseline_slice].mean(axis=1, keepdims=True)
             bl_tgt = P_tgt[:, baseline_slice].mean(axis=1, keepdims=True)
 
@@ -1140,7 +1203,8 @@ class SomatoModel():
         Plot simulated vs. measured Morlet TF power side-by-side for each ROI.
 
         Layout: 2 rows (Simulated / Measured) × 3 cols (A3b, A1, S2).
-        Both rows share the same colour scale per ROI (95th-percentile of simulated power).
+        All panels share one colour scale (95th-percentile of simulated power across
+        all areas) so the power ratios between areas are visible.
         Saves to ./Figures/tf_comparison_g-<g>_sI-<sI>_area-<area>.png.
         """
         rois      = ("A3b", "A1", "S2")
@@ -1162,11 +1226,15 @@ class SomatoModel():
             fontsize=11,
         )
 
+        # one shared colour scale across all areas -> cross-area power ratios stay visible
+        vmin = 0.0
+        vmax = max(
+            float(np.percentile(tf_sim[roi][:, start_idx:stop_idx], 95)) for roi in rois
+        )
+
         for col, roi in enumerate(rois):
             P_sim = tf_sim[roi][:, start_idx:stop_idx]    # (n_freqs=40, n_times_trimmed)
             P_tgt = tf_target[roi][:, start_idx:stop_idx]
-            vmax  = float(np.percentile(P_sim, 95))
-            vmin  = 0.0
 
             for row, (data, label) in enumerate(
                 zip((P_sim, P_tgt), row_labels)
@@ -1263,44 +1331,49 @@ class SomatoModel():
         return tc_target
 
 
-    def compute_error_timecourse(self, data_path):
+    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor):
         """
         Compute the dimensionless time-course error between simulation and measured data.
 
-        Each trace is peak-normalized (divided by its max absolute value over the
-        analysis window) before comparison, making the error scale-invariant —
-        the simulated dipoles and measured nAm amplitudes are on different scales.
-        The error focuses on waveform shape and timing.
+        All areas are peak-normalized *together* (divided by one shared peak across
+        A3b/A1/S2, computed separately for the simulated and the measured traces),
+        so the amplitude ratios between areas are preserved while the simulated
+        dipoles and measured nAm traces stay on a comparable overall scale.
 
         Returns:
             tuple: (float error, tc_sim dict, tc_target dict)
-                - float: Mean peak-normalized MSE across ROIs (A3b, A1, S2).
+                - float: Mean MSE across ROIs (A3b, A1, S2).
                 - tc_sim: roi label -> (n_times=451,) simulated trace
                 - tc_target: roi label -> (n_times=451,) measured trace
         """
-        sim_dip   = self.compute_dipoles()
         tc_sim    = self.compute_timecourse(simulated_dip=sim_dip)
         tc_target = self.load_target_timecourse(data_path)
 
         # Analysis window: -200 ms onward -> index 150 on the 2 ms / -500..400 axis.
         analysis_slice = slice(150, None)
         eps = 1e-10
+        rois = ("A3b", "A1", "S2")
 
-        errors = []
-        for roi in ("A3b", "A1", "S2"):
+        # collect the sliced, shape-matched traces per ROI
+        sims, tgts = {}, {}
+        for roi in rois:
             if roi not in tc_sim or roi not in tc_target:
                 raise RuntimeError(f"Missing time-course data for ROI '{roi}'.")
             x_sim = tc_sim[roi][analysis_slice]
             x_tgt = tc_target[roi][analysis_slice]
-
             if x_sim.shape != x_tgt.shape:
                 # cut simulated signal to same size
                 x_sim = x_sim[:x_tgt.shape[0]]
+            sims[roi], tgts[roi] = x_sim, x_tgt
 
-            x_sim = x_sim / (np.max(np.abs(x_sim)) + eps)
-            x_tgt = x_tgt / (np.max(np.abs(x_tgt)) + eps)
+        # one shared peak across all areas per signal -> preserves cross-area ratios
+        sim_peak = max(np.max(np.abs(sims[roi])) for roi in rois) + eps
+        tgt_peak = max(np.max(np.abs(tgts[roi])) for roi in rois) + eps
 
-            errors.append(float(np.mean((x_sim - x_tgt) ** 2)))
+        errors = [
+            float(np.mean((sims[roi] / sim_peak - tgts[roi] / tgt_peak) ** 2))
+            for roi in rois
+        ]
 
         return float(np.mean(errors)), tc_sim, tc_target
 
@@ -1309,9 +1382,9 @@ class SomatoModel():
         """
         Plot simulated vs. measured ROI time courses (peak-normalized) per ROI.
 
-        Layout: 1 row x 3 cols (A3b, A1, S2). Raw scales differ too much to share
-        an axis, so each trace is peak-normalized over the -200..+400 ms window —
-        the same quantity the error is computed on.
+        Layout: 1 row x 3 cols (A3b, A1, S2). All areas share one peak per signal
+        (max across A3b/A1/S2 over the -200..+400 ms window) — the same quantity the
+        error is computed on — so the amplitude ratios between areas are visible.
         Saves to ./Figures/tc_comparison_g-<g>_sI-<sI>_area-<area>.png.
         """
         rois = ("A3b", "A1", "S2")
@@ -1329,11 +1402,13 @@ class SomatoModel():
             fontsize=11,
         )
 
+        # one shared peak across all areas per signal -> preserves cross-area ratios
+        sim_peak = max(np.max(np.abs(tc_sim[roi][150:])) for roi in rois) + eps
+        tgt_peak = max(np.max(np.abs(tc_target[roi][150:])) for roi in rois) + eps
+
         for ax, roi in zip(axes, rois):
-            x_sim = tc_sim[roi][150:]
-            x_tgt = tc_target[roi][150:]
-            x_sim = x_sim / (np.max(np.abs(x_sim)) + eps)
-            x_tgt = x_tgt / (np.max(np.abs(x_tgt)) + eps)
+            x_sim = tc_sim[roi][150:] / sim_peak
+            x_tgt = tc_target[roi][150:] / tgt_peak
 
             ax.plot(t_ms, x_sim, color="C1", lw=1.5, label="Simulated")
             ax.plot(t_ms, x_tgt, color="black", lw=1.5, label="Measured")
@@ -1342,7 +1417,7 @@ class SomatoModel():
             ax.set_title(roi)
             ax.set_xlabel("Time (ms)")
             if ax is axes[0]:
-                ax.set_ylabel("Peak-normalized amplitude")
+                ax.set_ylabel("Amplitude (shared-peak normalized)")
             ax.legend(frameon=False, fontsize=8)
 
         fig.tight_layout(rect=[0, 0, 1, 0.96])
@@ -1390,6 +1465,7 @@ class SomatoModel():
             header=not os.path.exists(summary_path),
             index=False,
         )
+
 
     def save_timefreq_comparison(self, filedir, tf_sim, tf_target, tf_error, filename=None):
         """
@@ -1458,6 +1534,56 @@ class SomatoModel():
         return filepath
 
 
+    def read_labels(self, subID):
+
+        # read labels
+        somatosensory_label_files = [
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'lh.BA1_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'lh.BA2_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'lh.BA3a_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'lh.BA3b_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.BA1_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.BA2_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.BA3a_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.BA3b_exvivo.label'),
+        ]
+
+        visual_label_files = [
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'lh.V1_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'lh.V2_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.V1_exvivo.label'),
+            os.path.join(RECONDIR, f'sub-0{subID}', 'label', 'rh.V2_exvivo.label'),
+        ]
+
+        # Read labels
+        somatosensory_labels = [mne.read_label(label_file) for label_file in somatosensory_label_files]
+        somatosensory_label_names = [
+            'LH BA1',
+            'LH BA2',
+            'LH BA3a',
+            'LH 3b',
+            'RH BA1',
+            'RH BA2',
+            'RH BA3a',
+            'RH 3b'
+        ]
+
+        # S2 label
+        sub_name = f"sub-0{subID}"
+        labels = mne.read_labels_from_annot(sub_name, parc='aparc.a2009s', subjects_dir=RECONDIR)
+        # Relevant labels:
+        # 'S_circular_insula_sup' - superior circular sulcus of insula
+        # 'G_temp_sup-Plan_polar' 
+        # 'Lat_Fis-post' - posterior lateral fissure (parietal operculum = S2)
+        # 'G_and_S_transv_frontopol'
+        s2_lh_label = next(label for label in labels if label.name == 'Lat_Fis-post-lh')
+        s2_rh_label = next(label for label in labels if label.name == 'Lat_Fis-post-rh')
+
+        # append S2 to the label list (new indices 8 = LH S2, 9 = RH S2)
+        somatosensory_labels += [s2_lh_label, s2_rh_label]
+        somatosensory_label_names += ['LH S2', 'RH S2']
+
+        return somatosensory_labels, somatosensory_label_names
 
 
 
@@ -1468,5 +1594,9 @@ class SomatoModel():
 
 
 
-    
+
+
+
+
+        
     
