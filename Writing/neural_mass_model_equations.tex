@@ -1,0 +1,65 @@
+
+\documentclass{article}
+\usepackage{amsmath,booktabs}
+\begin{document}
+\section*{Neural Mass Model Equations}
+
+\subsection*{Population dynamics}
+\[
+\frac{d^2 v_{ij}}{dt^2}
+=
+\frac{H_{ij}}{\tau_{ij}}W_{ij}r_j
+-\frac{2}{\tau_{ij}}\frac{dv_{ij}}{dt}
+-\frac{1}{\tau_{ij}^2}v_{ij}
+\]
+
+\subsection*{External input}
+\[
+\frac{d^2 v_i^{\mathrm{ext}}}{dt^2}
+=
+\frac{H_i}{\tau_i}W_i^{\mathrm{ext}}I_{\mathrm{ext}}
+-\frac{2}{\tau_i}\frac{dv_i^{\mathrm{ext}}}{dt}
+-\frac{1}{\tau_i^2}v_i^{\mathrm{ext}}
+\]
+
+\subsection*{Background input}
+\[
+\frac{d^2 v_i^{\mathrm{bg}}}{dt^2}
+=
+\frac{H_i}{\tau_i}W_i^{\mathrm{bg}}I_{\mathrm{bg}}
+-\frac{2}{\tau_i}\frac{dv_i^{\mathrm{bg}}}{dt}
+-\frac{1}{\tau_i^2}v_i^{\mathrm{bg}}
+\]
+
+\subsection*{Total membrane potential}
+\[
+V_i=\sum_j v_{ij}+v_i^{\mathrm{ext}}+v_i^{\mathrm{bg}}
+\]
+
+\subsection*{Firing-rate function}
+\[
+r_i=\frac{r_i^{\max}}
+{1+\exp\left[a_i(\theta_i-V_i)\right]}
+\]
+
+\section*{Variable definitions}
+
+\begin{tabular}{ll}
+\toprule
+Symbol & Description\\
+\midrule
+$v_{ij}$ & Postsynaptic potential in population $i$ from population $j$\\
+$V_i$ & Total membrane potential\\
+$r_i$ & Population firing rate\\
+$r_i^{\max}$ & Maximum firing rate\\
+$a_i$ & Sigmoid slope\\
+$\theta_i$ & Firing threshold\\
+$W_{ij}$ & Effective connectivity weight\\
+$H_{ij}$ & Synaptic gain\\
+$\tau_{ij}$ & Synaptic time constant\\
+$I_{\mathrm{ext}}$ & External stimulus\\
+$I_{\mathrm{bg}}$ & Background input\\
+\bottomrule
+\end{tabular}
+
+\end{document}

@@ -60,6 +60,7 @@ _roi_dir = os.path.join(
 )
 tf_data_path = os.path.join(_roi_dir, "group_roi_tf_morlet_ses-elec_preprestim_corrected.csv")
 tc_data_path = os.path.join(_roi_dir, "group_roi_timecourse_pooled_ses-elec_preprestim_corrected.csv")
+ps_data_path = os.path.join(_roi_dir, "group_roi_prestim_spectrum_ses-elec_preprestim_corrected.csv")
 
 # ── model (fixed non-optimised parameters) ─────────────────────────────────────
 base_params = {
@@ -73,29 +74,31 @@ base_params = {
 model = SomatoModel(base_params)
 
 # ── objective function ─────────────────────────────────────────────────────────
-# Which error(s) the GA optimizes against: "tf" (time-frequency only),
-# "tc" (time-course only), or "both" (their sum).
+# Which error(s) the GA optimizes against: "tf" (time-frequency), "tc" (time-course),
+# "ps" (pre-stim spectrum) individually; "both" (tf+tc); or "all" (tf+tc+ps).
 ERROR_MODE = "tc"
-assert ERROR_MODE in ("tf", "tc", "both"), f"invalid ERROR_MODE: {ERROR_MODE!r}"
+assert ERROR_MODE in ("tf", "tc", "ps", "both", "all"), f"invalid ERROR_MODE: {ERROR_MODE!r}"
 
 
 def objective(**params):
     """
     Run one full simulation and return the selected error (see ERROR_MODE):
-    TF only, timecourse only, or their sum.
+    TF, timecourse, pre-stim spectrum, or their sum.
     The GA minimises (0 - objective)**2, i.e. the squared selected error.
     """
     model.apply_params(params)
     model.initialize_state()
     model.simulate()
     sim_dip = model.compute_dipoles(subID_elec)
-    err_tf = err_tc = 0.0
-    if ERROR_MODE in ("tf", "both"):
+    err_tf = err_tc = err_ps = 0.0
+    if ERROR_MODE in ("tf", "both", "all"):
         err_tf, _, _ = model.compute_error_timefreq(tf_data_path, sim_dip)
-    if ERROR_MODE in ("tc", "both"):
+    if ERROR_MODE in ("tc", "both", "all"):
         err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip)
-    combined = err_tf + err_tc
-    print(f"  params={params}  →  err_tf={err_tf:.4f}  err_tc={err_tc:.4f}  total={combined:.4f}")
+    if ERROR_MODE in ("ps", "all"):
+        err_ps, _, _ = model.compute_error_prestim_spectrum(ps_data_path, sim_dip)
+    combined = err_tf + err_tc + err_ps
+    print(f"  params={params}  →  err_tf={err_tf:.4f}  err_tc={err_tc:.4f}  err_ps={err_ps:.4f}  total={combined:.4f}")
     return combined
 
 # ── GA setup ───────────────────────────────────────────────────────────────────
@@ -107,14 +110,16 @@ opt_config = {
         "Ib_strength",
         "Iext_strength",
         "Iext_duration",
+        "scaling_factor"
     ],
     "bounds": np.array([
         [0,     50  ],   # coupling_strength
-        [0,      0.8],   # strength_I
+        [0.5,      0.8],   # strength_I
         [0,      2  ],   # g_intercortical
         [0,     10  ],   # Ib_strength
         [0,    100  ],   # Iext_strength
         [0.001,  0.1],   # Iext_duration
+        [0,      100],   # scaling factor
     ]),
     "reference":  0.0,
     "simulation": objective,
@@ -183,10 +188,13 @@ def plot_best_fit(model, best_params, outdir):
     err_tc, tc_sim, tc_target = model.compute_error_timecourse(tc_data_path, sim_dip)
     model.plot_timecourse_comparison(tc_sim, tc_target)      # saves to the model's TIMECOURSE_DIR
 
+    err_ps, ps_sim, ps_target = model.compute_error_prestim_spectrum(ps_data_path, sim_dip)
+    model.plot_prestim_spectrum_comparison(ps_data_path, sim_dip)  # saves to PRESTIM_SPECTRUM_DIR
+
     # also persist the comparison maps/traces for this best run
     model.save_timefreq_comparison(outdir, tf_sim, tf_target, err_tf, filename="best_tf_comparison")
     model.save_timecourse_comparison(outdir, tc_sim, tc_target, err_tc, filename="best_tc_comparison")
-    return err_tf, err_tc
+    return err_tf, err_tc, err_ps
 
 
 # ── run ────────────────────────────────────────────────────────────────────────
@@ -205,8 +213,8 @@ if __name__ == "__main__":
     plot_fit_diagnostics(ga, opt_config, diag_dir)
 
     # visualise (and persist) the best-fit simulation against the measured data
-    err_tf, err_tc = plot_best_fit(model, best_params, diag_dir)
-    print(f"  Best-fit re-evaluation: err_tf={err_tf:.4f}  err_tc={err_tc:.4f}")
+    err_tf, err_tc, err_ps = plot_best_fit(model, best_params, diag_dir)
+    print(f"  Best-fit re-evaluation: err_tf={err_tf:.4f}  err_tc={err_tc:.4f}  err_ps={err_ps:.4f}")
 
     # write a small machine-readable summary of the run
     summary = {
@@ -216,6 +224,7 @@ if __name__ == "__main__":
         "error_per_iteration": [float(e) for e in ga.errors],
         "best_fit_err_tf": float(err_tf),
         "best_fit_err_tc": float(err_tc),
+        "best_fit_err_ps": float(err_ps),
     }
     with open(os.path.join(diag_dir, "optimization_summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
