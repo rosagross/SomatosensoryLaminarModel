@@ -12,7 +12,7 @@ class Parameter():
         self.C = self.get_cellcounts()
         self.sigmoid_params = self.get_sigmoid()
 
-    def get_params(self, delay_factor=5e-3):
+    def get_params(self, delay_factor=5e-3, e3b_tau=6, e1_tau=6, e2_tau=6):
 
         # nr. of populations
         nPopA3b = 4 # E, PV, SST, VIP
@@ -26,9 +26,9 @@ class Parameter():
         # the last two values are used for the external input and background input
         # with nPopTotal = 33 the shape of tau should be (33, 33) 
         # order: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 
-        tauA3b = np.tile(np.array([6,3,20,15])*1e-3, (nPopTotal,1)) # sec
-        tauS1 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20])*1e-3, (nPopTotal,1)) # sec
-        tauS2 = np.tile(np.array([6,3,20,15,6,3,20,6,3,20,6,3,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
+        tauA3b = np.tile(np.array([e3b_tau,3,20,15])*1e-3, (nPopTotal,1)) # sec
+        tauS1 = np.tile(np.array([e1_tau,3,20,15,6,3,20,6,3,20,6,3,20])*1e-3, (nPopTotal,1)) # sec
+        tauS2 = np.tile(np.array([e2_tau,3,20,15,6,3,20,6,3,20,6,3,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
         # add delay to long range connections

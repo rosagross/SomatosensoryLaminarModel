@@ -38,21 +38,22 @@ bI_cellcounts = params['bI_cellcounts']
 thal_cellcounts = params['thal_cellcounts']
 
 # coupling strengths, balance and area selection
-strength_I = params['strength_I']
+strength_I = [0.68 , 0.685, 0.69 , 0.695, 0.7  , 0.705, 0.71 , 0.715, 0.72 ,
+       0.725, 0.73 , 0.735, 0.74 , 0.745, 0.75 , 0.755] # params['strength_I']
 g_thal = params['g_thal']
 sI_thal = params['sI_thal']
 step_size = params['step_size']
 area = params['area']
 filedir = params['filedir']
-g_intercortical = [1.0] #np.arange(0.2,2,0.2) # params['g_inter']
+g_intercortical = [0.6, 0.8, 1.0, 1.2] # params['g_inter']
 
 # inputs
 input_type = params['input_type']
 input_onset = params['input_onset']
 simulation_dur = params['simulation_dur']
-input_durations = params['input_durations']
-input_strengths = params['input_strengths']
-backgroundI_strengths = params['backgrndI_strengths']
+input_durations = [0.016] # params['input_durations']
+input_strengths = [0, 10, 20] # params['input_strengths']
+backgroundI_strengths = [4, 6] # params['backgrndI_strengths']
 
 #coupling_strengths = [10] #np.arange(0,55,5) #[100, 120, 140, 160]
 #backgroundI_strengths = [0] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
@@ -75,17 +76,15 @@ response_window = sampling_params['response_window']
 # %%
 
 # loop over all simulations
-for d in input_durations:
-    print('Iextd', d)
-    for s in input_strengths:
-        print('Iexts', s)
-        for g in coupling_strengths:
-            for g_inter in g_intercortical:
-                #print('coupling', g)
-                for sI in strength_I:
-                    #print('sI', sI)
-                    for bI in backgroundI_strengths:
-                        #print('bI', bI)
+for g_inter in g_intercortical:
+    print("g_inter", g_inter)
+    for d in input_durations:
+        print("input dur", d)
+        for bI in backgroundI_strengths:
+            print("background", bI)
+            for s in input_strengths:
+                for g in coupling_strengths:
+                    for sI in strength_I:
 
                         df = pd.DataFrame()
                         
