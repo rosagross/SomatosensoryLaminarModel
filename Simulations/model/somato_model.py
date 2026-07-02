@@ -141,7 +141,11 @@ class SomatoModel():
         self.t = 0.0
 
         # Weight matrix [to x from]
-        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area) 
+        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area)
+
+        # per-subject dipole projection vectors (forward model + labels + geometry), invariant
+        # across simulation runs → built once per subjects list and reused (see compute_dipoles).
+        self._dipole_projection_cache = {}
 
 
     def initialize_state(self):
@@ -447,13 +451,13 @@ class SomatoModel():
         """
         Safe the simulated data in a csv file
         """
-
         rates_df, potential_df = self.prepare_dataframes()
+        #print('saving rates', len(rates_df))
 
         filename = filename + ".hdf5"
         
         rates_df.to_hdf(
-            os.path.join(filedir, filename), index=False, key="rates", mode="a"
+            os.path.join(filedir, filename), index=False, key="rates", mode="w"
         )
 
         potential_df.to_hdf(
@@ -794,8 +798,8 @@ class SomatoModel():
         # each dipole set has a value for each source population
         dipole_matrix = []
         for i, s in enumerate(dipole_length):
-            dipole = s * np.dot(dipole_orientation[i], mean_normal) * resistance_factor 
-            #dipole = s * dipole_orientation[i] * resistance_factor 
+            #dipole = s * np.dot(dipole_orientation[i], mean_normal) * resistance_factor 
+            dipole = s * dipole_orientation[i] * resistance_factor 
             #print("dipole before vertex normal transformation:", s * dipole_orientation[i] * resistance_factor)
             #print(".. after vertex normal transformation:", s * np.dot((dipole_orientation)[i], mean_normal) * resistance_factor)
             mean_dipole = np.mean(dipole)
@@ -810,21 +814,28 @@ class SomatoModel():
         return dipoles_weighted
 
 
-    def compute_dipoles(self, subjects):
-        
+    def _build_dipole_projections(self, subjects):
+        """Precompute the per-subject dipole projection vectors that are invariant across
+        simulation runs.
+
+        The forward models, subject labels, dipole geometry (dipole_parameters.json),
+        resistance factor and cell counts do not depend on the optimized parameters
+        (apply_params only changes inputs/gains/connectivity), so this expensive work —
+        reading + converting each subject's forward solution and projecting it through
+        prepDipoles_normal — is done once per subjects list and cached (see compute_dipoles).
+        The Forward objects are read here and discarded; only the small projection vectors
+        are kept.
+
+        Returns:
+            dict with 'exc_pops' (potential indices) and 'per_subject' (list, in `subjects`
+            order, of {'A3b', 'A1', 'S2'} projection vectors).
+        """
         # load dipole parameters
-        start_loadingtime = time.time()
         dipole_length, dipole_orientation, resistance_factor, cellcounts = self.load_dipole_params()
-        end_loadingtime = time.time()
-        #print(f"Loaded dipole parameters in {end_loadingtime - start_loadingtime:.2f} seconds.")
 
         # get population mapping
-        mapping_time_start = time.time()
         pop_mapping = self.get_population_mapping()
-        mapping_time_end = time.time()
-        #print(f"Retrieved population mapping in {mapping_time_end - mapping_time_start:.2f} seconds.")    
-        
-        dipole_computation_start = time.time()
+
         # Extract excitatory populations (these generate the main EEG signal)
         exc_pops = []
         for area in ['A3b', 'A1', 'S2']:
@@ -852,11 +863,9 @@ class SomatoModel():
         cellcounts_EA1_relative = cellcounts_A1_relative[np.array(exc_pops[1:5])-4]
         cellcounts_ES2_relative = cellcounts_S2_relative[np.array(exc_pops[-4:])-17]
 
-
-        # for each subject compute dipoles for A3b, A1, S2 
-        simDipoles_all = []
-
-        for subID in subjects: 
+        # for each subject, compute the (parameter-independent) dipole projections
+        per_subject = []
+        for subID in subjects:
             soma_labels, _ = self.read_labels(subID)
             label_A3b = soma_labels[7]
             label_A1 = soma_labels[4]
@@ -872,9 +881,8 @@ class SomatoModel():
                 fwd_vector, surf_ori=True, force_fixed=True, use_cps=True)
             src_fixed_sub = fwd_fixed['src']
 
-
             dipoles_A3b_sub = self.prepDipoles_normal(label_A3b, src_fixed_sub, dipole_lengths_A3b, dipole_orientation_A3b, resistance_factor, cellcounts_EA3b_relative)
-        
+
             dipoles_A1_layers = []
             dipoles_ES2_layers = []
 
@@ -887,12 +895,33 @@ class SomatoModel():
                 dipole_layer_S2 = self.prepDipoles_normal(label_A2, src_fixed_sub, dipole_lengths_ES2[i], dipole_orientation_ES2[i], resistance_factor, cellcounts_ES2_relative[i])
                 dipoles_ES2_layers.append(dipole_layer_S2)
 
-            # I have the dipole models computed for each area/layer
-            # Now it needs to be convolved with the simulated data
+            per_subject.append({"A3b": dipoles_A3b_sub, "A1": dipoles_A1_layers, "S2": dipoles_ES2_layers})
+
+        return {"exc_pops": exc_pops, "per_subject": per_subject}
+
+
+    def compute_dipoles(self, subjects):
+        # The forward-model projections are invariant across simulation runs, so build them
+        # once per subjects list and reuse; only the dot products with self.potential (which
+        # changes every simulation) are recomputed on each call.
+        key = tuple(subjects)
+        cache = self._dipole_projection_cache.get(key)
+        if cache is None:
+            cache = self._build_dipole_projections(subjects)
+            self._dipole_projection_cache[key] = cache
+        exc_pops = cache["exc_pops"]
+
+        # for each subject compute dipoles for A3b, A1, S2
+        simDipoles_all = []
+        for proj in cache["per_subject"]:
+            dipoles_A3b_sub = proj["A3b"]
+            dipoles_A1_layers = proj["A1"]
+            dipoles_ES2_layers = proj["S2"]
+
+            # convolve the precomputed dipole models with the simulated data
             potentialsEA3b = self.potential[exc_pops[0], :-2]
             potentialsEA1 = self.potential[exc_pops[1:5], :-2]
             potentialsES2 = self.potential[exc_pops[-4:], :-2]
-
 
             # for each time point, compute the simulated dipole
             nE = 9
@@ -902,10 +931,6 @@ class SomatoModel():
             for E in range(4):
                 simDipoles[E+1] = np.dot(np.concatenate([dipoles_A1_layers[E]]), potentialsEA1[E])
                 simDipoles[E+5] = np.dot(np.concatenate([dipoles_ES2_layers[E]]), potentialsES2[E])
-
-            dipole_computation_end = time.time()
-            #print(f"Computed simulated dipoles in {dipole_computation_end - dipole_computation_start:.2f} seconds.")
-            #print("Simulated dipoles shape:", simDipoles.shape)
 
             simDipoles_all.append(simDipoles)
 
@@ -1129,18 +1154,23 @@ class SomatoModel():
         return freqs, spectra
 
 
-    def compute_error_prestim_spectrum(self, data_path, sim_dip, fmin=1.0, fmax=40.0):
+    def compute_error_prestim_spectrum(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None):
         """Error between simulated and measured pre-stimulus spectra.
 
         Each spectrum is normalised to unit sum (relative power) over the compared
         frequencies — removing the sim/data amplitude-scale mismatch — then compared by
         MSE, averaged over ROIs. Both signals fall on a shared 5 Hz frequency grid.
 
+        If `target_dip` is given (a saved dipole trace), the target spectrum is computed
+        from it instead of loading `data_path` — used for parameter-recovery tests against
+        a synthetic ground-truth trace (sim and target then share an identical freq grid).
+
         Returns:
             (float mean MSE over ROIs, sim spectra dict, target spectra dict).
         """
         f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
-        f_tgt, spec_tgt = self.load_target_prestim_spectrum(data_path)
+        f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax)
+                           if target_dip is not None else self.load_target_prestim_spectrum(data_path))
         tmask = (f_tgt >= fmin) & (f_tgt <= fmax)
         # align on the shared frequency bins (both are multiples of 5 Hz)
         common = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt[tmask], 6))
@@ -1226,13 +1256,17 @@ class SomatoModel():
         return tf_target
 
 
-    def compute_error_timefreq(self, data_path, sim_dip):
+    def compute_error_timefreq(self, data_path, sim_dip, target_dip=None):
         """
         Compute the dimensionless TF error between simulation and measured data.
 
         Each area is normalized by its own baseline (-500 to -430 ms per frequency),
         then compared in log10 space via MSE. This makes the error scale-invariant —
         robust to the absolute amplitude difference between simulated and measured dipoles.
+
+        If `target_dip` is given (a saved dipole trace), the target is derived from it
+        via compute_timefreq instead of loading `data_path` — used for parameter-recovery
+        tests against a synthetic ground-truth trace.
 
         Returns:
             tuple: (float error, tf_sim dict, tf_target dict)
@@ -1241,7 +1275,8 @@ class SomatoModel():
                 - tf_target: roi label → (n_freqs=40, n_times=451) measured power array
         """
         tf_sim    = self.compute_timefreq(simulated_dip=sim_dip)
-        tf_target = self.load_target_timefreq(data_path)
+        tf_target = (self.compute_timefreq(simulated_dip=target_dip)
+                     if target_dip is not None else self.load_target_timefreq(data_path))
 
         # Baseline: -500 to -430 ms → indices 0:36 at 2 ms steps (35 * 2 = 70 ms / 2 = 35+1=36 pts)
         baseline_slice = slice(150, 200)
@@ -1408,7 +1443,7 @@ class SomatoModel():
         return tc_target
 
 
-    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor=None):
+    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor=None, target_dip=None):
         """
         Compute the dimensionless time-course error between simulation and measured data.
 
@@ -1417,6 +1452,10 @@ class SomatoModel():
         so the amplitude ratios between areas are preserved while the simulated
         dipoles and measured nAm traces stay on a comparable overall scale.
 
+        If `target_dip` is given (a saved dipole trace), the target is derived from it
+        via compute_timecourse instead of loading `data_path` — used for parameter-recovery
+        tests against a synthetic ground-truth trace.
+
         Returns:
             tuple: (float error, tc_sim dict, tc_target dict)
                 - float: Mean MSE across ROIs (A3b, A1, S2).
@@ -1424,10 +1463,11 @@ class SomatoModel():
                 - tc_target: roi label -> (n_times=451,) measured trace
         """
         tc_sim    = self.compute_timecourse(simulated_dip=sim_dip)
-        tc_target = self.load_target_timecourse(data_path)
+        tc_target = (self.compute_timecourse(simulated_dip=target_dip)
+                     if target_dip is not None else self.load_target_timecourse(data_path))
 
-        # Analysis window: -200 ms onward -> index 150 on the 2 ms / -500..400 axis.
-        analysis_slice = slice(150, None)
+        # Analysis window: stimulus onset (0 ms) onward -> index 250 on the 2 ms / -500..400 axis.
+        analysis_slice = slice(250, None)
         eps = 1e-10
         rois = ("A3b", "A1", "S2")
 
@@ -1454,6 +1494,7 @@ class SomatoModel():
 
             print("Sim peak", sim_peak)
 
+        # the error of the ERP time course should be computed starting from stimulation onset 0 ms
         errors = [
             float(np.mean((sims[roi] / sim_peak - tgts[roi] / tgt_peak) ** 2))
             for roi in rois
@@ -1519,17 +1560,19 @@ class SomatoModel():
         plt.show()
 
 
-    def plot_prestim_spectrum_comparison(self, data_path, sim_dip, fmin=1.0, fmax=40.0):
+    def plot_prestim_spectrum_comparison(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None):
         """Plot simulated vs measured pre-stim power spectra (unit-sum relative power) per ROI.
 
         Layout 1x3 (A3b, A1, S2) on the shared 5 Hz grid — the same quantity the error uses.
         Self-contained (recomputes the sim spectrum and reloads the target) so the target's own
-        frequency grid is available for alignment.
+        frequency grid is available for alignment. When `target_dip` is given, the target
+        spectrum comes from that saved trace instead of `data_path` (parameter-recovery mode).
         Saves to PRESTIM_SPECTRUM_DIR/prestim_spectrum_comparison_g-<g>_sI-<sI>_area-<area>.png.
         """
         rois, eps = ("A3b", "A1", "S2"), 1e-10
         f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
-        f_tgt, spec_tgt = self.load_target_prestim_spectrum(data_path)
+        f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax)
+                           if target_dip is not None else self.load_target_prestim_spectrum(data_path))
         tmask  = (f_tgt >= fmin) & (f_tgt <= fmax)
         f_tgt  = f_tgt[tmask]
         common = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt, 6))
@@ -1666,6 +1709,50 @@ class SomatoModel():
                 h5f.attrs[key] = value
 
         return filepath
+
+
+    def save_dipole_trace(self, sim_dip, filedir, filename=None):
+        """
+        Save the full simulated dipole trace + its pre-stimulus spectrum to HDF5.
+
+        Used to build a synthetic ground-truth target for parameter-recovery testing
+        (see run_optimization.py): the saved trace can be reloaded and fed to the same
+        error functions as the measured data. The full (9, n_times) trace is stored so
+        the tf/tc/ps errors can all be computed against it later.
+
+        Layout: dataset 'dipole' (9 x n_times); group 'prestim_spectrum' with 'freqs'
+        plus A3b/A1/S2 power datasets. Parameter metadata + sampling info stored as attrs.
+        """
+        os.makedirs(filedir, exist_ok=True)
+        if filename is None:
+            filename = self._comparison_stem("dipole_trace") + ".hdf5"
+        elif not filename.endswith(".hdf5"):
+            filename = filename + ".hdf5"
+
+        freqs, spectra = self.compute_prestim_spectrum(sim_dip)
+
+        filepath = os.path.join(filedir, filename)
+        with h5py.File(filepath, "w") as h5f:
+            h5f.create_dataset("dipole", data=np.asarray(sim_dip))
+            ps_grp = h5f.create_group("prestim_spectrum")
+            ps_grp.create_dataset("freqs", data=np.asarray(freqs))
+            for roi in ("A3b", "A1", "S2"):
+                ps_grp.create_dataset(roi, data=np.asarray(spectra[roi]))
+            for key, value in self._comparison_param_attrs().items():
+                h5f.attrs[key] = value
+            h5f.attrs["sfreq_saved"] = self.sfreq_saved
+
+        return filepath
+
+    def load_dipole_trace(self, filepath):
+        """
+        Load a dipole trace saved by save_dipole_trace.
+
+        Returns the (9, n_times) dipole array, ready to plug into the error functions
+        in place of a freshly computed sim_dip (as the `target_dip` argument).
+        """
+        with h5py.File(filepath, "r") as h5f:
+            return h5f["dipole"][()]
 
 
     def read_labels(self, subID):
