@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.cm as cm 
 from matplotlib.colors import ListedColormap, Normalize, BoundaryNorm
 from plotting_style import figure_style
+from helper_functions import load_simulation_data, compute_freq_spectrum
 
 def sImulti_fingerprint_IextDurVsStr(data_df, gs, sIs, Ib_str, population, thalamus_source, figure_dir):
     '''
@@ -330,37 +331,56 @@ def multiLayer_couplingOnFrequency(data_df, Iext_dur, Iext_str, Ib_str, sI, wind
     layersS1 = [['E1', 'PV1', 'SST1', 'VIP1'], ['E2', 'PV2', 'SST2'], ['E3', 'PV3', 'SST3'], ['E4', 'PV4', 'SST4']]
     layersS2 = [['E1S2', 'PV1S2', 'SST1S2', 'VIP1S2'], ['E2S2', 'PV2S2', 'SST2S2'], ['E3S2', 'PV3S2', 'SST3S2'], ['E4S2', 'PV4S2', 'SST4S2']]
     layers_all = [layersS1, layersS2]
+    area_titles = ["S1", "S2"]
+    layer_labels = ["Layer 2/3", "Layer 4", "Layer 5", "Layer 6"]
 
-    fig, axes = plt.subplots(4, 2, figsize=(10, 6), sharey=False, sharex=True)
-    fig.suptitle(f"Dominant {signal_type} frequency during {window_prefix}")
+    # Fixed colour per cell type so a population's colour is stable across panels.
+    dark2 = sns.color_palette("Dark2")
+    celltype_colors = {"E": dark2[2], "PV": dark2[1], "SST": dark2[0], "VIP": dark2[3]}
 
-    for layers, axs in zip(layers_all, axes.T):
-        for l, ax in zip(layers, axs):
+    def _celltype(pop):
+        for ct in ("SST", "VIP", "PV", "E"):
+            if pop.startswith(ct):
+                return ct
+        return "E"
+
+    nrows, ncols = 4, 2
+    fig, axes = plt.subplots(nrows, ncols, figsize=(7, 8), sharey=False, sharex=True)
+
+    for c, (layers, axs) in enumerate(zip(layers_all, axes.T)):
+        for r, (l, ax) in enumerate(zip(layers, axs)):
             layer_df = data_df[data_df["population"].isin(l)]
-            sns.lineplot(layer_df, y=col, x="globalCoupling", hue="population", ax=ax, legend=True)
-            ax.set_ylabel("Frequency (Hz)")
-            ax.set_xlabel("Global Coupling Strength (g)")
-            ax.legend("")
+            palette = {p: celltype_colors[_celltype(p)] for p in l}
+            sns.lineplot(layer_df, y=col, x="globalCoupling", hue="population",
+                         palette=palette, marker="o", markersize=3, ax=ax, legend=True)
+            # one compact, deduplicated legend per panel (cell types differ per layer)
+            ax.legend(prop={"size": 7}, loc="best", frameon=False)
+            # shared axis labels: only bottom row / left column
+            ax.set_ylabel("Peak frequency (Hz)" if c == 0 else "")
+            ax.set_xlabel("Global coupling $g$" if r == nrows - 1 else "")
+            # layer label on the left, area title on the top
+            if c == 0:
+                ax.text(-0.35, 0.5, layer_labels[r], transform=ax.transAxes,
+                        rotation=90, va="center", ha="center", fontweight="bold")
+            if r == 0:
+                ax.set_title(area_titles[c], fontweight="bold")
 
-        axs[0].legend(prop={"size":8}, loc="upper right")
-        axs[0].set_title("Layer 2/3")
-        axs[1].set_title("Layer 4")
-        axs[2].set_title("Layer 5")
-        axs[3].set_title("Layer 6")
+    fig.suptitle(f"Dominant {signal_type} frequency during {window_prefix}", fontweight="bold")
 
     sns.despine(trim=True)
-    plt.tight_layout()
-    plt.annotate(
-        f"freq {signal_type}_{window_prefix}, \nInput Duration:{Iext_dur} \nInput Strength:{Iext_str} "
-        f"Background Input:{Ib_str} \nE-I Balance:{sI}",
-        xy=(0, 0), xycoords="figure fraction", xytext=(1.14, 0.17),
-        textcoords="figure fraction", ha="center", fontsize=10
+    plt.tight_layout(rect=[0.04, 0.05, 1, 0.96])
+    fig.text(
+        0.5, 0.005,
+        f"Input duration {Iext_dur} | Input strength {Iext_str} | "
+        f"Background input {Ib_str} | E-I balance {sI}",
+        ha="center", va="bottom", fontsize=8, color="0.3",
     )
     figure_name = (
         f"CouplingOnFrequency_{signal_type}_{window_prefix}_Iextdur{Iext_dur}_"
-        f"Iextstr{Iext_str}_Ibstr{Ib_str}_sI{sI}_tauVisual_{thalamus_source}.pdf"
+        f"Iextstr{Iext_str}_Ibstr{Ib_str}_sI{sI}_tauVisual_{thalamus_source}"
     )
-    plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches="tight")
+    plt.savefig(os.path.join(figure_dir, figure_name + ".pdf"), bbox_inches="tight")
+    plt.savefig(os.path.join(figure_dir, figure_name + ".png"), bbox_inches="tight", dpi=300)
     plt.show()
 
 
@@ -384,27 +404,37 @@ def scatter_frequency_vs_diff(data_df, window_prefix, signal_type, population, f
 
 def heatmap_frequency_coupling_vs_sI(data_df, area, window_prefix, signal_type, Iext_dur, Iext_str, Ib_str, figure_dir, vmin=None, vmax=None):
     """
-    Heatmaps of dominant frequency vs coupling strength (x) and sI (y) for all populations in an area.
+    Publication-ready grid of dominant-frequency heatmaps (global coupling x,
+    E-I balance sI y) for all populations of an area, arranged as
+    layer (rows) x cell type (columns).
     area: "A1", "S2", or "A3b"
     """
     col = f"freq{signal_type}_{window_prefix}"
     if col not in data_df.columns:
         raise ValueError(f"Column '{col}' not found in data frame.")
 
+    # rows = cortical layers, columns = cell type (E, PV, SST, VIP);
+    # None marks a cell type that does not exist in that layer.
     if area == "A1":
-        populations = ['E1', 'PV1', 'SST1', 'VIP1',
-                       'E2', 'PV2', 'SST2',
-                       'E3', 'PV3', 'SST3',
-                       'E4', 'PV4', 'SST4']
+        layers = [['E1', 'PV1', 'SST1', 'VIP1'],
+                  ['E2', 'PV2', 'SST2', None],
+                  ['E3', 'PV3', 'SST3', None],
+                  ['E4', 'PV4', 'SST4', None]]
+        row_labels = ["Layer 2/3", "Layer 4", "Layer 5", "Layer 6"]
     elif area == "S2":
-        populations = ['E1S2', 'PV1S2', 'SST1S2', 'VIP1S2',
-                       'E2S2', 'PV2S2', 'SST2S2',
-                       'E3S2', 'PV3S2', 'SST3S2',
-                       'E4S2', 'PV4S2', 'SST4S2']
+        layers = [['E1S2', 'PV1S2', 'SST1S2', 'VIP1S2'],
+                  ['E2S2', 'PV2S2', 'SST2S2', None],
+                  ['E3S2', 'PV3S2', 'SST3S2', None],
+                  ['E4S2', 'PV4S2', 'SST4S2', None]]
+        row_labels = ["Layer 2/3", "Layer 4", "Layer 5", "Layer 6"]
     elif area == "A3b":
-        populations = ['E3b', 'PV3b', 'SST3b', 'VIP3b']
+        layers = [['E3b', 'PV3b', 'SST3b', 'VIP3b']]
+        row_labels = ["A3b"]
     else:
         raise ValueError(f"Unsupported area: {area}. Use 'A1', 'S2', or 'A3b'.")
+
+    col_labels = ["Excitatory", "PV", "SST", "VIP"]
+    populations = [p for row in layers for p in row if p is not None]
 
     plot_df = data_df[
         (data_df["InputDuration"] == Iext_dur) &
@@ -413,90 +443,356 @@ def heatmap_frequency_coupling_vs_sI(data_df, area, window_prefix, signal_type, 
         (data_df["population"].isin(populations))
     ].copy()
 
-    n = len(populations)
+    nrows = len(layers)
     ncols = 4
-    nrows = int(np.ceil(n / ncols))
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4 * ncols, 3 * nrows), sharex=True, sharey=True)
-    axes = np.atleast_1d(axes).flatten()
+    fig, axes = plt.subplots(nrows, ncols, figsize=(2.2 * ncols, 2 * nrows), sharex=True, sharey=True)
+    axes = np.atleast_2d(axes)
 
-    # for the colorbar
+    # single shared colorbar
     norm = plt.Normalize(vmin=vmin, vmax=vmax)
     sm = plt.cm.ScalarMappable(cmap="magma", norm=norm)
     sm.set_array([])
 
-    for ax, pop in zip(axes, populations):
-        pop_df = plot_df[plot_df["population"] == pop]
-        data_heatmap = pop_df.pivot(index="strength_I", columns="globalCoupling", values=col)
+    for r, row in enumerate(layers):
+        for c, pop in enumerate(row):
+            ax = axes[r, c]
 
-        # seaborn.heatmap fails on empty matrices ("zero-size array to reduction")
-        # which can happen when no rows match the current population/filter values.
-        if data_heatmap.empty or data_heatmap.shape[0] == 0 or data_heatmap.shape[1] == 0 or np.all(np.isnan(data_heatmap.to_numpy())):
-            ax.axis("off")
-            ax.text(0.5, 0.5, f"{pop}\n(no data)", ha="center", va="center", transform=ax.transAxes)
-            continue
+            if pop is None:
+                ax.axis("off")
+                continue
 
-        sns.heatmap(data_heatmap, cmap="magma", vmin=vmin, vmax=vmax, ax=ax, cbar=False)
-        ax.invert_yaxis()
-        ax.set_title(pop)
-        ax.set_xlabel("g")
-        ax.set_ylabel("sI")
+            pop_df = plot_df[plot_df["population"] == pop]
+            data_heatmap = pop_df.pivot(index="strength_I", columns="globalCoupling", values=col)
 
-    # turn off unused axes
-    for ax in axes[n:]:
-        ax.axis('off')
+            # seaborn.heatmap fails on empty matrices ("zero-size array to reduction")
+            # which can happen when no rows match the current population/filter values.
+            if data_heatmap.empty or data_heatmap.shape[0] == 0 or data_heatmap.shape[1] == 0 or np.all(np.isnan(data_heatmap.to_numpy())):
+                ax.axis("off")
+                ax.text(0.5, 0.5, f"{pop}\n(no data)", ha="center", va="center", transform=ax.transAxes)
+                continue
+
+            # round the axis tick labels for a cleaner look
+            data_heatmap.index = np.round(data_heatmap.index.astype(float), 2)
+            data_heatmap.columns = np.round(data_heatmap.columns.astype(float), 1)
+
+            sns.heatmap(data_heatmap, cmap="magma", vmin=vmin, vmax=vmax, ax=ax, cbar=False)
+            ax.invert_yaxis()
+            ax.tick_params(axis="both", length=0)
+
+            # shared axis labels: bottom row / left column only
+            ax.set_xlabel("Global coupling $g$" if r == nrows - 1 else "")
+            ax.set_ylabel("Inhibitory coupling $s_I$" if c == 0 else "")
+
+            # cell-type column headers (top row) and layer row labels (left column)
+            if r == 0:
+                ax.set_title(col_labels[c], fontweight="bold")
+            if c == 0:
+                ax.text(-0.45, 0.5, row_labels[r], transform=ax.transAxes,
+                        rotation=90, va="center", ha="center", fontweight="bold")
 
     cbar = fig.colorbar(sm, ax=axes, orientation="vertical", fraction=0.02, pad=0.02)
-    cbar.set_label(col)
+    cbar.set_label("Peak frequency (Hz)")
 
-    fig.suptitle(f"{signal_type} freq ({window_prefix}) - area {area}")
-    plt.tight_layout()
+    area_title = {"A1": "S1", "S2": "S2", "A3b": "A3b"}.get(area, area)
+    # place the title above the column headers (higher offset needed for few rows)
+    suptitle_y = 1.02 + 0.10 / nrows
+    fig.suptitle(f"Dominant {signal_type} frequency ({window_prefix}) - {area_title}",
+                 fontweight="bold", y=suptitle_y)
     figure_name = (
         f"freqHeatmap_gVsSI_{signal_type}_{window_prefix}_Iextdur{Iext_dur}_"
-        f"Iextstr{Iext_str}_Ib{Ib_str}_area{area}.pdf"
+        f"Iextstr{Iext_str}_Ib{Ib_str}_area{area}"
     )
-    plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches="tight")
+    plt.savefig(os.path.join(figure_dir, figure_name + ".pdf"), bbox_inches="tight")
+    plt.savefig(os.path.join(figure_dir, figure_name + ".png"), bbox_inches="tight", dpi=300)
     plt.show()
+
+
+def heatmap_frequency_couplingVsSI_singlePop(data_df, population, window_prefix, signal_type,
+                                             Iext_dur, Iext_str, Ib_str, figure_dir,
+                                             vmin=None, vmax=None):
+    """
+    Publication-ready heatmap of the dominant frequency peak for a SINGLE chosen
+    population, as a function of global coupling (x) and E-I balance sI (y).
+
+    A focused, single-panel counterpart to heatmap_frequency_coupling_vs_sI
+    (which draws every population of a whole area).
+
+    signal_type:   "Rate" or "Potential"
+    window_prefix: "baseline", "duringInput", "lateLongterm", ...
+    """
+    col = f"freq{signal_type}_{window_prefix}"
+    if col not in data_df.columns:
+        raise ValueError(f"Column '{col}' not found in data frame.")
+
+    plot_df = data_df[
+        (data_df["InputDuration"] == Iext_dur) &
+        (data_df["InputStrength"] == Iext_str) &
+        (data_df["BckgndInputStrength"] == Ib_str) &
+        (data_df["population"] == population)
+    ].copy()
+
+    data_heatmap = plot_df.pivot(index="strength_I", columns="globalCoupling", values=col)
+    # round the axis tick labels for a cleaner look
+    data_heatmap.index = np.round(data_heatmap.index.astype(float), 3)
+    data_heatmap.columns = np.round(data_heatmap.columns.astype(float), 1)
+
+    fig, ax = plt.subplots(figsize=(4.5, 4))
+
+    # seaborn.heatmap fails on empty/all-NaN matrices ("zero-size array to reduction")
+    if (data_heatmap.empty or data_heatmap.shape[0] == 0 or data_heatmap.shape[1] == 0
+            or np.all(np.isnan(data_heatmap.to_numpy()))):
+        ax.axis("off")
+        ax.text(0.5, 0.5, f"{population}\n(no data)", ha="center", va="center",
+                transform=ax.transAxes)
+    else:
+        sns.heatmap(
+            data_heatmap, cmap="magma", vmin=vmin, vmax=vmax, ax=ax,
+            cbar_kws={"label": "Peak frequency (Hz)"},
+        )
+        ax.invert_yaxis()
+        ax.set_xlabel("Global coupling $g$")
+        ax.set_ylabel("Inhibitory coupling $s_I$")
+        ax.tick_params(axis="both", length=0)
+
+    ax.set_title(
+        f"{signal_type} peak frequency ({window_prefix}) - {population}\n"
+        f"Iext dur {Iext_dur}, Iext str {Iext_str}, Ib {Ib_str}",
+        fontsize=10,
+    )
+    plt.tight_layout()
+
+    figure_name = (
+        f"freqHeatmap_gVsSI_singlePop_{signal_type}_{window_prefix}_Iextdur{Iext_dur}_"
+        f"Iextstr{Iext_str}_Ib{Ib_str}_pop{population}"
+    )
+    plt.savefig(os.path.join(figure_dir, figure_name + ".pdf"), bbox_inches="tight")
+    plt.savefig(os.path.join(figure_dir, figure_name + ".png"), bbox_inches="tight", dpi=300)
+    plt.show()
+
+
+def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_str,
+                                  Iext_dur, Iext_str, input_onset, step_size, sample_dur,
+                                  offset, thal_cellcounts, bI_cellcounts, extI_cellcounts,
+                                  input_type, raw_dir, figure_dir, suffix='', fmax=100.0):
+    """
+    Grid of baseline power spectra (summed potential), one subplot per excitatory
+    population, one curve per swept coupling value (colour = value).
+
+    Parameters:
+    -----------
+    - sweep_name: 'g' -> vary global coupling; 'g_inter' -> vary inter-cortical coupling
+    - sweep_values: list of values for the swept coupling parameter
+    - g, g_inter: fixed coupling values (the one matching sweep_name is ignored/overwritten)
+    - sI, Ib_str, Iext_dur, Iext_str: fixed simulation parameters
+    - fmax: maximum displayed frequency (Hz)
+    """
+    if sweep_name not in ('g', 'g_inter'):
+        raise ValueError(f"sweep_name must be 'g' or 'g_inter', got {sweep_name}")
+
+    exc_pops = ['E1', 'E2', 'E3', 'E4',
+                'E1S2', 'E2S2', 'E3S2', 'E4S2', 'E3b']
+    titles = {'E1': 'S1 L2/3', 'E2': 'S1 L4', 'E3': 'S1 L5', 'E4': 'S1 L6',
+              'E1S2': 'S2 L2/3', 'E2S2': 'S2 L4', 'E3S2': 'S2 L5', 'E4S2': 'S2 L6',
+              'E3b': 'A3b L2/3'}
+
+    baseline_start = int((input_onset - (sample_dur + offset)) / step_size)
+    baseline_stop = int(baseline_start + sample_dur / step_size)
+
+    # colour map across swept values
+    cmap = cm.get_cmap('Greens', len(sweep_values))
+
+    fig, axes = plt.subplots(3, 3, figsize=(10, 8), sharex=True)
+    axes = axes.flatten()
+
+    for k, val in enumerate(sweep_values):
+        g_k = val if sweep_name == 'g' else g
+        g_inter_k = val if sweep_name == 'g_inter' else g_inter
+        try:
+            _, potentials_df, _ = load_simulation_data(
+                g_k, g_inter_k, sI, Ib_str, Iext_dur, Iext_str, input_onset,
+                thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type,
+                raw_dir, suffix=suffix)
+        except (FileNotFoundError, OSError):
+            print(f'Missing run: {sweep_name}={val} (g={g_k}, g_inter={g_inter_k}) - skipping')
+            continue
+
+        window = potentials_df.iloc[baseline_start:baseline_stop]
+        for ax, pop in zip(axes, exc_pops):
+            freqs, power = compute_freq_spectrum(window[pop].values, step_size)
+            mask = freqs <= fmax
+            ax.plot(freqs[mask], power[mask], color=cmap(k), lw=1.2, label=f'{val}')
+
+    for ax, pop in zip(axes, exc_pops):
+        ax.set_title(titles[pop])
+        ax.set_xlabel('Frequency (Hz)')
+        ax.set_ylabel('Power')
+
+    axes[0].legend(title=sweep_name, fontsize=7, ncol=2)
+    sns.despine(trim=True)
+    fig.suptitle(f'Baseline power spectrum vs {sweep_name} '
+                 f'(sI={sI}, Ib={Ib_str}, Iextstr={Iext_str}, Iextdur={Iext_dur})')
+    plt.tight_layout()
+
+    figure_name = (f'baselineSpectrum_vs_{sweep_name}_sI{sI}_Ib{Ib_str}_'
+                   f'Iextstr{Iext_str}_Iextdur{Iext_dur}.pdf')
+    plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+    plt.show()
+
+
+def backgroundInputOnPeakPower(data_df, g, sI, Iext_dur, Iext_str,
+                               window_prefix, signal_type, thalamus_source, figure_dir):
+    """
+    Influence of background input strength on the peak-frequency power for each
+    excitatory (E) population across the three ROIs (S1, S2, A3b), all other
+    parameters fixed. One panel per ROI, one line per cortical layer.
+
+    signal_type:   "Rate" or "Potential"
+    window_prefix: "baseline", "duringInput", "lateLongterm", ...
+    """
+    col = f"fftPower{signal_type}_{window_prefix}"
+    if col not in data_df.columns:
+        raise ValueError(f"Column '{col}' not found in data frame.")
+
+    plot_df = data_df[
+        (data_df["globalCoupling"] == g) &
+        (data_df["strength_I"] == sI) &
+        (data_df["InputDuration"] == Iext_dur) &
+        (data_df["InputStrength"] == Iext_str)
+    ].copy()
+
+    # ROI -> (E populations by layer, layer labels)
+    rois = {
+        "S1":  (['E1', 'E2', 'E3', 'E4'], ["Layer 2/3", "Layer 4", "Layer 5", "Layer 6"]),
+        "S2":  (['E1S2', 'E2S2', 'E3S2', 'E4S2'], ["Layer 2/3", "Layer 4", "Layer 5", "Layer 6"]),
+        "A3b": (['E3b'], ["Layer 2/3"]),
+    }
+    # cortical-depth colour gradient (L2/3 -> L6)
+    depth_colors = sns.color_palette("viridis", 4)
+
+    fig, axes = plt.subplots(1, 3, figsize=(11, 3.5), sharex=True)
+
+    for ax, (roi, (pops, labels)) in zip(axes, rois.items()):
+        for pop, lab, color in zip(pops, labels, depth_colors):
+            pop_df = plot_df[plot_df["population"] == pop].sort_values("BckgndInputStrength")
+            ax.plot(pop_df["BckgndInputStrength"], pop_df[col],
+                    marker="o", color=color, label=lab)
+        ax.set_title(roi, fontweight="bold")
+        ax.set_xlabel("Background input strength")
+        ax.legend(title="Layer", prop={"size": 8})
+
+    axes[0].set_ylabel("Peak frequency power")
+
+    fig.suptitle(
+        f"Background input vs {signal_type} peak-frequency power ({window_prefix})   "
+        f"[g {g}, sI {sI}, Iext dur {Iext_dur}, Iext str {Iext_str}]",
+        fontsize=10,
+    )
+    sns.despine(trim=True)
+    plt.tight_layout()
+
+    figure_name = (
+        f"bckgndInputOnPeakPower_{signal_type}_{window_prefix}_g{g}_sI{sI}_"
+        f"Iextdur{Iext_dur}_Iextstr{Iext_str}_tauVisual_{thalamus_source}"
+    )
+    plt.savefig(os.path.join(figure_dir, figure_name + ".pdf"), bbox_inches="tight")
+    plt.savefig(os.path.join(figure_dir, figure_name + ".png"), bbox_inches="tight", dpi=300)
+    plt.show()
+
 
 def multisI_couplingOnMinmaxRate(data_df, sI, Ib_str, population, rate_measure, thalamus_source, figure_dir):
     '''
-    3.1) Background input strength 
-    - x-axis: input strength
-    - y-axis: PSP of E3 population
-    - one subplot for each sI value
-    - choose rate measure ('lateLongterm' or 'immediateLongterm', 'duringInput', 'baseline')
+    3.1) Effect of coupling strength on the firing-rate range (min/max) of a population.
+    - x-axis: global coupling strength
+    - y-axis: min and max firing rate (shaded band = oscillation range)
+    - one subplot per E-I balance (sI) value
+    - one colored band per background-input strength (Ib_str)
+    - choose rate measure ('lateLongterm', 'immediateLongterm', 'duringInput', 'baseline')
     '''
-    data_df = data_df[data_df['population']==population]
+    figure_style()
 
-    # plot results
-    f_height = len(sI) * 2
-    fig, axes = plt.subplots(len(sI), 1, figsize=(8,f_height)) 
-    fig.suptitle(f'Minimum and Maximum rate of {population} Population')
-    for axs, b in zip(axes, sI):
-        
-        data_sI_df = data_df[data_df['strength_I']==b]
-        
-        # Create a colormap
-        cmap = cm.get_cmap('Dark2', len(Ib_str))  # Choose a colormap, e.g., 'viridis'
-        cmap_max = cm.get_cmap('Dark2', len(Ib_str))  # Choose a colormap, e.g., 'viridis'
+    data_df = data_df[data_df['population'] == population]
+    Ib_str = sorted(Ib_str)
+    palette = sns.color_palette('Blues', len(Ib_str))
+
+    fig, axes = plt.subplots(len(sI), 1, figsize=(3.5, 1.6 * len(sI)), sharex=True)
+    axes = np.atleast_1d(axes)
+    fig.suptitle(f'Min–max firing rate of {population}')
+
+    for ax, b in zip(axes, sI):
+        data_sI_df = data_df[data_df['strength_I'] == b]
 
         for i, s in enumerate(Ib_str):
-            Istrength_df = data_sI_df[data_sI_df['BckgndInputStrength']==s]
-            color = cmap(i / (len(Ib_str)))  # Normalize i to [0, 1] for colormap
-            color_max = cmap_max(i / (len(Ib_str)))  # Normalize i to [0, 1] for colormap
-            axs.plot(Istrength_df['globalCoupling'], Istrength_df[f'minRate_{rate_measure}'], label=s, color=color)
-            axs.plot(Istrength_df['globalCoupling'], Istrength_df[f'maxRate_{rate_measure}'], color=color_max)
+            Istrength_df = data_sI_df[data_sI_df['BckgndInputStrength'] == s].sort_values('globalCoupling')
+            x = Istrength_df['globalCoupling']
+            y_min = Istrength_df[f'minRate_{rate_measure}']
+            y_max = Istrength_df[f'maxRate_{rate_measure}']
+            ax.plot(x, y_max, color=palette[i], linewidth=1)
+            ax.plot(x, y_min, color=palette[i], linewidth=1)
+            ax.fill_between(x, y_min, y_max, color=palette[i], alpha=0.2, linewidth=0)
 
-        #sns.lineplot(data_sI_df, y='maxPotential_longterm', x='coupling_strength', hue='InputStrength')
-        axs.set_xlabel('Coupling Strength')
-        axs.set_ylabel('Rate (Hz)')
-        axs.set_title(f'E-I Balance:{b}')
+        ax.set_ylabel('Rate (Hz)')
+        ax.set_title(f'Inhibitory coupling = {b}')
 
-    #axs.set_xlim([0,100])
+    axes[-1].set_xlabel('Global coupling strength')
+
+    # single shared legend for the background-input colors
+    handles = [plt.Line2D([0], [0], color=palette[i], linewidth=2) for i in range(len(Ib_str))]
+    fig.legend(handles, [str(s) for s in Ib_str], title='Background input',
+               loc='center left', bbox_to_anchor=(1.0, 0.5))
+
     sns.despine(trim=True)
-    plt.legend(title=f'Effect of background input and coupling strength on MinMax Rate {rate_measure}', loc='right')
-    plt.tight_layout() 
-    figure_name = f'multisI_couplingOnMinmaxRate_{rate_measure}_pop{population}_measure{rate_measure}_Ibstr{Ib_str}_sI{sI}_tauVisual_{thalamus_source}.pdf'
-    plt.savefig(os.path.join(figure_dir, figure_name), bbox_inches='tight')
+    plt.tight_layout()
+    figure_name = (f'multisI_couplingOnMinmaxRate_{rate_measure}_pop{population}_'
+                   f'Ibstr{Ib_str}_sI{sI}_tauVisual_{thalamus_source}')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
+    plt.show()
+
+
+def multisI_couplingOnDiffRate(data_df, sI, Ib_str, population, rate_measure, thalamus_source, figure_dir):
+    '''
+    3.1b) Effect of coupling strength on the firing-rate oscillation amplitude of a population.
+    Same layout as multisI_couplingOnMinmaxRate, but the y-axis is the difference between the
+    maximum and minimum rate (diffRate_{rate_measure}) rather than the two absolute rates.
+    - x-axis: global coupling strength
+    - y-axis: max - min firing rate (oscillation amplitude)
+    - one subplot per E-I balance (sI) value
+    - one colored curve per background-input strength (Ib_str)
+    - choose rate measure ('lateLongterm', 'immediateLongterm', 'duringInput', 'baseline')
+    '''
+    figure_style()
+
+    data_df = data_df[data_df['population'] == population]
+    Ib_str = sorted(Ib_str)
+    palette = sns.color_palette('viridis', len(Ib_str))
+
+    fig, axes = plt.subplots(len(sI), 1, figsize=(3.5, 1.6 * len(sI)), sharex=True)
+    axes = np.atleast_1d(axes)
+    fig.suptitle(f'Firing-rate range (max–min) of {population}')
+
+    for ax, b in zip(axes, sI):
+        data_sI_df = data_df[data_df['strength_I'] == b]
+
+        for i, s in enumerate(Ib_str):
+            Istrength_df = data_sI_df[data_sI_df['BckgndInputStrength'] == s].sort_values('globalCoupling')
+            ax.plot(Istrength_df['globalCoupling'], Istrength_df[f'diffRate_{rate_measure}'],
+                    color=palette[i], linewidth=1)
+
+        ax.set_ylabel('Max − min rate (Hz)')
+        ax.set_title(f'E–I balance = {b}')
+
+    axes[-1].set_xlabel('Global coupling strength')
+
+    handles = [plt.Line2D([0], [0], color=palette[i], linewidth=2) for i in range(len(Ib_str))]
+    fig.legend(handles, [str(s) for s in Ib_str], title='Background input',
+               loc='center left', bbox_to_anchor=(1.0, 0.5))
+
+    sns.despine(trim=True)
+    plt.tight_layout()
+    figure_name = (f'multisI_couplingOnDiffRate_{rate_measure}_pop{population}_'
+                   f'Ibstr{Ib_str}_sI{sI}_tauVisual_{thalamus_source}')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
     plt.show()
 
 def multiLayer_couplingOnMinMaxRate(data_df, Iext_dur, Iext_str, Ib_str, sI, rate_measure, thalamus_source, figure_dir):
@@ -745,4 +1041,84 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
             os.makedirs(figdir)
         plt.savefig(os.path.join(figdir, f'population_potentials_sI-{sI}_g-{g}_area-{area}_Iextdur-{d}_Iextstr-{s}_Ibstr-{sb}.pdf'), dpi=300)
         #plt.show()
-            
+
+
+def plot_response_type_examples(examples, fixed_params, population, raw_dir, figure_dir,
+                                suffix='', plot_window=(-0.15, 0.25)):
+    """
+    Publication/poster-ready figure: example firing-rate trajectories showing how a single
+    population reacts to the *same* brief stimulus under several parameter settings. Each
+    setting is one vertically stacked panel (shared time axis, independent y-axes) so that
+    qualitatively different response archetypes stay legible despite very different rate scales.
+
+    Parameters
+    ----------
+    examples : list of dict
+        Ordered list, one entry per panel, each with keys:
+            'label' : str   - archetype name shown in bold (e.g. 'Memory')
+            'g'     : float - global coupling strength of that run
+            'sI'    : float - E-I balance of that run
+            'color' : color - line colour for that panel
+    fixed_params : dict
+        Stimulus/simulation parameters shared by every run:
+            'g_inter', 'Ib_str', 'Iext_dur', 'Iext_str', 'input_onset',
+            'thal_cellcounts', 'bI_cellcounts', 'extI_cellcounts', 'input_type', 'step_size'
+    population : str
+        Population column to plot (e.g. 'E3').
+    raw_dir : str
+        Directory holding the per-run result folders.
+    figure_dir : str
+        Where to save the figure.
+    plot_window : (float, float)
+        Time window (s) relative to stimulus onset to display.
+    """
+    figure_style()
+
+    fp = fixed_params
+    step_size = fp['step_size']
+    input_onset = fp['input_onset']
+    Iext_dur = fp['Iext_dur']
+
+    n = len(examples)
+    fig, axes = plt.subplots(n, 1, figsize=(3.6, 1.7 * n), sharex=True, sharey=False)
+    axes = np.atleast_1d(axes)
+
+    for ax, ex in zip(axes, examples):
+        g, sI = ex['g'], ex['sI']
+        rates_df, _, _ = load_simulation_data(
+            g, fp['g_inter'], sI, fp['Ib_str'], Iext_dur, fp['Iext_str'], input_onset,
+            fp['thal_cellcounts'], fp['bI_cellcounts'], fp['extI_cellcounts'],
+            fp['input_type'], raw_dir, suffix=suffix)
+
+        rate = rates_df[population].values
+        # time re-zeroed to stimulus onset
+        t = np.arange(len(rate)) * step_size - input_onset
+        mask = (t >= plot_window[0]) & (t <= plot_window[1])
+
+        # stimulus window (0 .. Iext_dur) shaded in every panel
+        ax.axvspan(0, Iext_dur, color='0.85', linewidth=0, zorder=0)
+        ax.plot(t[mask], rate[mask], color=ex['color'], linewidth=1.2, zorder=2)
+
+        # archetype label (bold) + parameter subtitle (grey) inside the panel
+        ax.text(0.97, 0.9, ex['label'], transform=ax.transAxes, ha='right', va='top',
+                fontweight='bold', fontsize=9, color=ex['color'])
+        ax.text(0.97, 0.74, f'$g$ = {g},  $s_I$ = {sI}', transform=ax.transAxes, ha='right',
+                va='top', fontsize=7.5, color='0.4')
+
+    # stimulus marker + label on the top panel only
+    top = axes[0]
+    top.annotate('stimulus', xy=(Iext_dur / 2, 1.0), xycoords=('data', 'axes fraction'),
+                 xytext=(0, 6), textcoords='offset points', ha='center', va='bottom',
+                 fontsize=7.5, color='0.2',
+                 arrowprops=dict(arrowstyle='-|>', color='0.2', lw=0.8))
+
+    axes[-1].set_xlabel('Time from stimulus onset (s)')
+    fig.text(0.005, 0.5, 'Firing rate (Hz)', va='center', rotation='vertical')
+
+    sns.despine(trim=True)
+    plt.tight_layout(rect=[0.03, 0, 1, 1])
+
+    figure_name = f'responseType_examples_pop{population}{suffix}'
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
+    plt.show()
