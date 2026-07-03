@@ -37,7 +37,9 @@ os.makedirs(diag_dir, exist_ok=True)
 
 sys.path.append(os.path.join(WDDIR, "Simulations", "model"))
 sys.path.insert(0, "/data/p_02989/Modelling/neuronaldynamics/src")
-sys.path.insert(0, "/data/p_02989/Modelling/neuronaldynamics")  # for Utils.py
+# Optimizer.py imports Utils via a bare `from Utils import ...`, so its containing
+# directory must be on sys.path (Utils.py lives at src/neuronaldynamics/Utils.py).
+sys.path.insert(0, "/data/p_02989/Modelling/neuronaldynamics/src/neuronaldynamics")
 
 from somato_model import SomatoModel
 from neuronaldynamics.Optimizers.Optimizer import GA
@@ -79,12 +81,40 @@ model = SomatoModel(base_params)
 ERROR_MODE = "tc"
 assert ERROR_MODE in ("tf", "tc", "ps", "both", "all"), f"invalid ERROR_MODE: {ERROR_MODE!r}"
 
+# ── parameter-recovery mode ─────────────────────────────────────────────────────
+# If SYNTHETIC_TARGET_PATH is set, the GA optimizes against a synthetic dipole trace
+# saved by model.save_dipole_trace (instead of the measured CSVs), so we can check
+# whether it recovers the known TRUE_PARAMS. None = normal measured-data fit.
+# Generate the target file once with:  python run_optimization.py --generate-target
+SYNTHETIC_TARGET_PATH = "/data/p_02989/Modelling/output_grossmannr/optimization/synthetic_target.hdf5"  # e.g. os.path.join(diag_dir, "synthetic_target.hdf5")
+TRUE_PARAMS = {               # params used to generate the synthetic target
+    "coupling_strength": 10, "strength_I": 0.68, "g_intercortical": 1.0, "g_thalPOm": 1.0,
+    "Ib_strength": 6, "Iext_strength": 40, "Iext_duration": 0.016, "scaling_factor": 1.0,
+}
+
+# loaded once: the (9, n_times) synthetic target dipole trace, or None for measured-data fit
+target_dip = model.load_dipole_trace(SYNTHETIC_TARGET_PATH) if SYNTHETIC_TARGET_PATH else None
+
+
+def generate_synthetic_target():
+    """Run the model at TRUE_PARAMS and save its dipole trace as a synthetic target."""
+    model.apply_params(TRUE_PARAMS)
+    model.initialize_state()
+    model.simulate()
+    sim_dip = model.compute_dipoles(subID_elec)
+    path = model.save_dipole_trace(sim_dip, diag_dir, filename="synthetic_target")
+    print(f"Synthetic target saved to {path}")
+    print(f"TRUE_PARAMS: {TRUE_PARAMS}")
+    return path
+
 
 def objective(**params):
     """
     Run one full simulation and return the selected error (see ERROR_MODE):
     TF, timecourse, pre-stim spectrum, or their sum.
     The GA minimises (0 - objective)**2, i.e. the squared selected error.
+    When target_dip is set, errors are computed against the synthetic target instead
+    of the measured CSVs.
     """
     model.apply_params(params)
     model.initialize_state()
@@ -92,11 +122,11 @@ def objective(**params):
     sim_dip = model.compute_dipoles(subID_elec)
     err_tf = err_tc = err_ps = 0.0
     if ERROR_MODE in ("tf", "both", "all"):
-        err_tf, _, _ = model.compute_error_timefreq(tf_data_path, sim_dip)
+        err_tf, _, _ = model.compute_error_timefreq(tf_data_path, sim_dip, target_dip=target_dip)
     if ERROR_MODE in ("tc", "both", "all"):
-        err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip)
+        err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip, target_dip=target_dip)
     if ERROR_MODE in ("ps", "all"):
-        err_ps, _, _ = model.compute_error_prestim_spectrum(ps_data_path, sim_dip)
+        err_ps, _, _ = model.compute_error_prestim_spectrum(ps_data_path, sim_dip, target_dip=target_dip)
     combined = err_tf + err_tc + err_ps
     print(f"  params={params}  →  err_tf={err_tf:.4f}  err_tc={err_tc:.4f}  err_ps={err_ps:.4f}  total={combined:.4f}")
     return combined
@@ -107,6 +137,7 @@ opt_config = {
         "coupling_strength",
         "strength_I",
         "g_intercortical",
+        "g_thalPOm",
         "Ib_strength",
         "Iext_strength",
         "Iext_duration",
@@ -115,19 +146,20 @@ opt_config = {
     "bounds": np.array([
         [0,     50  ],   # coupling_strength
         [0.5,      0.8],   # strength_I
-        [0,      2  ],   # g_intercortical
-        [0,     10  ],   # Ib_strength
+        [0.5,      2  ],   # g_intercortical
+        [0,      2  ],   # g_thalPOm (scales POm output connectivity)
+        [3,     10  ],   # Ib_strength
         [0,    100  ],   # Iext_strength
         [0.001,  0.1],   # Iext_duration
-        [0,      100],   # scaling factor
+        [0.5,      1.1],   # scaling factor
     ]),
     "reference":  0.0,
     "simulation": objective,
     "op":         -1,    # minimise
-    "N1":         10,    # initial population size
-    "N2":         20,    # crossover offspring per iteration
-    "N3":         20,    # mutation offspring per iteration
-    "n_iter":     5,
+    "N1":         20,    # initial population size
+    "N2":         40,    # crossover offspring per iteration
+    "N3":         40,    # mutation offspring per iteration
+    "n_iter":     20,
     "tolerance":  0.05,
     "verbose":    1,
 }
@@ -152,7 +184,7 @@ def plot_fit_diagnostics(ga, config, outdir):
     # convergence
     ax_err.plot(np.arange(1, len(errors) + 1), errors, marker="o", color="C3")
     ax_err.set_xlabel("iteration")
-    ax_err.set_ylabel("best combined error (TF + TC)")
+    ax_err.set_ylabel("best combined error")
     ax_err.set_yscale("log")
     ax_err.set_title("Convergence")
 
@@ -182,14 +214,14 @@ def plot_best_fit(model, best_params, outdir):
 
     sim_dip = model.compute_dipoles(subID_elec)
 
-    err_tf, tf_sim, tf_target = model.compute_error_timefreq(tf_data_path, sim_dip)
+    err_tf, tf_sim, tf_target = model.compute_error_timefreq(tf_data_path, sim_dip, target_dip=target_dip)
     model.plot_timefreq_comparison(tf_sim, tf_target)        # saves to the model's TIMEFREQ_DIR
 
-    err_tc, tc_sim, tc_target = model.compute_error_timecourse(tc_data_path, sim_dip)
+    err_tc, tc_sim, tc_target = model.compute_error_timecourse(tc_data_path, sim_dip, target_dip=target_dip)
     model.plot_timecourse_comparison(tc_sim, tc_target)      # saves to the model's TIMECOURSE_DIR
 
-    err_ps, ps_sim, ps_target = model.compute_error_prestim_spectrum(ps_data_path, sim_dip)
-    model.plot_prestim_spectrum_comparison(ps_data_path, sim_dip)  # saves to PRESTIM_SPECTRUM_DIR
+    err_ps, ps_sim, ps_target = model.compute_error_prestim_spectrum(ps_data_path, sim_dip, target_dip=target_dip)
+    model.plot_prestim_spectrum_comparison(ps_data_path, sim_dip, target_dip=target_dip)  # saves to PRESTIM_SPECTRUM_DIR
 
     # also persist the comparison maps/traces for this best run
     model.save_timefreq_comparison(outdir, tf_sim, tf_target, err_tf, filename="best_tf_comparison")
@@ -199,6 +231,11 @@ def plot_best_fit(model, best_params, outdir):
 
 # ── run ────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    # Parameter-recovery helper: generate the synthetic target once, then exit.
+    if "--generate-target" in sys.argv:
+        generate_synthetic_target()
+        sys.exit(0)
+
     ga = GA(opt_config)
     ga.run()
 
@@ -207,6 +244,14 @@ if __name__ == "__main__":
     for name, val in best_params.items():
         print(f"  {name}: {val:.4f}")
     print(f"  Best combined error: {ga.errors[-1]:.4f}")
+
+    # in parameter-recovery mode, show the known TRUE_PARAMS alongside the recovered ones
+    if target_dip is not None:
+        print("\n── True parameters (synthetic target) ──")
+        for name in opt_config["model_parameters"]:
+            true_val = TRUE_PARAMS.get(name)
+            true_str = f"{true_val:.4f}" if true_val is not None else "—"
+            print(f"  {name}: true={true_str}  recovered={best_params[name]:.4f}")
 
     # diagnostics of the optimisation itself
     ga.plot_fit()
@@ -226,6 +271,9 @@ if __name__ == "__main__":
         "best_fit_err_tc": float(err_tc),
         "best_fit_err_ps": float(err_ps),
     }
+    if target_dip is not None:
+        summary["synthetic_target_path"] = SYNTHETIC_TARGET_PATH
+        summary["true_params"] = {k: float(v) for k, v in TRUE_PARAMS.items()}
     with open(os.path.join(diag_dir, "optimization_summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
     print(f"  Diagnostics written to {diag_dir}")

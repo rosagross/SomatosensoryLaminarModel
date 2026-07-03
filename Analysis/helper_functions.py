@@ -456,7 +456,7 @@ def load_parameters(WDDIR):
         params = json.load(json_file)
     return params
 
-def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False, suffix=''):
+def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False, suffix='', g_thalPOm=1):
     """ Read simulation data """
     # read in firing rates in data matrix (datapoints x populations)
     if pyrates:
@@ -466,9 +466,16 @@ def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cel
         # each run now lives in its own folder named by the parameter stem; the
         # rates/potentials are stored in results.hdf5 inside that folder
         # (alongside params.json and optional tf/tc comparison files).
-        stem = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}_thalUncon"
+        stem = f"gthal2_gthalPOm{g_thalPOm}_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}_thalUncon"
         filename = stem + ".hdf5"
         filepath = os.path.join(data_dir, stem, "results.hdf5")
+        # backward-compat: runs saved before g_thalPOm was added to the filename
+        # have no gthalPOm token; fall back to that older stem if the new one is absent.
+        if not os.path.exists(filepath):
+            stem_old = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}_thalUncon"
+            old_path = os.path.join(data_dir, stem_old, "results.hdf5")
+            if os.path.exists(old_path):
+                stem, filename, filepath = stem_old, stem_old + ".hdf5", old_path
         #print(filepath)
 
     rates_df = pd.read_hdf(filepath, key='rates')
@@ -488,12 +495,19 @@ def load_hdf_safe(fname):
     potentials_safe = pd.DataFrame(values, columns=cols, index=idx)
     return potentials_safe
 
-def load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix=''):
+def load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix='', g_thalPOm=1):
     """ load the characteristics/processed data of one simulation """
     # the processed characteristics now live inside the per-run folder (named by
     # the parameter stem) as processed.csv, next to results.hdf5 / params.json
-    stem = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}_thalUncon{suffix}"
-    deriv_df = pd.read_csv(os.path.join(deriv_dir, stem, "processed.csv"))
+    stem = f"gthal2_gthalPOm{g_thalPOm}_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}_thalUncon{suffix}"
+    filepath = os.path.join(deriv_dir, stem, "processed.csv")
+    # backward-compat: runs saved before g_thalPOm was in the filename lack the gthalPOm token
+    if not os.path.exists(filepath):
+        stem_old = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}_thalUncon{suffix}"
+        old_path = os.path.join(deriv_dir, stem_old, "processed.csv")
+        if os.path.exists(old_path):
+            filepath = old_path
+    deriv_df = pd.read_csv(filepath)
     return deriv_df
 
 def check_list(sim_param):
@@ -502,7 +516,7 @@ def check_list(sim_param):
 
     return sim_param
 
-def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=''):
+def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix='', g_thalPOm=1):
     """ load all selected combinations of processed simulation (with their characteristics) into one dataframe
     All parameters can be either lists of single values. If they are single values, 
     convert them into lists with one entry.
@@ -531,7 +545,7 @@ def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_on
                     for g_inter in g_inters:
                         for sI in sIs:
                             for bI in Ib_str:
-                                data_single_df = load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+                                data_single_df = load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm)
                                 data_df = pd.concat([data_df, data_single_df], ignore_index=True)
 
     return data_df

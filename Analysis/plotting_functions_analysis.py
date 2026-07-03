@@ -598,8 +598,11 @@ def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_s
     baseline_start = int((input_onset - (sample_dur + offset)) / step_size)
     baseline_stop = int(baseline_start + sample_dur / step_size)
 
-    # colour map across swept values
-    cmap = cm.get_cmap('Greens', len(sweep_values))
+    # colour map across swept values; truncate the light (near-white) low end
+    # of 'Greens' so every trace is visible on a white poster background.
+    base_cmap = cm.get_cmap('Greens')
+    n_vals = max(len(sweep_values), 1)
+    trace_colors = [base_cmap(v) for v in np.linspace(0.35, 1.0, n_vals)]
 
     fig, axes = plt.subplots(3, 3, figsize=(10, 8), sharex=True)
     axes = axes.flatten()
@@ -620,7 +623,7 @@ def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_s
         for ax, pop in zip(axes, exc_pops):
             freqs, power = compute_freq_spectrum(window[pop].values, step_size)
             mask = freqs <= fmax
-            ax.plot(freqs[mask], power[mask], color=cmap(k), lw=1.2, label=f'{val}')
+            ax.plot(freqs[mask], power[mask], color=trace_colors[k], lw=1.2, label=f'{val}')
 
     for ax, pop in zip(axes, exc_pops):
         ax.set_title(titles[pop])
@@ -1119,6 +1122,218 @@ def plot_response_type_examples(examples, fixed_params, population, raw_dir, fig
     plt.tight_layout(rect=[0.03, 0, 1, 1])
 
     figure_name = f'responseType_examples_pop{population}{suffix}'
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
+    plt.show()
+
+
+def plot_gthalPOm_potential_sweep(g_thalPOms, fixed_params, populations, raw_dir, figure_dir,
+                                  suffix='', plot_window=(-0.1, 0.95)):
+    """
+    Publication/poster-ready figure: how each population's summed potential responds to the SAME
+    stimulus as the POm output-gain g_thalPOm is varied. One line per g_thalPOm value, each in a
+    distinct colour with a shared legend. Near g_thalPOm ~ 1 the post-stimulus attractor is highly
+    sensitive, so a few hand-picked values span very different response regimes.
+
+    Parameters
+    ----------
+    g_thalPOms : list of float
+        The g_thalPOm values to overlay (kept small so each colour is distinct).
+    fixed_params : dict
+        Operating point shared by every run:
+            'g', 'g_inter', 'sI', 'Ib_str', 'Iext_dur', 'Iext_str', 'input_onset',
+            'thal_cellcounts', 'bI_cellcounts', 'extI_cellcounts', 'input_type', 'step_size'
+    populations : str or 2D list of str
+        Potential column(s) to plot. A 2D list lays the populations out as a grid of panels
+        (rows x cols), e.g. [['E2', 'E2S2'], ['E3', 'E3S2']]. A plain string plots a single panel.
+    raw_dir : str
+        Directory holding the per-run result folders.
+    figure_dir : str
+        Where to save the figure.
+    plot_window : (float, float)
+        Time window (s) relative to stimulus onset to display.
+    """
+    figure_style()
+
+    fp = fixed_params
+    step_size = fp['step_size']
+    input_onset = fp['input_onset']
+    Iext_dur = fp['Iext_dur']
+
+    # normalise `populations` to a 2D grid
+    if isinstance(populations, str):
+        pop_grid = [[populations]]
+    else:
+        pop_grid = populations
+    nrows = len(pop_grid)
+    ncols = max(len(r) for r in pop_grid)
+
+    # distinct, colourblind-friendly qualitative palette (one colour per value)
+    base_colors = ['#4477AA', '#EE6677', '#228833', '#AA3377', '#CCBB44',
+                   '#66CCEE', '#EE7733', '#000000']
+    colors = (base_colors * (len(g_thalPOms) // len(base_colors) + 1))[:len(g_thalPOms)]
+
+    fig, axes = plt.subplots(nrows, ncols, figsize=(4.2 * ncols, 3.0 * nrows),
+                             sharex=True, sharey=False)
+    axes = np.atleast_2d(axes)
+
+    # stimulus window shaded in every panel
+    for ax in axes.flat:
+        ax.axvspan(0, Iext_dur, color='0.85', linewidth=0, zorder=0)
+
+    # load each run once, then plot its trace into every population panel
+    for gp, col in zip(g_thalPOms, colors):
+        try:
+            _, potentials_df, _ = load_simulation_data(
+                fp['g'], fp['g_inter'], fp['sI'], fp['Ib_str'], fp['Iext_dur'], fp['Iext_str'],
+                input_onset, fp['thal_cellcounts'], fp['bI_cellcounts'], fp['extI_cellcounts'],
+                fp['input_type'], raw_dir, suffix=suffix, g_thalPOm=np.round(gp, 3))
+        except (FileNotFoundError, OSError, KeyError):
+            print(f'Missing run for g_thalPOm={gp} - skipping')
+            continue
+
+        for r, row in enumerate(pop_grid):
+            for c, pop in enumerate(row):
+                pot = potentials_df[pop].values
+                t = np.arange(len(pot)) * step_size - input_onset
+                mask = (t >= plot_window[0]) & (t <= plot_window[1])
+                axes[r, c].plot(t[mask], pot[mask], color=col, linewidth=1.3,
+                                label=f'{gp:g}', zorder=2)
+
+    # map population id -> "ROI Layer" label (e.g. E2 -> 'S1 L4', E3S2 -> 'S2 L5')
+    pop_labels = {'E1': 'S1 L2/3', 'E2': 'S1 L4', 'E3': 'S1 L5', 'E4': 'S1 L6',
+                  'E1S2': 'S2 L2/3', 'E2S2': 'S2 L4', 'E3S2': 'S2 L5', 'E4S2': 'S2 L6',
+                  'E3b': 'A3b L2/3'}
+
+    # per-panel titles + shared axis labels (bottom row / left column only)
+    for r, row in enumerate(pop_grid):
+        for c, pop in enumerate(row):
+            ax = axes[r, c]
+            ax.set_title(pop_labels.get(pop, pop), fontweight='bold')
+            if r == nrows - 1:
+                ax.set_xlabel('Time from stimulus onset (s)')
+            if c == 0:
+                ax.set_ylabel('Summed potential (mV)')
+
+    # single shared legend built from the g_thalPOm / colour pairs
+    handles = [plt.Line2D([0], [0], color=col, linewidth=2) for col in colors]
+    labels = [f'{gp:g}' for gp in g_thalPOms]
+    fig.legend(handles, labels, title=r'$g_{\mathrm{thalPOm}}$', frameon=False,
+               fontsize=8, title_fontsize=9, loc='center left', bbox_to_anchor=(1.0, 0.5))
+
+    sns.despine(trim=True)
+    plt.tight_layout()
+
+    flat_pops = [p for row in pop_grid for p in row]
+    figure_name = f'gthalPOm_sweep_potential_' + '_'.join(flat_pops) + suffix
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
+    plt.show()
+
+
+def plot_gthalPOm_dipole_sweep(g_thalPOms, sim_overrides, figure_dir, subjects=(15,),
+                               area='S2', suffix='', plot_window=(-0.1, 0.25)):
+    """
+    Companion to plot_gthalPOm_potential_sweep: the SUMMED computed dipole of an area (default S2)
+    for each g_thalPOm value. The dipole is a source-resolved weighting of the full 3-D potential
+    (SomatoModel.compute_dipoles), which is not saved in results.hdf5, so each parameter set is
+    re-simulated here and its dipole computed with a subject forward model.
+
+    Parameters
+    ----------
+    g_thalPOms : list of float
+        The g_thalPOm values to overlay (kept small so each colour is distinct).
+    sim_overrides : dict
+        SomatoModel parameter overrides for the operating point (model param names), e.g.
+        {'coupling_strength', 'strength_I', 'Iext_duration', 'Iext_strength', 'Ib_strength',
+         'g_intercortical', 'g_thal', 'sI_thal', 'area', 'resistance_factor', 'delay_factor',
+         'extI_cellcounts', 'bI_cellcounts'}. g_thalPOm is set per value.
+    figure_dir : str
+        Where to save the figure.
+    subjects : sequence of int
+        Subject IDs whose forward models project the dipole (averaged); default (15,).
+    area : str
+        'A3b', 'A1' or 'S2' - which area's summed dipole to plot.
+    plot_window : (float, float)
+        Time window (s) relative to stimulus onset to display.
+    """
+    # lazy import so the analysis module isn't coupled to the model (and its env vars) at import
+    import sys
+    _wd = os.getenv('WDDIR')
+    for _p in [os.path.join(_wd, 'Simulations'), os.path.join(_wd, 'Simulations', 'model')]:
+        if _p not in sys.path:
+            sys.path.insert(0, _p)
+    from somato_model import SomatoModel, read_simulation_params
+
+    figure_style()
+
+    # dipole-row layout returned by compute_dipoles: 0=A3b, 1-4=A1 L{2/3,4,5,6}, 5-8=S2 L{2/3,4,5,6}
+    area_rows = {'A3b': [0], 'A1': [1, 2, 3, 4], 'S2': [5, 6, 7, 8]}
+    if area not in area_rows:
+        raise ValueError(f"area must be one of {list(area_rows)}, got {area!r}")
+    rows = area_rows[area]
+
+    # distinct, colourblind-friendly qualitative palette (one colour per value)
+    base_colors = ['#4477AA', '#EE6677', '#228833', '#AA3377', '#CCBB44',
+                   '#66CCEE', '#EE7733', '#000000']
+    colors = (base_colors * (len(g_thalPOms) // len(base_colors) + 1))[:len(g_thalPOms)]
+
+    # one model, reused across values (compute_dipoles caches the forward projection after the
+    # first call, so the forward model is read only once) - mirrors run_optimization.py
+    base_params = read_simulation_params()
+    base_params.update(sim_overrides)
+    model = SomatoModel(base_params)
+    step_size = model.step_size
+    input_onset = model.input_onset
+    Iext_dur = model.Iext_duration
+
+    fig, ax = plt.subplots(figsize=(7.4, 3.6))
+    ax.axvspan(0, Iext_dur, color='0.85', linewidth=0, zorder=0)
+
+    for gp, col in zip(g_thalPOms, colors):
+        model.apply_params({**sim_overrides, 'g_thalPOm': np.round(gp, 3)})
+        model.initialize_state()
+        model.simulate()
+        simDipoles = model.compute_dipoles(list(subjects))
+        dip = simDipoles[rows].sum(axis=0)
+
+        t = np.arange(len(dip)) * step_size - input_onset
+        mask = (t >= plot_window[0]) & (t <= plot_window[1])
+        ax.plot(t[mask], dip[mask], color=col, linewidth=1.3, label=f'{gp:g}', zorder=2)
+
+    ax.set_xlabel('Time from stimulus onset (s)')
+    ax.set_ylabel(f'{area} summed dipole (a.u.)')
+    # g_thalPOm legend outside, top-right
+    ax.legend(title=r'$g_{\mathrm{thalPOm}}$', frameon=False, fontsize=8,
+              title_fontsize=9, loc='upper left', bbox_to_anchor=(1.02, 1.0))
+
+    # box listing the physically-meaningful fixed parameters, in mathematical notation
+    # (key, description, math symbol, optional value transform for display)
+    _box = [
+        ('coupling_strength', 'Intra-cortical coupling', r'g', None),
+        ('strength_I',        'Inhibitory coupling',     r's_I', None),
+        ('g_intercortical',   'Inter-cortical coupling', r'g_\mathrm{inter}', None),
+        ('Ib_strength',       'Background input',        r'I_\mathrm{b}', None),
+        ('Iext_strength',     'External input',          r'I_\mathrm{ext}', None),
+        ('Iext_duration',     'Input duration',          r'\Delta t', 'ms'),
+    ]
+    lines = ['Fixed parameters']
+    for key, desc, sym, unit in _box:
+        if key not in sim_overrides:
+            continue
+        val = sim_overrides[key]
+        if unit == 'ms':
+            lines.append(f'{desc}  ${sym} = {val * 1e3:g}$ ms')
+        else:
+            lines.append(f'{desc}  ${sym} = {val:g}$')
+    ax.text(1.02, 0.62, '\n'.join(lines), transform=ax.transAxes, va='top', ha='left',
+            fontsize=7.5,
+            bbox=dict(boxstyle='round', facecolor='0.96', edgecolor='0.7', linewidth=0.6))
+
+    sns.despine(trim=True)
+    plt.tight_layout()
+
+    figure_name = f'gthalPOm_sweep_dipole_{area}{suffix}'
     plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
     plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
     plt.show()

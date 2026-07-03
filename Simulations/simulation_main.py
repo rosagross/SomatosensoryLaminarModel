@@ -90,8 +90,8 @@ epoch_fif = os.path.join(sub_dir,
 
 # electrical-modality subjects; compute_dipoles reads each one's forward model
 # (same list as Analysis/SourceReconstruction/step002_inverse_solution_multisub_epochswise.py)
-subID_elec = [15, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 34, 35, 36, 37, 38, 39, 40,
-              42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
+subID_elec = [15] #, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 34, 35, 36, 37, 38, 39, 40,
+              #42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
 
 # needed for rh.BA3b.label lookup inside simulate_eeg()
 data_path_labels = sample.data_path()
@@ -115,19 +115,24 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [5] # np.arange(0,55,5)#[100, 120, 140, 160]
-backgrndI_strengths = [1] # np.arange(0,8,2)#[40, 60, 80] #,6,7]
-input_durations = [0.01] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [100] # np.arange(0,50,10)
-strength_I = [0.8] # np.arange(0.2,0.9,0.02)#, 0.25, 0.26, 0.36]
-ginters = [2] # np.arange(0,2,0.2)
+coupling_strengths = [11.24]  # np.arange(0,20,1)#[100, 120, 140, 160]
+backgrndI_strengths = [3] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+input_durations = [0.044] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [80] # np.arange(0,50,10)
+strength_I = [0.5927] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
+ginters = [2] #np.arange(0,2,0.2)
+g_thalPOms = np.arange(0.99,1.01,0.001) # scales the POm population's output connectivity
 resistance_factor = 1
 area = 'all'
 pyrates = False
 
 for ginter in ginters:
-    for d in input_durations:
+    print("ginter", np.round(ginter, 3))
+    for g_thalPOm in g_thalPOms:
+      print("g_thalPOm", np.round(g_thalPOm, 3))
+      for d in input_durations:
         for sb in backgrndI_strengths:
+            print("background", sb)
             for s in input_strengths:
                 # arrays to store simulation duration
                 all_durations = []
@@ -138,7 +143,7 @@ for ginter in ginters:
                         
                         params['g_intercortical'] = np.round(ginter, 3)
                         params['coupling_strength'] = g 
-                        params['strength_I'] = np.round(sI, 3)
+                        params['strength_I'] = np.round(sI, 4)
                         params['Iext_duration'] = np.round(d, 3)
                         params['Iext_strength'] = s
                         params['Ib_strength'] = sb
@@ -147,7 +152,7 @@ for ginter in ginters:
 
                         # additional parameters (that are usually fixed)
                         params['g_thal'] = 2
-                        params['g_thalPOm'] = 1
+                        params['g_thalPOm'] = np.round(g_thalPOm, 3)
                         params['sI_thal'] = 0.5
                         params['delay_factor'] = 0.005
                         params['extI_cellcounts'] = 1000
@@ -158,7 +163,7 @@ for ginter in ginters:
                             model = SomatoModelPyrates(params)
                         else:
                             model = SomatoModel(params)
-                            model.plot_W_heatmap()
+                            #model.plot_W_heatmap()
                         
                         # simulate rates and potentials
                         start = time.time()
@@ -166,12 +171,11 @@ for ginter in ginters:
                         stop = time.time()
                         duration = stop - start
                         all_durations.append(duration)
-                        print("Simulation duration (in s):", duration)
+                        #print("Simulation duration (in s):", duration)
 
                         # analyse signal (frequency spectra)
                         #model.analyse_signal(save_spectrum=True)
-
-                        
+                        """
                         # time-frequency error against measured data
                         sim_dip = model.compute_dipoles(subID_elec)
                         tf_error, tf_sim, tf_target = model.compute_error_timefreq(tf_target_path, sim_dip)
@@ -196,11 +200,10 @@ for ginter in ginters:
                         model.save_timecourse_comparison(
                             run_dir, tc_sim, tc_target, tc_error, filename="tc_comparison")
                         model.append_comparison_summary(tf_error=tf_error, tc_error=tc_error)
-
+                        """
                         # compute dipoles
                         #sim_dip = model.compute_dipoles()
                         #model.plot_dipoles(sim_dip, epochs.info)
-                        
 
                         #error = compute_error_timefreq()
 
@@ -224,10 +227,10 @@ for ginter in ginters:
                         print('input_type', model.input_type) 
                         print('area', model.area) 
                         """
-                        print('coupling strength', model.coupling_strength) 
-                        print('b input', model.Ib_strength) 
-                        print('Iext strength', model.Iext_strength) 
-                        print('Iext dur', model.Iext_duration) 
+                        #print('coupling strength', model.coupling_strength) 
+                        #print('b input', model.Ib_strength) 
+                        #print('Iext strength', model.Iext_strength) 
+                        #print('Iext dur', model.Iext_duration) 
 
                         if save_results:
                             # create per-run output folder (holds params.json + all HDF5s for this run)
@@ -237,7 +240,7 @@ for ginter in ginters:
                             stop = time.time()
                             duration = stop - start
                             all_durations_saving.append(duration)
-                            print("Saving duration (in s):", duration)
+                            #print("Saving duration (in s):", duration)
 
                         if plot_rates:
                             start_plot = 0

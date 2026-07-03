@@ -201,6 +201,66 @@ plot_response_type_examples(response_examples, fixed_params, 'E3', raw_dir, figu
 
 
 # %%
+'''
+1.1c) POm-GAIN SENSITIVITY (publication figure)
+Show how the E3S2 summed potential responds to the SAME stimulus as the POm output gain
+g_thalPOm is varied. Near g_thalPOm ~ 1 the post-stimulus attractor is highly sensitive, so a
+few hand-picked values each land in a different regime (oscillation / elevated / giant transient
+/ quenched / extreme high). All other parameters are fixed at the processed operating point.
+'''
+
+# five g_thalPOm values that show the greatest divergence in the post-stimulus response
+gthalPOm_values = [0.997, 0.998, 0.999, 1.0, 1.001]
+
+gthalPOm_fixed = {
+    'g': 11.24,
+    'g_inter': 2,
+    'sI': 0.5927,
+    'Ib_str': 3,
+    'Iext_dur': 0.044,
+    'Iext_str': 80,
+    'input_onset': input_onset,
+    'thal_cellcounts': thal_cellcounts,
+    'bI_cellcounts': bI_cellcounts,
+    'extI_cellcounts': extI_cellcounts,
+    'input_type': input_type,
+    'step_size': step_size,
+}
+
+plot_gthalPOm_potential_sweep(gthalPOm_values, gthalPOm_fixed, [['E2', 'E2S2'], ['E3', 'E3S2']], raw_dir, figure_dir, suffix=suffix, plot_window=(-0.1,0.3))
+
+
+# %%
+'''
+1.1d) POm-GAIN SENSITIVITY - summed S2 dipole (publication figure)
+Companion to 1.1c: the summed computed dipole of area S2 for each g_thalPOm value. The dipole
+needs the full source-resolved potential (SomatoModel.compute_dipoles), which is not saved, so
+each parameter set is re-simulated here and projected through a subject forward model.
+Requires DATADIR / SUBJECTS_DIR env vars (the model reads them at import).
+'''
+gthalPOm_values = [0.997, 0.998, 0.999, 1.0, 1.001]
+
+# model-side overrides (model parameter names) for the same operating point as 1.1c
+gthalPOm_sim = {
+    'coupling_strength': 11.24,
+    'strength_I': 0.5927,
+    'Iext_duration': 0.044,
+    'Iext_strength': 80,
+    'Ib_strength': 3,
+    'g_intercortical': 2,
+    'g_thal': 2,
+    'sI_thal': 0.5,
+    'area': 'all',
+    'resistance_factor': 1,
+    'delay_factor': 0.005,
+    'extI_cellcounts': 1000,
+    'bI_cellcounts': 100,
+}
+
+plot_gthalPOm_dipole_sweep(gthalPOm_values, gthalPOm_sim, figure_dir, subjects=[15], area='S2', suffix=suffix, plot_window=(-0.1,0.3))
+
+
+# %%
 """
 Plot a heatmap showing the effect of Input Strength versus Input Duration
 """
@@ -449,7 +509,7 @@ baseline_spectrum_by_coupling('g_inter', g_inter_values, g, None, sI, Ib_str,
 - one subplot for each sI value
 '''
 
-sI = [0.5, 0.6, 0.7] #params['strength_I']
+sI = [0.4, 0.5, 0.6, 0.7] #params['strength_I']
 Ib_str = params['backgrndI_strengths']
 Iext_dur = 0.016
 Iext_str = 40 #, 200, 300, 400]

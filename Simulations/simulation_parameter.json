@@ -1,6 +1,6 @@
 {
     "save_params": false,
-    "save_results": false,
+    "save_results": true,
     "save_full_potentials": false,
     "plot_rates": false,
     "plot_potentials": false,

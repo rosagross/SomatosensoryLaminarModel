@@ -60,7 +60,7 @@ params = read_simulation_params()
 # override for a single stimulated run (same values as the simulation_main.py loop)
 params['g_intercortical'] = 2.0
 params['coupling_strength'] = 11.24
-params['strength_I'] = 0.5927
+params['strength_I'] = 0.593
 params['Iext_duration'] = 0.044
 params['Iext_strength'] = 80
 params['Ib_strength'] = 3

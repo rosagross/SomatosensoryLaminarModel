@@ -38,28 +38,28 @@ bI_cellcounts = params['bI_cellcounts']
 thal_cellcounts = params['thal_cellcounts']
 
 # coupling strengths, balance and area selection
-strength_I = [0.68 , 0.685, 0.69 , 0.695, 0.7  , 0.705, 0.71 , 0.715, 0.72 ,
-       0.725, 0.73 , 0.735, 0.74 , 0.745, 0.75 , 0.755] # params['strength_I']
+strength_I = params['strength_I']
 g_thal = params['g_thal']
 sI_thal = params['sI_thal']
 step_size = params['step_size']
 area = params['area']
 filedir = params['filedir']
-g_intercortical = [0.6, 0.8, 1.0, 1.2] # params['g_inter']
+g_intercortical = [2] # params['g_inter']
+g_thalPOms = np.arange(0.99,1.01,0.001) # e.g. np.round(np.arange(0.8, 1.2, 0.01), 3) to match simulation_main.py; scales POm output connectivity
 
 # inputs
 input_type = params['input_type']
 input_onset = params['input_onset']
 simulation_dur = params['simulation_dur']
-input_durations = [0.016] # params['input_durations']
-input_strengths = [0, 10, 20] # params['input_strengths']
-backgroundI_strengths = [4, 6] # params['backgrndI_strengths']
+input_durations = params['input_durations']
+input_strengths = params['input_strengths']
+backgroundI_strengths = params['backgrndI_strengths']
 
-#coupling_strengths = [10] #np.arange(0,55,5) #[100, 120, 140, 160]
-#backgroundI_strengths = [0] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
-#input_durations = [0.004] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-#input_strengths = [10] #np.arange(0,50,10)
-#strength_I = [0.2]
+coupling_strengths = [11.24] #np.arange(0,55,5) #[100, 120, 140, 160]
+backgroundI_strengths = [3] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
+input_durations = [0.044] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [80] #np.arange(0,50,10)
+strength_I = [0.5927]
 
 
 # sampling parameters
@@ -78,7 +78,9 @@ response_window = sampling_params['response_window']
 # loop over all simulations
 for g_inter in g_intercortical:
     print("g_inter", g_inter)
-    for d in input_durations:
+    for g_thalPOm in g_thalPOms:
+      print("g_thalPOm", np.round(g_thalPOm, 3))
+      for d in input_durations:
         print("input dur", d)
         for bI in backgroundI_strengths:
             print("background", bI)
@@ -89,7 +91,7 @@ for g_inter in g_intercortical:
                         df = pd.DataFrame()
                         
                         # read data 
-                        rates_df, potentials_df, filename = load_simulation_data(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, sim_dir)
+                        rates_df, potentials_df, filename = load_simulation_data(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, sim_dir, g_thalPOm=np.round(g_thalPOm, 3))
 
                         # compute characteristics
                         compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)
