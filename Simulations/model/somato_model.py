@@ -242,16 +242,37 @@ class SomatoModel():
         with open(filename + '.yaml', 'w') as file:
             yaml.dump(parameters, file)
 
-    def plot_W_heatmap(self):
+    def plot_W_heatmap(self, save_dir=None):
         """
-        Plot connectivity matrix as heatmap.
+        Plot the connectivity matrix as a heatmap.
+
+        Args:
+            save_dir (str, optional): if given, save the heatmap (PNG) and the
+                connectivity matrix (CSV) into this run directory. Defaults to
+                self.run_dir when it exists; if neither is available the figure
+                is only drawn, not saved.
         """
         pop_names = self.get_population_labels()
-        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area) 
-        W_df = pd.DataFrame(W[:,:-2])
-        W_df.columns = pop_names
-        sns.heatmap(W_df, annot=False, cmap='coolwarm', center=0, xticklabels=pop_names, yticklabels=pop_names)
+        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area)
+        # drop the background (B) and external (Ext) input columns so the matrix is square
+        W_df = pd.DataFrame(W[:, :-2], index=pop_names, columns=pop_names)
 
+        fig, ax = plt.subplots(figsize=(14, 12))
+        sns.heatmap(W_df, annot=False, cmap='coolwarm', center=0, xticklabels=pop_names, yticklabels=pop_names, ax=ax)
+        ax.set_xlabel("Source population")
+        ax.set_ylabel("Target population")
+        ax.set_title("Connectivity matrix W")
+        fig.tight_layout()
+
+        if save_dir is None:
+            save_dir = getattr(self, "run_dir", None)
+        if save_dir is not None:
+            # save the connectivity heatmap and matrix in the run directory
+            os.makedirs(save_dir, exist_ok=True)
+            fig.savefig(os.path.join(save_dir, "connectivity_heatmap.png"), dpi=300, bbox_inches="tight")
+            W_df.to_csv(os.path.join(save_dir, "connectivity_matrix.csv"))
+            plt.close(fig)
+        return fig
 
     def simulate(self):
         '''

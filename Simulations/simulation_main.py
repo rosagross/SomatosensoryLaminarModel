@@ -103,6 +103,7 @@ input_onset = params['input_onset']
 simulation_dur = params['simulation_dur']
 save_params = params['save_params']
 save_results = params['save_results']
+save_connectivity = params['save_connectivity']
 save_full_potentials = params['save_full_potentials']
 plot_rates = params['plot_rates']
 plot_potentials = params['plot_potentials']
@@ -115,13 +116,13 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [11.24]  # np.arange(0,20,1)#[100, 120, 140, 160]
-backgrndI_strengths = [3] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+coupling_strengths = [1] #[11.24]  # np.arange(0,20,1)#[100, 120, 140, 160]
+backgrndI_strengths = [1] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
 input_durations = [0.044] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [80] # np.arange(0,50,10)
-strength_I = [0.5927] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
+input_strengths = [1] # np.arange(0,50,10)
+strength_I = [1] #[0.5927] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
 ginters = [2] #np.arange(0,2,0.2)
-g_thalPOms = np.arange(0.99,1.01,0.001) # scales the POm population's output connectivity
+g_thalPOms = [1] #np.arange(0.99,1.01,0.001) # scales the POm population's output connectivity
 resistance_factor = 1
 area = 'all'
 pyrates = False
@@ -163,8 +164,12 @@ for ginter in ginters:
                             model = SomatoModelPyrates(params)
                         else:
                             model = SomatoModel(params)
-                            #model.plot_W_heatmap()
-                        
+
+                        # save the connectivity heatmap into this run's directory
+                        if save_connectivity and not pyrates:
+                            run_dir = model.prepare_run_dir(filedir)
+                            model.plot_W_heatmap(save_dir=run_dir)
+
                         # simulate rates and potentials
                         start = time.time()
                         model.simulate()

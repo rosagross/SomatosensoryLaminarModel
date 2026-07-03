@@ -509,6 +509,7 @@ baseline_spectrum_by_coupling('g_inter', g_inter_values, g, None, sI, Ib_str,
 - one subplot for each sI value
 '''
 
+g_inters = [0.8]
 sI = [0.4, 0.5, 0.6, 0.7] #params['strength_I']
 Ib_str = params['backgrndI_strengths']
 Iext_dur = 0.016

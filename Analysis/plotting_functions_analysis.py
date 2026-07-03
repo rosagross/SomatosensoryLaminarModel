@@ -573,7 +573,7 @@ def heatmap_frequency_couplingVsSI_singlePop(data_df, population, window_prefix,
 def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_str,
                                   Iext_dur, Iext_str, input_onset, step_size, sample_dur,
                                   offset, thal_cellcounts, bI_cellcounts, extI_cellcounts,
-                                  input_type, raw_dir, figure_dir, suffix='', fmax=100.0):
+                                  input_type, raw_dir, figure_dir, suffix='', fmax=80.0):
     """
     Grid of baseline power spectra (summed potential), one subplot per excitatory
     population, one curve per swept coupling value (colour = value).
@@ -591,9 +591,11 @@ def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_s
 
     exc_pops = ['E1', 'E2', 'E3', 'E4',
                 'E1S2', 'E2S2', 'E3S2', 'E4S2', 'E3b']
-    titles = {'E1': 'S1 L2/3', 'E2': 'S1 L4', 'E3': 'S1 L5', 'E4': 'S1 L6',
-              'E1S2': 'S2 L2/3', 'E2S2': 'S2 L4', 'E3S2': 'S2 L5', 'E4S2': 'S2 L6',
-              'E3b': 'A3b L2/3'}
+    titles = {'E1': 'Area 1\nLayer 2/3', 'E2': 'Area 1\nLayer 4',
+              'E3': 'Area 1\nLayer 5', 'E4': 'Area 1\nLayer 6',
+              'E1S2': 'S2\nLayer 2/3', 'E2S2': 'S2\nLayer 4',
+              'E3S2': 'S2\nLayer 5', 'E4S2': 'S2\nLayer 6',
+              'E3b': 'A3b\nLayer 2/3'}
 
     baseline_start = int((input_onset - (sample_dur + offset)) / step_size)
     baseline_stop = int(baseline_start + sample_dur / step_size)
@@ -626,11 +628,12 @@ def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_s
             ax.plot(freqs[mask], power[mask], color=trace_colors[k], lw=1.2, label=f'{val}')
 
     for ax, pop in zip(axes, exc_pops):
-        ax.set_title(titles[pop])
+        ax.set_title(titles[pop], fontweight='bold')
         ax.set_xlabel('Frequency (Hz)')
-        ax.set_ylabel('Power')
+        ax.set_ylabel('Power (mV$^2$)')
 
-    axes[0].legend(title=sweep_name, fontsize=7, ncol=2)
+    legend_title = {'g': 'Intracortical coupling', 'g_inter': 'Intercortical coupling'}.get(sweep_name, sweep_name)
+    axes[0].legend(title=legend_title, fontsize=11, title_fontsize=12, ncol=2)
     sns.despine(trim=True)
     fig.suptitle(f'Baseline power spectrum vs {sweep_name} '
                  f'(sI={sI}, Ib={Ib_str}, Iextstr={Iext_str}, Iextdur={Iext_dur})')
@@ -1200,10 +1203,12 @@ def plot_gthalPOm_potential_sweep(g_thalPOms, fixed_params, populations, raw_dir
                 axes[r, c].plot(t[mask], pot[mask], color=col, linewidth=1.3,
                                 label=f'{gp:g}', zorder=2)
 
-    # map population id -> "ROI Layer" label (e.g. E2 -> 'S1 L4', E3S2 -> 'S2 L5')
-    pop_labels = {'E1': 'S1 L2/3', 'E2': 'S1 L4', 'E3': 'S1 L5', 'E4': 'S1 L6',
-                  'E1S2': 'S2 L2/3', 'E2S2': 'S2 L4', 'E3S2': 'S2 L5', 'E4S2': 'S2 L6',
-                  'E3b': 'A3b L2/3'}
+    # map population id -> two-line "area / layer" label (e.g. E2 -> 'Area 1\nLayer 4')
+    pop_labels = {'E1': 'Area 1\nLayer 2/3', 'E2': 'Area 1\nLayer 4',
+                  'E3': 'Area 1\nLayer 5', 'E4': 'Area 1\nLayer 6',
+                  'E1S2': 'S2\nLayer 2/3', 'E2S2': 'S2\nLayer 4',
+                  'E3S2': 'S2\nLayer 5', 'E4S2': 'S2\nLayer 6',
+                  'E3b': 'A3b\nLayer 2/3'}
 
     # per-panel titles + shared axis labels (bottom row / left column only)
     for r, row in enumerate(pop_grid):
