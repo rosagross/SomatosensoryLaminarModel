@@ -313,7 +313,7 @@ class Parameter():
         
         S_thalToS2 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S2, using S1 values but reduce them later!
                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # no connections from thal I to S2
-                              [0.3, 0, 0, 0, 0.5, 0, 0, 0.3, 0, 0, 0, 0, 0]]) # POm to S2 (mainly to L2/3 and L5a pyramidal cells, but also L4 which is driving in S2) 
+                              [0.3, 0, 0, 0, 0.2, 0, 0, 0.3, 0, 0, 0, 0, 0]]) # POm to S2 (mainly to L2/3 and L5a pyramidal cells, but also L4 which is driving in S2) 
         
         # approximation of synpatic strength: 0.5 for driver, 0.3 for modulator
 
@@ -339,7 +339,7 @@ class Parameter():
 
         P_thalToS2 = np.array([thal_to_S1*0.2, # thal E to S2 (even weaker, therefore 0.2!)
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
-                                [30, 0, 0, 0, 30, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S2
+                                [30, 0, 0, 0, 20, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S2
 
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         P_A3bto_thal = np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
