@@ -62,9 +62,14 @@ class SomatoModel():
     def __init__(self, params={}, WDDIR=None):
         
         # load in all connectivity parameters, time constants, etc.
-        # delay_factor is read here (before Parameter is built) since it shapes the tau matrix
-        self.delay_factor = params.get('delay_factor', 5e-3)
-        self.p = Parameter(delay_factor=self.delay_factor)
+        # these are read here (before Parameter is built) since they shape the tau matrix
+        self.delay_factor      = params.get('delay_factor', 5e-3)
+        self.thal_delay_factor = params.get('thal_delay_factor', 3e-3)
+        self.e3b_tau           = params.get('e3b_tau', 6)
+        self.e1_tau            = params.get('e1_tau', 6)
+        self.e2_tau            = params.get('e2_tau', 6)
+        self.p = Parameter(delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
+                           e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau)
         self.tau = self.p.tau
         self.nPop = self.p.nPop
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
@@ -77,6 +82,8 @@ class SomatoModel():
         self.resolution_tstep = 0.001 # in s
         self.sfreq_saved = 1 / self.resolution_tstep 
         self.input_onset = 1.001
+        # periphery→thalamus alignment delay (s); overridable via params / optimized by the GA
+        self.receptor_thalamus_delay = RECEPTOR_THALAMUS_DELAY_S
         self.thal_connect = [0,0,0,0]
         self.extI_cellcounts = 1000
         self.strength_I = 0 #0.7
@@ -91,6 +98,9 @@ class SomatoModel():
         self.area = 'all' 
         self.coupling_strength = 10
         self.Ib_strength = 7
+        self.Ib_noise_std = 1.0     # stationary std of OU background noise (units of Ib_strength); 0 = off
+        self.Ib_noise_tau = 0.016   # OU correlation time constant (s)
+        self.Ib_noise_seed = None   # seed for the isolated background-noise RNG (None = fresh draws)
         self.Iext_strength = 10
         self.Iext_duration = 0.5
         self.resistance_factor = 1
@@ -122,9 +132,10 @@ class SomatoModel():
         # extend input arrays
         self.Iext = np.tile(Iext, (self.nPop,1))
         self.Ib = np.tile(Ib, (self.nPop,1))
+        self.Ib = self.add_background_noise(self.Ib)
 
         self.filename = (
-            f"gthal{self.g_thal}_gthalPOm{self.g_thalPOm}_sIthal{self.sI_thal}_g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_Iextd{self.Iext_duration}_"
+            f"gthal{self.g_thal}_gthalPOm{self.g_thalPOm}_sIthal{self.sI_thal}_g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_Ibnoise{self.Ib_noise_std}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thalE_cellcounts}_"
             f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_gInter{self.g_intercortical}_thalUncon"
         )
@@ -166,11 +177,18 @@ class SomatoModel():
         """
         self.__dict__.update(params)
 
+        # rebuild the tau matrix so tau/delay-shaping params (delay_factor,
+        # thal_delay_factor, e3b_tau, e1_tau, e2_tau) take effect on every update
+        self.p = Parameter(delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
+                           e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau)
+        self.tau = self.p.tau
+
         # recompute inputs and gains
         Iext = self.create_Iext()
         Ib = self.create_Ibackground()
         self.Iext = np.tile(Iext, (self.nPop, 1))
         self.Ib = np.tile(Ib, (self.nPop, 1))
+        self.Ib = self.add_background_noise(self.Ib)
 
         self.gE = self.coupling_strength
         self.gI = self.coupling_strength * self.strength_I
@@ -218,7 +236,35 @@ class SomatoModel():
         Ib[:] = self.Ib_strength
         return Ib
 
-        
+
+    def add_background_noise(self, Ib_matrix):
+        """Add independent Ornstein-Uhlenbeck (colored) noise to the tiled background input.
+
+        Each population gets its own zero-mean OU trace: an exponentially
+        autocorrelated process with stationary std `Ib_noise_std` (units of
+        `Ib_strength`) and correlation time `Ib_noise_tau` (s). The exact discrete
+        OU update is used, so the noise statistics do not depend on `step_size`.
+        A std of 0 returns the input unchanged (identical to the constant-background
+        model).
+
+        Note: with a fixed `Ib_noise_seed` every call regenerates the same noise;
+        leaving `Ib_noise_seed=None` gives fresh independent noise each call (e.g.
+        per parameter set when `apply_params` is called repeatedly during SBI).
+        """
+        if self.Ib_noise_std <= 0:
+            return Ib_matrix
+        rng = np.random.default_rng(self.Ib_noise_seed)
+        n_pop, n_steps = Ib_matrix.shape
+        a = np.exp(-self.step_size / self.Ib_noise_tau)       # decay per step
+        b = self.Ib_noise_std * np.sqrt(1.0 - a**2)           # scale for stationary std
+        xi = rng.standard_normal((n_pop, n_steps))
+        noise = np.empty((n_pop, n_steps))
+        noise[:, 0] = self.Ib_noise_std * xi[:, 0]            # start at stationary distribution
+        for t in range(1, n_steps):
+            noise[:, t] = a * noise[:, t - 1] + b * xi[:, t]
+        return Ib_matrix + noise
+
+
     def save_to_yaml(self, filename):
         
         S = self.p.get_connectStrength()
@@ -354,6 +400,7 @@ class SomatoModel():
 
         # -----------------------------
         # BACKGROUND INPUT
+        # with added noise
         # -----------------------------
 
         # update potentials
@@ -1175,16 +1222,25 @@ class SomatoModel():
         return freqs, spectra
 
 
-    def compute_error_prestim_spectrum(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None):
+    def compute_error_prestim_spectrum(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None,
+                                       flatten_sim=False, rois=None):
         """Error between simulated and measured pre-stimulus spectra.
 
         Each spectrum is normalised to unit sum (relative power) over the compared
         frequencies — removing the sim/data amplitude-scale mismatch — then compared by
         MSE, averaged over ROIs. Both signals fall on a shared 5 Hz frequency grid.
 
+        `rois` selects which ROIs the returned error averages over (default: all three).
+        The returned spectra dicts always hold every ROI, so plotting/saving is unaffected.
+
         If `target_dip` is given (a saved dipole trace), the target spectrum is computed
         from it instead of loading `data_path` — used for parameter-recovery tests against
         a synthetic ground-truth trace (sim and target then share an identical freq grid).
+
+        If `flatten_sim` is True, the FOOOF aperiodic (1/f) component is removed from the
+        simulated spectrum before comparison — use this when the measured target loaded
+        from `data_path` has already been 1/f-removed (see run_optimization.py), so both
+        sides are compared on the same aperiodic-removed footing.
 
         Returns:
             (float mean MSE over ROIs, sim spectra dict, target spectra dict).
@@ -1192,18 +1248,27 @@ class SomatoModel():
         f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
         f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax)
                            if target_dip is not None else self.load_target_prestim_spectrum(data_path))
+        if flatten_sim:
+            from signal_preprocessing import remove_aperiodic
+            for roi in spec_sim:
+                f_flat, spec_sim[roi] = remove_aperiodic(f_sim, spec_sim[roi], fmin, fmax)
+            f_sim = f_flat
         tmask = (f_tgt >= fmin) & (f_tgt <= fmax)
         # align on the shared frequency bins (both are multiples of 5 Hz)
         common = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt[tmask], 6))
         sim_sel = np.isin(np.round(f_sim, 6), common)
         tgt_sel = np.isin(np.round(f_tgt, 6), common)
         eps, errors = 1e-10, []
-        for roi in ("A3b", "A1", "S2"):
+        for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
             s = spec_sim[roi][sim_sel]
             s = s / (s.sum() + eps)
             t = spec_tgt[roi][tgt_sel]
             t = t / (t.sum() + eps)
             errors.append(np.mean((s - t) ** 2))
+
+
+        print('prestim error', float(np.mean(errors)))
+
         return float(np.mean(errors)), spec_sim, spec_tgt
 
 
@@ -1227,7 +1292,7 @@ class SomatoModel():
 
         # Window of interest: -500 ms to +250 ms relative to stimulus onset (901 samples
         # at 1 kHz), shifted 20 ms earlier for the receptor→thalamus travel time.
-        delay_samples = round(RECEPTOR_THALAMUS_DELAY_S / self.step_size)  # 20 samples @ 1 kHz
+        delay_samples = round(self.receptor_thalamus_delay / self.step_size)  # 20 samples @ 1 kHz (default)
         window_start = stim_idx - 500 - delay_samples
         window_end   = stim_idx + 251 - delay_samples
 
@@ -1277,7 +1342,7 @@ class SomatoModel():
         return tf_target
 
 
-    def compute_error_timefreq(self, data_path, sim_dip, target_dip=None):
+    def compute_error_timefreq(self, data_path, sim_dip, target_dip=None, rois=None):
         """
         Compute the dimensionless TF error between simulation and measured data.
 
@@ -1289,9 +1354,12 @@ class SomatoModel():
         via compute_timefreq instead of loading `data_path` — used for parameter-recovery
         tests against a synthetic ground-truth trace.
 
+        `rois` selects which ROIs the returned error averages over (default: all three).
+        The returned tf dicts always hold every ROI, so plotting/saving is unaffected.
+
         Returns:
             tuple: (float error, tf_sim dict, tf_target dict)
-                - float: Mean log10-normalized MSE across ROIs (A3b, A1, S2).
+                - float: Mean log10-normalized MSE across `rois` (default A3b, A1, S2).
                 - tf_sim: roi label → (n_freqs=40, n_times=451) simulated power array
                 - tf_target: roi label → (n_freqs=40, n_times=451) measured power array
         """
@@ -1307,7 +1375,7 @@ class SomatoModel():
         eps = 1e-10
 
         errors = []
-        for roi in ("A3b", "A1", "S2"):
+        for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
             if roi not in tf_sim or roi not in tf_target:
                 raise RuntimeError(f"Missing TF data for ROI '{roi}'.")
             P_sim = tf_sim[roi]    # (n_freqs, n_times)
@@ -1421,7 +1489,7 @@ class SomatoModel():
         # Window of interest: -500 ms to +250 ms relative to stimulus onset (751 samples at 1 kHz),
         # shifted 20 ms earlier so the model's thalamic onset aligns with the real cortical
         # response (which lags the fingertip pulse by the receptor→thalamus travel time).
-        delay_samples = round(RECEPTOR_THALAMUS_DELAY_S / self.step_size)  # 20 samples @ 1 kHz
+        delay_samples = round(self.receptor_thalamus_delay / self.step_size)  # 20 samples @ 1 kHz (default)
         win_start = stim_idx - 500 - delay_samples
         win_end   = stim_idx + 251 - delay_samples
 
@@ -1464,22 +1532,29 @@ class SomatoModel():
         return tc_target
 
 
-    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor=None, target_dip=None):
+    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor=None, target_dip=None, rois=None):
         """
         Compute the dimensionless time-course error between simulation and measured data.
 
-        All areas are peak-normalized *together* (divided by one shared peak across
-        A3b/A1/S2, computed separately for the simulated and the measured traces),
-        so the amplitude ratios between areas are preserved while the simulated
-        dipoles and measured nAm traces stay on a comparable overall scale.
+        Normalization depends on `scaling_factor`:
+          - if given, every area's simulated trace is divided by that single scalar
+            (measured traces by 1), keeping the cross-area amplitude ratios.
+          - if not given, each area is normalized by *its own* peak (a separate
+            scaling factor per area), computed separately for sim and measured. This
+            compares the per-area shape and does NOT preserve cross-area ratios.
 
         If `target_dip` is given (a saved dipole trace), the target is derived from it
         via compute_timecourse instead of loading `data_path` — used for parameter-recovery
         tests against a synthetic ground-truth trace.
 
+        `rois` selects which ROIs the returned error averages over (default: all three).
+        The returned tc dicts always hold every ROI, so plotting/saving is unaffected.
+        With a single ROI the `scaling_factor` distinction collapses — there are no
+        cross-area ratios left to preserve, only that ROI's own amplitude scale.
+
         Returns:
             tuple: (float error, tc_sim dict, tc_target dict)
-                - float: Mean MSE across ROIs (A3b, A1, S2).
+                - float: Mean MSE across `rois` (default A3b, A1, S2).
                 - tc_sim: roi label -> (n_times=451,) simulated trace
                 - tc_target: roi label -> (n_times=451,) measured trace
         """
@@ -1490,7 +1565,7 @@ class SomatoModel():
         # Analysis window: stimulus onset (0 ms) onward -> index 250 on the 2 ms / -500..400 axis.
         analysis_slice = slice(250, None)
         eps = 1e-10
-        rois = ("A3b", "A1", "S2")
+        rois = tuple(rois) if rois else ("A3b", "A1", "S2")
 
         # collect the sliced, shape-matched traces per ROI
         sims, tgts = {}, {}
@@ -1506,18 +1581,17 @@ class SomatoModel():
 
 
         if scaling_factor:
-            sim_peak = scaling_factor
-            tgt_peak = 1
+            # one shared scalar across all areas -> preserves cross-area ratios
+            sim_peak = {roi: scaling_factor for roi in rois}
+            tgt_peak = {roi: 1 for roi in rois}
         else:
-            # one shared peak across all areas per signal -> preserves cross-area ratios
-            sim_peak = max(np.max(np.abs(sims[roi])) for roi in rois) + eps
-            tgt_peak = max(np.max(np.abs(tgts[roi])) for roi in rois) + eps
-
-            print("Sim peak", sim_peak)
+            # separate peak per area -> each ROI normalized to its own amplitude
+            sim_peak = {roi: np.max(np.abs(sims[roi])) + eps for roi in rois}
+            tgt_peak = {roi: np.max(np.abs(tgts[roi])) + eps for roi in rois}
 
         # the error of the ERP time course should be computed starting from stimulation onset 0 ms
         errors = [
-            float(np.mean((sims[roi] / sim_peak - tgts[roi] / tgt_peak) ** 2))
+            float(np.mean((sims[roi] / sim_peak[roi] - tgts[roi] / tgt_peak[roi]) ** 2))
             for roi in rois
         ]
 
@@ -1528,9 +1602,10 @@ class SomatoModel():
         """
         Plot simulated vs. measured ROI time courses (peak-normalized) per ROI.
 
-        Layout: 1 row x 3 cols (A3b, A1, S2). All areas share one peak per signal
-        (max across A3b/A1/S2 over the -200..+250 ms window) — the same quantity the
-        error is computed on — so the amplitude ratios between areas are visible.
+        Layout: 1 row x 3 cols (A3b, A1, S2). Normalization mirrors the error
+        (compute_error_timecourse): with a `scaling_factor` all areas share that one
+        scalar (cross-area ratios visible); without it each area is normalized by its
+        own peak over the -200..+250 ms window (per-area shape comparison).
         Saves to ./Figures/tc_comparison_g-<g>_sI-<sI>_area-<area>.png.
         """
         rois = ("A3b", "A1", "S2")
@@ -1550,16 +1625,17 @@ class SomatoModel():
 
 
         if scaling_factor:
-            sim_peak = scaling_factor
-            tgt_peak = 1
+            # one shared scalar across all areas -> preserves cross-area ratios
+            sim_peak = {roi: scaling_factor for roi in rois}
+            tgt_peak = {roi: 1 for roi in rois}
         else:
-            # one shared peak across all areas per signal -> preserves cross-area ratios
-            sim_peak = max(np.max(np.abs(tc_sim[roi][150:])) for roi in rois) + eps
-            tgt_peak = max(np.max(np.abs(tc_target[roi][150:])) for roi in rois) + eps
+            # separate peak per area -> each ROI normalized to its own amplitude
+            sim_peak = {roi: np.max(np.abs(tc_sim[roi][150:])) + eps for roi in rois}
+            tgt_peak = {roi: np.max(np.abs(tc_target[roi][150:])) + eps for roi in rois}
 
         for ax, roi in zip(axes, rois):
-            x_sim = tc_sim[roi][150:] / sim_peak
-            x_tgt = tc_target[roi][150:] / tgt_peak
+            x_sim = tc_sim[roi][150:] / sim_peak[roi]
+            x_tgt = tc_target[roi][150:] / tgt_peak[roi]
 
             ax.plot(t_ms, x_sim, color="C1", lw=1.5, label="Simulated")
             ax.plot(t_ms, x_tgt, color="black", lw=1.5, label="Measured")
@@ -1568,7 +1644,8 @@ class SomatoModel():
             ax.set_title(roi)
             ax.set_xlabel("Time (ms)")
             if ax is axes[0]:
-                ax.set_ylabel("Amplitude (shared-peak normalized)")
+                ax.set_ylabel("Amplitude (shared-scalar normalized)" if scaling_factor
+                              else "Amplitude (per-area peak normalized)")
             ax.legend(frameon=False, fontsize=8)
 
         fig.tight_layout(rect=[0, 0, 1, 0.96])

@@ -5,14 +5,14 @@ import pandas as pd
 # %%
 class Parameter():
     
-    def __init__(self, delay_factor=5e-3):
-        self.tau, self.nPop = self.get_params(delay_factor)
+    def __init__(self, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6):
+        self.tau, self.nPop = self.get_params(delay_factor, thal_delay_factor, e3b_tau, e1_tau, e2_tau)
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
         self.C = self.get_cellcounts()
         self.sigmoid_params = self.get_sigmoid()
 
-    def get_params(self, delay_factor=5e-3, e3b_tau=6, e1_tau=6, e2_tau=6):
+    def get_params(self, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6):
 
         # nr. of populations
         nPopA3b = 4 # E, PV, SST, VIP
@@ -27,8 +27,8 @@ class Parameter():
         # with nPopTotal = 33 the shape of tau should be (33, 33) 
         # order: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 
         tauA3b = np.tile(np.array([e3b_tau,3,20,15])*1e-3, (nPopTotal,1)) # sec
-        tauS1 = np.tile(np.array([e1_tau,3,20,15,6,3,20,6,3,20,6,3,20])*1e-3, (nPopTotal,1)) # sec
-        tauS2 = np.tile(np.array([e2_tau,3,20,15,6,3,20,6,3,20,6,3,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
+        tauS1 = np.tile(np.array([e1_tau,3,20,15,e1_tau,3,20,e1_tau,3,20,e1_tau,3,20])*1e-3, (nPopTotal,1)) # sec
+        tauS2 = np.tile(np.array([e2_tau,3,20,15,e2_tau,3,20,e2_tau,3,20,e2_tau,3,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
         # add delay to long range connections
@@ -51,6 +51,10 @@ class Parameter():
         tau[4+4+13, 7+4] += delay_factor # layer 4
         tau[7+4+13, 0+4] += delay_factor
         tau[7+4+13, 7+4] += delay_factor
+
+        # delay from thalamus (frist order and higher order) to S1 and S2 
+        tau[:-3, -3] += thal_delay_factor
+        tau[:-3, -1] += thal_delay_factor
 
         # Alternative, old values for tau
         # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
