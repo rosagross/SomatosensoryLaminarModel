@@ -116,13 +116,14 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [1] #[11.24]  # np.arange(0,20,1)#[100, 120, 140, 160]
-backgrndI_strengths = [1] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
-input_durations = [0.044] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [1] # np.arange(0,50,10)
-strength_I = [1] #[0.5927] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-ginters = [2] #np.arange(0,2,0.2)
-g_thalPOms = [1] #np.arange(0.99,1.01,0.001) # scales the POm population's output connectivity
+coupling_strengths = [1]  # np.arange(0,20,1)#[100, 120, 140, 160]
+backgrndI_strengths = [3] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+Ib_noise_std = 0
+input_durations = [0.02619] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [10] # np.arange(0,50,10)
+strength_I = [1] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
+ginters = [1] #np.arange(0,2,0.2)
+g_thalPOms = [1] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
 resistance_factor = 1
 area = 'all'
 pyrates = False
@@ -148,6 +149,7 @@ for ginter in ginters:
                         params['Iext_duration'] = np.round(d, 3)
                         params['Iext_strength'] = s
                         params['Ib_strength'] = sb
+                        params['Ib_noise_std'] = Ib_noise_std
                         params['area'] = area
                         params['resistance_factor'] = resistance_factor
 
@@ -156,6 +158,7 @@ for ginter in ginters:
                         params['g_thalPOm'] = np.round(g_thalPOm, 3)
                         params['sI_thal'] = 0.5
                         params['delay_factor'] = 0.005
+                        params['receptor_thalamus_delay'] = 0.020
                         params['extI_cellcounts'] = 1000
                         params['bI_cellcounts'] = 100
                         # thalE_cellcounts / thalI_cellcounts / pom_cellcounts come from the JSON
@@ -180,7 +183,6 @@ for ginter in ginters:
 
                         # analyse signal (frequency spectra)
                         #model.analyse_signal(save_spectrum=True)
-                        """
                         # time-frequency error against measured data
                         sim_dip = model.compute_dipoles(subID_elec)
                         tf_error, tf_sim, tf_target = model.compute_error_timefreq(tf_target_path, sim_dip)
@@ -194,7 +196,7 @@ for ginter in ginters:
 
                         # pre-stimulus spectrum error against measured data
                         ps_error, ps_sim, ps_target = model.compute_error_prestim_spectrum(
-                            ps_target_path, sim_dip)
+                            ps_target_path, sim_dip, flatten_sim=True)
                         print("Pre-stim spectrum error (rel-power MSE):", ps_error)
                         model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip)  # saves to PRESTIM_SPECTRUM_DIR
 
@@ -205,7 +207,7 @@ for ginter in ginters:
                         model.save_timecourse_comparison(
                             run_dir, tc_sim, tc_target, tc_error, filename="tc_comparison")
                         model.append_comparison_summary(tf_error=tf_error, tc_error=tc_error)
-                        """
+
                         # compute dipoles
                         #sim_dip = model.compute_dipoles()
                         #model.plot_dipoles(sim_dip, epochs.info)

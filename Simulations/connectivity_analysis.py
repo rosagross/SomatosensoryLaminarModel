@@ -41,7 +41,7 @@ figure_dir = '/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/'
 params = Parameter()
 population_names = ['E3b','PV3b','SST3b','VIP3b', 'E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4',
                                           'E1S2','PV1S2','SST1S2','VIP1S2','E2S2','PV2S2','SST2S2','E3S2','PV3S2','SST3S2','E4S2','PV4S2','SST4S2']
-all_pops = np.concatenate((population_names,['ThalE', 'ThalI', 'B', 'Ext']))
+all_pops = np.concatenate((population_names,['ThalE', 'ThalI', 'POm', 'B', 'Ext']))
 # Synaptic strengths
 S = np.abs(params.get_connectStrength())
 df_S = pd.DataFrame(S, index=population_names[4:], columns=population_names[4:])
@@ -52,17 +52,23 @@ df_P = pd.DataFrame(P, index=population_names[4:], columns=population_names[4:])
 C = params.get_cellcounts()
 df_C = pd.DataFrame(C, index=population_names[4:])
 # Total Connectivity
+g_intercortical = 1
 g_thal = 2
-bEI_thal = 1
-gEthal = g_thal * bEI_thal 
-gIthal = g_thal * (1 - bEI_thal) 
-thal_connect = [0, 0, 0, 0] 
+sI_thal = 0.5
+gEthal = g_thal
+gIthal = g_thal * sI_thal
+gPOmthal = 1
+thal_connect = [0, 0, 0, 0]
 gE, gI = [1, 1]
-area = 'ThalA1'
+area = 'all'
 extI_cellcounts = 1
-bI_cellcounts = 1   
-thal_cellcount = 500  # it is 230 in Jiang et al. 2023 but for us might differ!
-W = params.get_connectivity(gE, gI, gEthal, gIthal, thal_connect, extI_cellcounts, bI_cellcounts, thal_cellcount, area=area)
+bI_cellcounts = 1
+thalE_cellcount = 500  # VPM; it is 230 in Jiang et al. 2023 but for us might differ!
+thalI_cellcount = 500  # reticular nucleus
+pom_cellcount = 500    # POm
+W = params.get_connectivity(g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, thal_connect,
+                            extI_cellcounts, bI_cellcounts, thalE_cellcount, thalI_cellcount,
+                            pom_cellcount, area=area)
 df_W = pd.DataFrame(W, index=all_pops[:-2], columns=all_pops)
 
 # %% Plot Synaptic strengths
@@ -155,7 +161,7 @@ df_W_relative_S1 = df_W_relative.loc[S1_pops, S1_pops]
 #%% 
 ################ Thalamus connectivity ##################
 plt.figure(figsize=(5,12))
-sns.heatmap(df_W[["ThalE", 'ThalI']], annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
+sns.heatmap(df_W[["ThalE", 'ThalI', 'POm']], annot=False, cmap='vlag', center=0, xticklabels=True, yticklabels=True)
 
 #%% 
 ################ Background & External input ##################

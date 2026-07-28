@@ -72,6 +72,9 @@ params['sI_thal'] = 0.5
 params['delay_factor'] = 0.005
 params['extI_cellcounts'] = 1000
 params['bI_cellcounts'] = 100
+params['Ib_noise_std'] = 0
+params['Ib_noise_tau'] = 0
+
 
 model = SomatoModel(params)
 model.simulate()
