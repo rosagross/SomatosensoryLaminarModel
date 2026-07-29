@@ -104,6 +104,11 @@ tf_data_path = os.path.join(_roi_dir, "group_roi_tf_morlet_ses-elec_preprestim_c
 tc_data_path = os.path.join(_roi_dir, "group_roi_timecourse_pooled_ses-elec_preprestim_corrected.csv")
 ps_data_path = os.path.join(_roi_dir, "group_roi_prestim_spectrum_ses-elec_preprestim_corrected.csv")
 
+# preprocess_targets repoints tc_data_path / ps_data_path at the processed CSVs below; keep
+# the raw measured prestim spectrum around for plot_prestim_spectrum_comparison, which does
+# its own 1/f removal and therefore needs the unflattened target.
+ps_data_path_raw = ps_data_path
+
 # ── model (fixed non-optimised parameters) ─────────────────────────────────────
 base_params = {
     "g_thal":           2,
@@ -285,10 +290,10 @@ opt_config = {
     "reference":  0.0,
     "simulation": objective,
     "op":         -1,    # minimise
-    "N1":         30,    # initial population size
-    "N2":         40,    # crossover offspring per iteration
-    "N3":         40,    # mutation offspring per iteration
-    "n_iter":     50,
+    "N1":         30, #30,    # initial population size
+    "N2":         30, #40,    # crossover offspring per iteration
+    "N3":         30, #40,    # mutation offspring per iteration
+    "n_iter":     10,
     "tolerance":  0.05,
     "verbose":    1,
 }
@@ -353,7 +358,10 @@ def plot_best_fit(model, best_params, outdir):
 
     err_ps, ps_sim, ps_target = model.compute_error_prestim_spectrum(
         ps_data_path, sim_dip, target_dip=target_dip, flatten_sim=(target_dip is None), rois=FIT_ROIS)
-    model.plot_prestim_spectrum_comparison(ps_data_path, sim_dip, target_dip=target_dip)  # saves to PRESTIM_SPECTRUM_DIR
+    # the figure flattens both sides itself, so it gets the *raw* measured CSV (ps_data_path
+    # points at the already-flattened one after preprocess_targets); its bottom row then
+    # reproduces the flattened comparison the error above scores.
+    model.plot_prestim_spectrum_comparison(ps_data_path_raw, sim_dip, target_dip=target_dip)  # saves to PRESTIM_SPECTRUM_DIR
 
     # also persist the comparison maps/traces for this best run
     model.save_timefreq_comparison(outdir, tf_sim, tf_target, err_tf, filename="best_tf_comparison")

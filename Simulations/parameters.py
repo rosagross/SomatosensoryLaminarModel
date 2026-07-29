@@ -52,7 +52,7 @@ class Parameter():
         tau[7+4+13, 0+4] += delay_factor
         tau[7+4+13, 7+4] += delay_factor
 
-        # delay from thalamus (frist order and higher order) to S1 and S2 
+        # delay from thalamus (first order and higher order) to S1 and S2 
         tau[:-3, -3] += thal_delay_factor
         tau[:-3, -1] += thal_delay_factor
 
@@ -321,12 +321,14 @@ class Parameter():
         
         # approximation of synpatic strength: 0.5 for driver, 0.3 for modulator
 
-        S_A3bto_thal = np.array([[0.1, 0, 0, 0], [0, 0, 0, 0], [0.4, 0, 0, 0]])
+        S_A3bto_thal = np.array([[0.1, 0, 0, 0], # thal E
+                                 [0.1, 0, 0, 0], # thal I
+                                 [0.1, 0, 0, 0]]) # POm
         S_A1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], # to thal E 
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # to thal I (reticular nucleus)
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], # to thal I (reticular nucleus)
                                 [0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0.2, 0, 0]]) # S1 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
         S_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], 
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], 
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], 
                                 [0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0.2, 0, 0]]) # S2 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
         S_to_thal = np.hstack((S_A3bto_thal, S_A1to_thal, S_S2to_thal))
 
@@ -334,26 +336,28 @@ class Parameter():
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         P_thalToA3b = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0], # thalamus excitatory
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
-                                [30, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0]])*1e-2 # POm to S2
+                                [10, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0]])*1e-2 # POm to A3b
         
         thal_to_S1 = np.array([6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0]) # based on Jiang et al. 2023
         P_thalToA1 = np.array([thal_to_S1*0.7, # thal E to A1 (less strong than to A3b, therefore 0.7!)
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
-                                [30, 0, 0, 0, 0, 0, 0, 40, 0, 0, 0, 0, 0]])*1e-2 # POm to S1
+                                [20, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S1
 
         P_thalToS2 = np.array([thal_to_S1*0.2, # thal E to S2 (even weaker, therefore 0.2!)
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
                                 [30, 0, 0, 0, 20, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S2
 
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        P_A3bto_thal = np.array([[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]])
-        P_S1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0], # S1 to Thal E (some projections from L6 to VPM)
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0.5, 0, 0]]) # S1 to POm (L5b driver)
-        P_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.5, 0, 0], 
-                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0.5, 0, 0]]) # S2 to POm (L5b driver, 6 modulator)
-        P_to_thal = np.hstack((P_A3bto_thal, P_S1to_thal, P_S2to_thal))
+        P_A3bto_thal = np.array([[10, 0, 0, 0], # thal E
+                                 [10, 0, 0, 0], # thal I
+                                 [5, 0, 0, 0]])*1e-2 # POm
+        P_A1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0], # S1 to Thal E (some projections from L6 to VPM)
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 5, 0, 0]])*1e-2 # S1 to POm (L5b driver)
+        P_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0], 
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0],
+                                [0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 20, 0, 0]])*1e-2 # S2 to POm (L5b driver, 6 modulator)
+        P_to_thal = np.hstack((P_A3bto_thal, P_A1to_thal, P_S2to_thal))
         
         # calculate final thalamus connectivity
         PS_to_thal = np.multiply(P_to_thal, S_to_thal)
@@ -383,9 +387,10 @@ class Parameter():
         # join area 3b, S1 and S2 input arrays
         W_from_thal = np.hstack((W_A3bThal.T, W_from_thal_A1, W_from_thal_S2))
         # add within thalamus (E and I) connectivity 
-        tEE, tEI, tIE, tII = thal_connect
+        tEE, tEI, tIE, tII, tPOmI = thal_connect
+        # tIPOm: input to the POm from the reticular nucleus I
         # POm connectivity to other thalamic neurons is not present (=0)
-        W_from_thal = np.hstack((W_from_thal, [[tEE,tEI,0],[tIE,tII,0],[0,0,0]]))
+        W_from_thal = np.hstack((W_from_thal, [[tEE,tEI,0],[tIE,tII,0],[0,tPOmI,0]]))
 
         # Create the external input matrix
         # Thalamic block order is [thal E (VPM), thal I (reticular), POm] = indices -3, -2, -1.

@@ -116,14 +116,20 @@ if not os.path.exists(filedir):
     os.makedirs(filedir)
 
 # set parameters to loop over 
-coupling_strengths = [1]  # np.arange(0,20,1)#[100, 120, 140, 160]
-backgrndI_strengths = [3] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
-Ib_noise_std = 0
-input_durations = [0.02619] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [10] # np.arange(0,50,10)
-strength_I = [1] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-ginters = [1] #np.arange(0,2,0.2)
-g_thalPOms = [1] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
+coupling_strengths = [5.7774]  # np.arange(0,20,1)#[100, 120, 140, 160]
+backgrndI_strengths = [3.9546] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+Ib_noise_std = 5
+input_durations = [0.0291] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [99.8497] # np.arange(0,50,10)
+strength_I = [0.7286] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
+ginters = [0.8204] #np.arange(0,2,0.2)
+g_thalPOms = [0.3253] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
+delay_factor = 0.0031
+receptor_thalamus_delay = 0.0113 # from periphery to thal
+thal_delay_factor = 0.0032 # from thal to cortex delay
+e1_tau = 8.1386
+e2_tau = 2.3385
+e3b_tau = 6.5648
 resistance_factor = 1
 area = 'all'
 pyrates = False
@@ -157,10 +163,15 @@ for ginter in ginters:
                         params['g_thal'] = 2
                         params['g_thalPOm'] = np.round(g_thalPOm, 3)
                         params['sI_thal'] = 0.5
-                        params['delay_factor'] = 0.005
-                        params['receptor_thalamus_delay'] = 0.020
+                        params['delay_factor'] = delay_factor
+                        params['receptor_thalamus_delay'] = receptor_thalamus_delay
+                        params['thal_delay_factor'] = thal_delay_factor
+                        params['e3b_tau'] = e3b_tau
+                        params['e1_tau'] = e1_tau
+                        params['e2_tau'] = e2_tau
                         params['extI_cellcounts'] = 1000
                         params['bI_cellcounts'] = 100
+                        
                         # thalE_cellcounts / thalI_cellcounts / pom_cellcounts come from the JSON
 
                         if pyrates:
@@ -195,8 +206,9 @@ for ginter in ginters:
                         model.plot_timecourse_comparison(tc_sim, tc_target)
 
                         # pre-stimulus spectrum error against measured data
+                        # ps_target_path is the raw measured CSV, so flatten both sides
                         ps_error, ps_sim, ps_target = model.compute_error_prestim_spectrum(
-                            ps_target_path, sim_dip, flatten_sim=True)
+                            ps_target_path, sim_dip, flatten_sim=True, flatten_target=True)
                         print("Pre-stim spectrum error (rel-power MSE):", ps_error)
                         model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip)  # saves to PRESTIM_SPECTRUM_DIR
 

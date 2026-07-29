@@ -61,19 +61,6 @@ class SomatoModel():
 
     def __init__(self, params={}, WDDIR=None):
         
-        # load in all connectivity parameters, time constants, etc.
-        # these are read here (before Parameter is built) since they shape the tau matrix
-        self.delay_factor      = params.get('delay_factor', 5e-3)
-        self.thal_delay_factor = params.get('thal_delay_factor', 3e-3)
-        self.e3b_tau           = params.get('e3b_tau', 6)
-        self.e1_tau            = params.get('e1_tau', 6)
-        self.e2_tau            = params.get('e2_tau', 6)
-        self.p = Parameter(delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
-                           e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau)
-        self.tau = self.p.tau
-        self.nPop = self.p.nPop
-        # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
-        self.sigm = self.p.sigmoid_params
 
         # parameters that will be updated from the json file 
         # (first initialized with default values) 
@@ -82,11 +69,10 @@ class SomatoModel():
         self.resolution_tstep = 0.001 # in s
         self.sfreq_saved = 1 / self.resolution_tstep 
         self.input_onset = 1.001
-        # periphery→thalamus alignment delay (s); overridable via params / optimized by the GA
-        self.receptor_thalamus_delay = RECEPTOR_THALAMUS_DELAY_S
-        self.thal_connect = [0,0,0,0]
+        self.receptor_thalamus_delay = 0.02 # periphery→thalamus alignment delay (s)
+        self.thal_connect = [0,10,0,0,5]
         self.extI_cellcounts = 1000
-        self.strength_I = 0 #0.7
+        self.strength_I = 0.7
         self.bI_cellcounts = 100
         self.thalE_cellcounts = 500
         self.thalI_cellcounts = 500
@@ -104,6 +90,11 @@ class SomatoModel():
         self.Iext_strength = 10
         self.Iext_duration = 0.5
         self.resistance_factor = 1
+        self.delay_factor      = 5e-3
+        self.thal_delay_factor = 3e-3 # delay from thalamus (first order and higher order) to S1 and S2
+        self.e3b_tau           = 6
+        self.e1_tau            = 6
+        self.e2_tau            = 6
 
         # scaling the coupling strength between the cortical areas
         self.g_intercortical = 1
@@ -113,6 +104,13 @@ class SomatoModel():
 
         # keep a copy of the params used for this run (written to the run folder)
         self.params = dict(params)
+        
+        self.p = Parameter(delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
+                           e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau)
+        self.tau = self.p.tau
+        self.nPop = self.p.nPop
+        # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
+        self.sigm = self.p.sigmoid_params
 
         # create input array
         Iext = self.create_Iext()
@@ -1180,28 +1178,89 @@ class SomatoModel():
 
 
 
-    def compute_prestim_spectrum(self, sim_dip, fmin=1.0, fmax=40.0):
-        """Power spectrum of the 400 ms pre-stimulus window of the simulated ROI dipoles.
+    def _prestim_segments(self, seg_dur=0.4, overlap=0.5, settle_s=0.3):
+        """Start indices of the pre-stimulus segments used for the spectrum (Welch layout).
 
-        Mirrors helper_functions.compute_freq_spectrum (detrend + Hann + |rfft|^2 / n^2).
-        The window is the 400 ms ending at stimulus onset; captures ongoing oscillatory
-        activity before stimulation.
+        Segments of `seg_dur` seconds (so the frequency grid stays 1/seg_dur = 2.5 Hz at the
+        default 400 ms, matching the measured epochs) tile the settled part of the
+        pre-stimulus period, ending at stimulus onset, with `overlap` fractional overlap.
+        The first `settle_s` seconds of the run are skipped so the initialisation transient
+        never enters the estimate.
+
+        Returns:
+            (list of start indices, segment length in samples). Always at least one segment
+            (the 400 ms ending at onset), so short runs behave as before.
+        """
+        stim_idx = round(self.input_onset / self.step_size) - 1
+        seg_len  = round(seg_dur / self.step_size)
+        first    = max(round(settle_s / self.step_size), 0)
+        hop      = max(round(seg_len * (1.0 - overlap)), 1)
+
+        # walk backwards from onset so the last segment always ends exactly at stimulus onset
+        starts = []
+        start = stim_idx - seg_len
+        while start >= first:
+            starts.append(start)
+            start -= hop
+        if not starts:
+            starts = [max(stim_idx - seg_len, 0)]
+        return sorted(starts), seg_len
+
+
+    def compute_prestim_spectrum(self, sim_dip, fmin=1.0, fmax=40.0,
+                                 seg_dur=0.4, overlap=0.5, settle_s=0.3):
+        """Pre-stimulus power spectrum of the simulated ROI dipoles (Welch-averaged).
+
+        Mirrors helper_functions.compute_freq_spectrum per segment (detrend + Hann +
+        |rfft|^2 / n^2) and averages the periodograms over all `seg_dur`-long segments of
+        the settled pre-stimulus period (see _prestim_segments). Averaging matters because a
+        single 400 ms periodogram of one noise realisation has ~100% variance per bin, while
+        the measured target is averaged over subjects and epochs — with one segment a random
+        low-frequency bin can look like an oscillatory peak.
+
+        `seg_dur` sets the frequency resolution (400 ms -> 2.5 Hz, the measured grid).
+
+        Note the pre-stimulus spectrum is only meaningful with background noise enabled
+        (`Ib_noise_std > 0`); without it the pre-stimulus signal is the settled fixed point
+        and this returns numerical residue (a warning is printed).
 
         Returns:
             (freqs, dict roi -> power) restricted to [fmin, fmax] Hz.
         """
         rois = {"A3b": sim_dip[0], "A1": np.sum(sim_dip[1:5], axis=0), "S2": np.sum(sim_dip[5:9], axis=0)}
-        stim_idx = round(self.input_onset / self.step_size) - 1
-        n_pre = round(0.4 / self.step_size)                  # 400 ms -> 400 samples @ 1 kHz
-        win = np.hanning(n_pre)
-        freqs = np.fft.rfftfreq(n_pre, d=self.step_size)
+        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
+        win = np.hanning(seg_len)
+        freqs = np.fft.rfftfreq(seg_len, d=self.step_size)
         fmask = (freqs >= fmin) & (freqs <= fmax)
         spectra = {}
         for roi, sig in rois.items():
-            seg = sig[stim_idx - n_pre:stim_idx]
-            x = (seg - seg.mean()) * win
-            spectra[roi] = ((np.abs(np.fft.rfft(x)) ** 2) / n_pre**2)[fmask]
+            psd = np.zeros(fmask.sum())
+            for s0 in starts:
+                seg = sig[s0:s0 + seg_len]
+                x = (seg - seg.mean()) * win
+                psd += ((np.abs(np.fft.rfft(x)) ** 2) / seg_len**2)[fmask]
+            spectra[roi] = psd / len(starts)
+
+        if not self._prestim_signal_ok(sim_dip, seg_dur, overlap, settle_s):
+            print("[compute_prestim_spectrum] WARNING: the pre-stimulus signal is flat "
+                  "(std < 1e-6 x evoked peak) — with background noise off (Ib_noise_std=0) "
+                  "there is no ongoing activity, so this spectrum is numerical residue.")
         return freqs[fmask], spectra
+
+
+    def _prestim_signal_ok(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.3, rel_tol=1e-6):
+        """True if the pre-stimulus period carries meaningful fluctuations.
+
+        Compares the pre-stimulus std against the evoked peak of the same (A1) signal, so a
+        settled fixed point with no background noise (`Ib_noise_std=0`, where the residue is
+        ~1e-9 of the evoked response) is recognised as "no signal".
+        """
+        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
+        stim_idx = round(self.input_onset / self.step_size) - 1
+        sig = np.sum(sim_dip[1:5], axis=0)
+        pre = sig[starts[0]:starts[-1] + seg_len]
+        evoked = np.abs(sig[stim_idx:stim_idx + 250] - pre.mean()).max()
+        return pre.std() > rel_tol * max(evoked, 1e-30)
 
 
     def load_target_prestim_spectrum(self, data_path):
@@ -1223,12 +1282,13 @@ class SomatoModel():
 
 
     def compute_error_prestim_spectrum(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None,
-                                       flatten_sim=False, rois=None):
+                                       flatten_sim=False, flatten_target=False, rois=None):
         """Error between simulated and measured pre-stimulus spectra.
 
         Each spectrum is normalised to unit sum (relative power) over the compared
         frequencies — removing the sim/data amplitude-scale mismatch — then compared by
-        MSE, averaged over ROIs. Both signals fall on a shared 5 Hz frequency grid.
+        MSE, averaged over ROIs. Both signals fall on a shared 2.5 Hz frequency grid (the
+        400 ms segment length of the simulated and the measured pre-stimulus epochs).
 
         `rois` selects which ROIs the returned error averages over (default: all three).
         The returned spectra dicts always hold every ROI, so plotting/saving is unaffected.
@@ -1237,10 +1297,12 @@ class SomatoModel():
         from it instead of loading `data_path` — used for parameter-recovery tests against
         a synthetic ground-truth trace (sim and target then share an identical freq grid).
 
-        If `flatten_sim` is True, the FOOOF aperiodic (1/f) component is removed from the
-        simulated spectrum before comparison — use this when the measured target loaded
-        from `data_path` has already been 1/f-removed (see run_optimization.py), so both
-        sides are compared on the same aperiodic-removed footing.
+        `flatten_sim` / `flatten_target` remove the FOOOF aperiodic (1/f) component from the
+        simulated / measured spectrum before comparison, so the oscillatory peaks rather than
+        the slope drive the error. Both sides must end up on the same footing: set only
+        `flatten_sim` when the target CSV has already been 1/f-removed (run_optimization.py's
+        preprocess_targets), and both when comparing against the raw measured CSV
+        (simulation_main.py).
 
         Returns:
             (float mean MSE over ROIs, sim spectra dict, target spectra dict).
@@ -1248,13 +1310,18 @@ class SomatoModel():
         f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
         f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax)
                            if target_dip is not None else self.load_target_prestim_spectrum(data_path))
-        if flatten_sim:
+        if flatten_sim or flatten_target:
             from signal_preprocessing import remove_aperiodic
-            for roi in spec_sim:
-                f_flat, spec_sim[roi] = remove_aperiodic(f_sim, spec_sim[roi], fmin, fmax)
-            f_sim = f_flat
+            if flatten_sim:
+                for roi in spec_sim:
+                    f_flat, spec_sim[roi] = remove_aperiodic(f_sim, spec_sim[roi], fmin, fmax)
+                f_sim = f_flat
+            if flatten_target:
+                for roi in spec_tgt:
+                    f_flat, spec_tgt[roi] = remove_aperiodic(f_tgt, spec_tgt[roi], fmin, fmax)
+                f_tgt = f_flat
         tmask = (f_tgt >= fmin) & (f_tgt <= fmax)
-        # align on the shared frequency bins (both are multiples of 5 Hz)
+        # align on the shared frequency bins (both are multiples of 2.5 Hz)
         common = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt[tmask], 6))
         sim_sel = np.isin(np.round(f_sim, 6), common)
         tgt_sel = np.isin(np.round(f_tgt, 6), common)
@@ -1658,42 +1725,94 @@ class SomatoModel():
         plt.show()
 
 
-    def plot_prestim_spectrum_comparison(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None):
+    def plot_prestim_spectrum_comparison(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None,
+                                         seg_dur=0.4, overlap=0.5, settle_s=0.3):
         """Plot simulated vs measured pre-stim power spectra (unit-sum relative power) per ROI.
 
-        Layout 1x3 (A3b, A1, S2) on the shared 5 Hz grid — the same quantity the error uses.
+        Layout 2x3: columns are the ROIs (A3b, A1, S2) on the shared 2.5 Hz grid, rows are the
+        two views of the same comparison —
+          - top: the raw spectra, so the aperiodic (1/f) shape of both signals is visible;
+          - bottom: both sides 1/f-removed with FOOOF, i.e. exactly what
+            compute_error_prestim_spectrum(..., flatten_sim=True) scores.
+        `data_path` must therefore be the *raw* measured CSV (this function does its own
+        flattening); the same remove_aperiodic call as preprocess_targets is used, so the
+        bottom-row target matches the flattened target CSV the optimization fits against.
+
         Self-contained (recomputes the sim spectrum and reloads the target) so the target's own
         frequency grid is available for alignment. When `target_dip` is given, the target
         spectrum comes from that saved trace instead of `data_path` (parameter-recovery mode).
+        `seg_dur`/`overlap`/`settle_s` are passed to compute_prestim_spectrum.
         Saves to PRESTIM_SPECTRUM_DIR/prestim_spectrum_comparison_g-<g>_sI-<sI>_area-<area>.png.
         """
+        from signal_preprocessing import remove_aperiodic
+
         rois, eps = ("A3b", "A1", "S2"), 1e-10
-        f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
-        f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax)
+        seg_kw = dict(seg_dur=seg_dur, overlap=overlap, settle_s=settle_s)
+        f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax, **seg_kw)
+        f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax, **seg_kw)
                            if target_dip is not None else self.load_target_prestim_spectrum(data_path))
-        tmask  = (f_tgt >= fmin) & (f_tgt <= fmax)
-        f_tgt  = f_tgt[tmask]
-        common = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt, 6))
-        sim_sel = np.isin(np.round(f_sim, 6), common)
-        tgt_sel = np.isin(np.round(f_tgt, 6), common)
+        tmask     = (f_tgt >= fmin) & (f_tgt <= fmax)
+        f_tgt     = f_tgt[tmask]
+        spec_tgt  = {roi: spec_tgt[roi][tmask] for roi in rois}
+
+        # 1/f-removed counterparts (FOOOF returns its own cropped grid, so realign afterwards).
+        # Skipped when there is no ongoing pre-stim activity at all (Ib_noise_std=0), where the
+        # spectrum is numerical residue and fitting an aperiodic component to it is meaningless.
+        signal_ok = self._prestim_signal_ok(sim_dip, **seg_kw)
+        flat_sim, flat_tgt = {}, {}
+        f_sim_flat = f_tgt_flat = None
+        if signal_ok:
+            for roi in rois:
+                f_sim_flat, flat_sim[roi] = remove_aperiodic(f_sim, spec_sim[roi], fmin, fmax)
+                f_tgt_flat, flat_tgt[roi] = remove_aperiodic(f_tgt, spec_tgt[roi], fmin, fmax)
+
+        def _aligned(f_s, f_t):
+            """Bins present in both grids, plus the selectors onto each."""
+            common = np.intersect1d(np.round(f_s, 6), np.round(f_t, 6))
+            return (common,
+                    np.isin(np.round(f_s, 6), common),
+                    np.isin(np.round(f_t, 6), common))
+
+        n_seg = len(self._prestim_segments(**seg_kw)[0])
+        views = [("Relative power (unit-sum normalized)", spec_sim, f_sim, spec_tgt, f_tgt, "", "")]
+        if signal_ok:
+            views.append(("Relative power, 1/f removed", flat_sim, f_sim_flat, flat_tgt, f_tgt_flat,
+                          " (1/f removed)", " (1/f removed)"))
 
         figuredir = PRESTIM_SPECTRUM_DIR
         os.makedirs(figuredir, exist_ok=True)
-        fig, axes = plt.subplots(1, 3, figsize=(13, 3.4), sharex=True, sharey=True)
+        fig, axes = plt.subplots(2, 3, figsize=(13, 6.4), sharex=True)
         fig.suptitle(
-            f"Pre-stim spectrum - g={self.coupling_strength}, sI={self.strength_I}, area={self.area}",
+            f"Pre-stim spectrum - g={self.coupling_strength}, sI={self.strength_I}, "
+            f"area={self.area} ({n_seg} x {int(seg_dur * 1000)} ms segments)"
+            + ("" if signal_ok else " - WARNING: no ongoing pre-stim activity (Ib_noise_std=0)"),
             fontsize=11,
         )
-        for ax, roi in zip(axes, rois):
-            s = spec_sim[roi][sim_sel];        s = s / (s.sum() + eps)
-            t = spec_tgt[roi][tmask][tgt_sel]; t = t / (t.sum() + eps)
-            ax.plot(common, s, color="C1", lw=1.5, marker="o", ms=3, label="Simulated")
-            ax.plot(common, t, color="black", lw=1.5, marker="o", ms=3, label="Measured")
-            ax.set_title(roi)
-            ax.set_xlabel("Frequency (Hz)")
-            if ax is axes[0]:
-                ax.set_ylabel("Relative power (unit-sum normalized)")
-            ax.legend(frameon=False, fontsize=8)
+        if not signal_ok:
+            for ax in axes[1]:
+                ax.text(0.5, 0.5, "1/f removal skipped:\nno ongoing pre-stim activity",
+                        ha="center", va="center", fontsize=9, color="0.4", transform=ax.transAxes)
+                ax.set_axis_off()
+        for row, (ylabel, sim_d, f_s, tgt_d, f_t, sim_sfx, tgt_sfx) in enumerate(views):
+            common, sim_sel, tgt_sel = _aligned(f_s, f_t)
+            row_axes = axes[row]
+            for col, roi in enumerate(rois):
+                ax = row_axes[col]
+                s = sim_d[roi][sim_sel]; s = s / (s.sum() + eps)
+                t = tgt_d[roi][tgt_sel]; t = t / (t.sum() + eps)
+                ax.plot(common, s, color="C1", lw=1.5, marker="o", ms=3, label=f"Simulated{sim_sfx}")
+                ax.plot(common, t, color="black", lw=1.5, marker="o", ms=3, label=f"Measured{tgt_sfx}")
+                ax.set_title(roi)
+                if row == len(views) - 1:
+                    ax.set_xlabel("Frequency (Hz)")
+                if col == 0:
+                    ax.set_ylabel(ylabel)
+                ax.legend(frameon=False, fontsize=8)
+            # share the y range within the row (the two rows live on different scales)
+            lo = min(a.get_ylim()[0] for a in row_axes)
+            hi = max(a.get_ylim()[1] for a in row_axes)
+            for a in row_axes:
+                a.set_ylim(lo, hi)
 
         fig.tight_layout(rect=[0, 0, 1, 0.96])
         fname = (
