@@ -45,12 +45,170 @@ helper_path = os.path.join(WDDIR, 'Analysis')
 sys.path.insert(0, helper_path)
 import helper_functions as hf
 
-def read_simulation_params():
-    """Read simulation parameters from json file."""
-    # Read in preprocessing parameters
-    with open(os.path.join(WDDIR, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
+def read_simulation_params(wddir=None):
+    """Read the default simulation parameters from Simulations/simulation_parameter.json.
+
+    That file is the single source of default parameters: SomatoModel.__init__ starts
+    from it, and every entry point (simulation_main, run_optimization, run_sbi,
+    plot_dipole_computation, backend/server) builds on it rather than on its own
+    literal defaults. Anything passed as `params` to the model is an override on top.
+    """
+    wddir = wddir or WDDIR
+    with open(os.path.join(wddir, 'Simulations', 'simulation_parameter.json'), 'r') as json_file:
         params = json.load(json_file)
-    
+
+    return params
+
+
+# Parameters the model reads while building itself - names only, so the values live in
+# exactly one place (the JSON). Checked in __init__ so a key dropped from the JSON fails
+# by name instead of as an AttributeError deep inside create_Iext / get_connectivity.
+REQUIRED_PARAMS = (
+    # timing
+    'simulation_dur', 'step_size', 'resolution_tstep', 'input_onset',
+    # input
+    'input_type', 'Iext_strength', 'Iext_duration', 'Ib_strength',
+    'Ib_noise_std', 'Ib_noise_tau', 'Ib_noise_seed',
+    # gains
+    'coupling_strength', 'strength_I', 'g_thal', 'sI_thal', 'g_thalPOm', 'g_intercortical',
+    # delays / time constants / connection probabilities (passed to Parameter)
+    'delay_factor', 'thal_delay_factor', 'receptor_thalamus_delay',
+    'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE',
+    # structure
+    'area', 'thal_connect', 'extI_cellcounts', 'bI_cellcounts',
+    'thalE_cellcounts', 'thalI_cellcounts', 'pom_cellcounts',
+    # misc
+    'resistance_factor',
+)
+
+# --- dipole-parameter file layout -------------------------------------------------
+# The JSONs in EEGSimulation/ label every value by *source* region, layer and cell
+# type; the model needs them as vectors over the 33 source populations in
+# get_population_labels() order. DIPOLE_SOURCE_PATHS is that order expressed as key
+# paths into the nested file, so the reader below can flatten it and, more
+# importantly, complain when a value is missing or misnamed instead of silently
+# shifting a whole block (which a bare list of 33 numbers does).
+DIPOLE_TARGET_LAYERS = ["L2/3", "L4", "L5", "L6"]
+DIPOLE_SOURCE_PATHS = (
+    [("A3b", ct) for ct in ("E", "PV", "SST", "VIP")]
+    + [("S1", layer, ct)
+       for layer, celltypes in zip(DIPOLE_TARGET_LAYERS,
+                                   [("E", "PV", "SST", "VIP"), ("E", "PV", "SST"),
+                                    ("E", "PV", "SST"), ("E", "PV", "SST")])
+       for ct in celltypes]
+    + [("S2", layer, ct)
+       for layer, celltypes in zip(DIPOLE_TARGET_LAYERS,
+                                   [("E", "PV", "SST", "VIP"), ("E", "PV", "SST"),
+                                    ("E", "PV", "SST"), ("E", "PV", "SST")])
+       for ct in celltypes]
+    + [("Thalamus", pop) for pop in ("ThalE", "ThalI", "ThalPOm")]
+)
+# the source region of the S1/A1 populations is spelled "S1" in the files, but the
+# same area is the target "A1" (get_population_mapping's name) - accept both
+DIPOLE_SOURCE_ALIASES = {"S1": ("S1", "A1"), "A1": ("A1", "S1")}
+
+
+def _flatten_dipole_sources(block, where):
+    """Nested source dict -> list of 33 values in get_population_labels() order.
+
+    A list is passed through unchanged, so the older flat files still load.
+    Raises ValueError naming the offending key path on a missing, misnamed or
+    non-numeric entry, or on keys the population order does not know about.
+    """
+    if isinstance(block, list):
+        return list(block)
+
+    values, seen = [], set()
+    for path in DIPOLE_SOURCE_PATHS:
+        node, walked = block, []
+        for key in path:
+            candidates = DIPOLE_SOURCE_ALIASES.get(key, (key,))
+            match = next((c for c in candidates if isinstance(node, dict) and c in node), None)
+            if match is None:
+                raise ValueError(f"{where}: missing dipole parameter for "
+                                 f"{'/'.join(walked + [key])}")
+            walked.append(match)
+            node = node[match]
+            seen.add(tuple(walked))
+        if isinstance(node, (dict, list)) or isinstance(node, bool):
+            raise ValueError(f"{where}: {'/'.join(walked)} must be a number, got {node!r}")
+        values.append(float(node))
+
+    # anything present in the file but not consumed above is a typo or a population
+    # the model does not have - flag it rather than ignoring it
+    def _walk(node, prefix=()):
+        for key, child in node.items():
+            here = prefix + (key,)
+            if here not in seen:
+                raise ValueError(f"{where}: unexpected dipole parameter key {'/'.join(here)}")
+            if isinstance(child, dict):
+                _walk(child, here)
+    _walk(block)
+
+    return values
+
+
+def read_dipole_params(path):
+    """Read a dipole-parameter JSON and flatten it to per-source vectors.
+
+    Returns the file's dict with 'dipole_lengths' and 'dipole_orientation' replaced by
+        {'A3b': [33 values], 'A1': [[33], [33], [33], [33]], 'S2': [[33], ...]}
+    where the outer list is the *target* layer in DIPOLE_TARGET_LAYERS order (fixed
+    here, so JSON key order can never reorder the layers) and the inner list runs over
+    the *source* populations in get_population_labels() order.
+    """
+    with open(path, 'r') as json_file:
+        dipole_params = json.load(json_file)
+
+    for field in ('dipole_lengths', 'dipole_orientation'):
+        flat = {}
+        for target, block in dipole_params[field].items():
+            if target == 'A3b':
+                flat[target] = _flatten_dipole_sources(block, f'{field}/{target}')
+            elif isinstance(block, list):
+                flat[target] = [_flatten_dipole_sources(row, f'{field}/{target}[{i}]')
+                                for i, row in enumerate(block)]
+            else:
+                missing = [l for l in DIPOLE_TARGET_LAYERS if l not in block]
+                extra = [l for l in block if l not in DIPOLE_TARGET_LAYERS]
+                if missing or extra:
+                    raise ValueError(f"{field}/{target}: target layers must be "
+                                     f"{DIPOLE_TARGET_LAYERS}, missing {missing}, "
+                                     f"unexpected {extra}")
+                flat[target] = [_flatten_dipole_sources(block[layer], f'{field}/{target}/{layer}')
+                                for layer in DIPOLE_TARGET_LAYERS]
+        dipole_params[field] = flat
+
+    return dipole_params
+
+
+def load_optimized_params(opt_run, overrides=None):
+    """Full parameter dict for an optimization session.
+
+    Starts from the simulation_parameter.json defaults (so base settings such as
+    input_onset / cell counts / filedir are present), applies the session's
+    best_params, then any explicit overrides. Use this instead of reading
+    optimization_summary.json by hand: the summary's top level holds bookkeeping
+    (error_mode, fit_rois, best_fit_err_*), and passing it straight to
+    SomatoModel silently leaves the model on the JSON defaults.
+
+    Parameters
+    ----------
+    opt_run : str
+        Session folder name under SIMDIR/optimization, e.g.
+        "opt_20260729_093613_tc_roi-S2".
+    overrides : dict, optional
+        Applied last, e.g. {'Ib_noise_std': 0} to run without background noise.
+    """
+    params = read_simulation_params()
+    summary_path = os.path.join(SIMDIR, 'optimization', opt_run,
+                                'optimization_summary.json')
+    with open(summary_path, 'r') as f:
+        summary = json.load(f)
+    params.update(summary['best_params'])
+    if overrides:
+        params.update(overrides)
+
     return params
 
 def read_analysis_params():
@@ -60,53 +218,29 @@ def read_analysis_params():
 class SomatoModel():
 
     def __init__(self, params={}, WDDIR=None):
-        
 
-        # parameters that will be updated from the json file 
-        # (first initialized with default values) 
-        self.simulation_dur = 2 # in s
-        self.step_size = 0.001 # in s
-        self.resolution_tstep = 0.001 # in s
-        self.sfreq_saved = 1 / self.resolution_tstep 
-        self.input_onset = 1.001
-        self.receptor_thalamus_delay = 0.02 # periphery→thalamus alignment delay (s)
-        self.thal_connect = [0,10,0,0,5]
-        self.extI_cellcounts = 1000
-        self.strength_I = 0.7
-        self.bI_cellcounts = 100
-        self.thalE_cellcounts = 500
-        self.thalI_cellcounts = 500
-        self.pom_cellcounts = 500
-        self.sI_thal = 0.5
-        self.g_thal = 2
-        self.g_thalPOm = 1
-        self.input_type = 'step'
-        self.area = 'all' 
-        self.coupling_strength = 10
-        self.Ib_strength = 7
-        self.Ib_noise_std = 1.0     # stationary std of OU background noise (units of Ib_strength); 0 = off
-        self.Ib_noise_tau = 0.016   # OU correlation time constant (s)
-        self.Ib_noise_seed = None   # seed for the isolated background-noise RNG (None = fresh draws)
-        self.Iext_strength = 10
-        self.Iext_duration = 0.5
-        self.resistance_factor = 1
-        self.delay_factor      = 5e-3
-        self.thal_delay_factor = 3e-3 # delay from thalamus (first order and higher order) to S1 and S2
-        self.e3b_tau           = 6
-        self.e1_tau            = 6
-        self.e2_tau            = 6
-
-        # scaling the coupling strength between the cortical areas
-        self.g_intercortical = 1
-
-        # update parameters based on params dicts
+        # All defaults come from Simulations/simulation_parameter.json - the single
+        # source of default parameters (see read_simulation_params). `params` are
+        # overrides layered on top of it.
+        defaults = read_simulation_params(WDDIR)
+        self.__dict__.update(defaults)
         self.__dict__.update(params)
 
-        # keep a copy of the params used for this run (written to the run folder)
-        self.params = dict(params)
-        
+        missing = [k for k in REQUIRED_PARAMS if not hasattr(self, k)]
+        if missing:
+            raise ValueError("simulation_parameter.json is missing required "
+                             f"parameters: {missing}")
+
+        self.sfreq_saved = 1 / self.resolution_tstep
+
+        # The effective parameter set, not just what the caller passed: this is what
+        # prepare_run_dir writes to run_dir/params.json and what
+        # Analysis/step001_process_simulations.py reads back key by key.
+        self.params = {**defaults, **params}
+
         self.p = Parameter(delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
-                           e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau)
+                           e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
+                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE)
         self.tau = self.p.tau
         self.nPop = self.p.nPop
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
@@ -135,7 +269,7 @@ class SomatoModel():
         self.filename = (
             f"gthal{self.g_thal}_gthalPOm{self.g_thalPOm}_sIthal{self.sI_thal}_g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_Ibnoise{self.Ib_noise_std}_Iextd{self.Iext_duration}_"
             f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thalE_cellcounts}_"
-            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_gInter{self.g_intercortical}_thalUncon"
+            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_gInter{self.g_intercortical}"
         )
 
         # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
@@ -174,11 +308,17 @@ class SomatoModel():
         Update parameters and recompute derived state.
         """
         self.__dict__.update(params)
+        # keep the recorded effective set in sync, so a run_dir/params.json written
+        # after the GA / SBI has mutated the model describes the run it belongs to
+        self.params.update(params)
 
-        # rebuild the tau matrix so tau/delay-shaping params (delay_factor,
-        # thal_delay_factor, e3b_tau, e1_tau, e2_tau) take effect on every update
+        # rebuild the Parameter tables so the params baked into them take effect on
+        # every update: the tau/delay-shaping ones (delay_factor, thal_delay_factor,
+        # e3b_tau, e1_tau, e2_tau) and the connection probabilities (p_2PVE, p_4PVE),
+        # which self.W below is then recomputed from
         self.p = Parameter(delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
-                           e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau)
+                           e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
+                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE)
         self.tau = self.p.tau
 
         # recompute inputs and gains
@@ -768,9 +908,11 @@ class SomatoModel():
         plt.show()
 
     def load_dipole_params(self):
-        # Read in preprocessing parameters
-        with open(os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters.json'), 'r') as json_file:
-            dipole_params = json.load(json_file)
+        # read the dipole geometry; read_dipole_params flattens the per-source-region /
+        # layer / cell type nesting of the file into vectors over the 33 source
+        # populations, in get_population_labels() order
+        dipole_params = read_dipole_params(
+            os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters_flippedPVSST.json'))
 
         dipole_length = dipole_params['dipole_lengths']
         dipole_orientation = dipole_params['dipole_orientation']
@@ -1178,14 +1320,14 @@ class SomatoModel():
 
 
 
-    def _prestim_segments(self, seg_dur=0.4, overlap=0.5, settle_s=0.3):
+    def _prestim_segments(self, seg_dur=0.4, overlap=0.5, settle_s=0.5):
         """Start indices of the pre-stimulus segments used for the spectrum (Welch layout).
 
         Segments of `seg_dur` seconds (so the frequency grid stays 1/seg_dur = 2.5 Hz at the
         default 400 ms, matching the measured epochs) tile the settled part of the
         pre-stimulus period, ending at stimulus onset, with `overlap` fractional overlap.
         The first `settle_s` seconds of the run are skipped so the initialisation transient
-        never enters the estimate.
+        never enters the estimate (500 ms by default — at 300 ms its tail is still visible).
 
         Returns:
             (list of start indices, segment length in samples). Always at least one segment
@@ -1208,7 +1350,7 @@ class SomatoModel():
 
 
     def compute_prestim_spectrum(self, sim_dip, fmin=1.0, fmax=40.0,
-                                 seg_dur=0.4, overlap=0.5, settle_s=0.3):
+                                 seg_dur=0.4, overlap=0.5, settle_s=0.5):
         """Pre-stimulus power spectrum of the simulated ROI dipoles (Welch-averaged).
 
         Mirrors helper_functions.compute_freq_spectrum per segment (detrend + Hann +
@@ -1248,7 +1390,7 @@ class SomatoModel():
         return freqs[fmask], spectra
 
 
-    def _prestim_signal_ok(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.3, rel_tol=1e-6):
+    def _prestim_signal_ok(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, rel_tol=1e-6):
         """True if the pre-stimulus period carries meaningful fluctuations.
 
         Compares the pre-stimulus std against the evoked peak of the same (A1) signal, so a
@@ -1261,6 +1403,23 @@ class SomatoModel():
         pre = sig[starts[0]:starts[-1] + seg_len]
         evoked = np.abs(sig[stim_idx:stim_idx + 250] - pre.mean()).max()
         return pre.std() > rel_tol * max(evoked, 1e-30)
+
+
+    def _prestim_stationary(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, min_ratio=0.5):
+        """True if the pre-stimulus amplitude is sustained rather than decaying.
+
+        Compares the (A1) amplitude of the last pre-stimulus segment against the first: a
+        self-sustained oscillation holds its amplitude (ratio ~1), while a damped ring-down
+        of the initialisation transient decays away (ratio « 1). Needed only with the
+        background noise off, where a decaying transient is otherwise indistinguishable
+        from ongoing activity to `_prestim_signal_ok` — its spectrum then concentrates in
+        the lowest frequency bin and looks like a slow rhythm that the model does not have.
+        """
+        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
+        sig = np.sum(sim_dip[1:5], axis=0)
+        first = sig[starts[0]:starts[0] + seg_len].std()
+        last = sig[starts[-1]:starts[-1] + seg_len].std()
+        return bool(last >= min_ratio * first) if first > 0 else False
 
 
     def load_target_prestim_spectrum(self, data_path):
@@ -1726,7 +1885,7 @@ class SomatoModel():
 
 
     def plot_prestim_spectrum_comparison(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None,
-                                         seg_dur=0.4, overlap=0.5, settle_s=0.3):
+                                         seg_dur=0.4, overlap=0.5, settle_s=0.5):
         """Plot simulated vs measured pre-stim power spectra (unit-sum relative power) per ROI.
 
         Layout 2x3: columns are the ROIs (A3b, A1, S2) on the shared 2.5 Hz grid, rows are the

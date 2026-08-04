@@ -80,7 +80,7 @@ sys.path.insert(0, "/data/p_02989/Modelling/neuronaldynamics/src")
 sys.path.insert(0, "/data/p_02989/Modelling/neuronaldynamics/src/neuronaldynamics")
 
 import somato_model as sm
-from somato_model import SomatoModel
+from somato_model import SomatoModel, read_simulation_params
 from signal_preprocessing import smooth_timecourse, remove_aperiodic
 from neuronaldynamics.Optimizers.Optimizer import GA
 
@@ -110,14 +110,36 @@ ps_data_path = os.path.join(_roi_dir, "group_roi_prestim_spectrum_ses-elec_prepr
 ps_data_path_raw = ps_data_path
 
 # ── model (fixed non-optimised parameters) ─────────────────────────────────────
-base_params = {
-    "g_thal":           2,
-    "sI_thal":          0.5,
-    "extI_cellcounts":  1000,
-    "bI_cellcounts":    100,
-    "thal_cellcounts":  500,
-    "area":             "all",
-}
+# The defaults (cell counts, area, g_thal/sI_thal, taus, connection probabilities, ...)
+# come from Simulations/simulation_parameter.json, the single source of default
+# parameters. Only the deviations specific to a GA run are set here.
+base_params = read_simulation_params()
+base_params.update({
+    # The pre-stim spectrum needs a long settled pre-stimulus period: with the 500 ms
+    # transient skipped this gives 6 Welch segments instead of 2 (see _prestim_segments),
+    # at ~50% more simulation time per evaluation.
+    "input_onset":      2.001,
+    "simulation_dur":   3,
+    # Background noise OFF: the pre-stimulus rhythms have to come from the network's own
+    # dynamics, not from the spectrum of the OU input (with noise on, the fitted alpha/beta
+    # peaks are largely a property of the filtered noise). See the flat-signal gate in
+    # objective(): without noise a parameter set that settles to a fixed point has no
+    # ongoing activity at all and is rejected rather than scored.
+    "Ib_noise_std":     0.0,
+    # Inert while Ib_noise_std == 0 (add_background_noise returns its input unchanged).
+    # With noise on it makes the objective deterministic, so the GA selects on parameters
+    # rather than on the luckier noise realisation.
+    "Ib_noise_seed":    0,
+    # Defaults for the evoked parameters, used only in "ps" mode (where they cannot affect
+    # the pre-stimulus window and so are not searched). In tf/tc/both/all they are part of
+    # the GA search space and every evaluation overrides them via model.apply_params.
+    # The values are the best A1 timecourse fit (opt_20260728_152103_tc_roi-A1), so a "ps"
+    # run's tf/tc diagnostic figures stay interpretable instead of falling back to the JSON
+    # defaults (Iext_strength=0, Iext_duration=0 s).
+    "Iext_strength":            99.85,
+    "Iext_duration":            0.0291,
+    "receptor_thalamus_delay":  0.01127,
+})
 model = SomatoModel(base_params)
 
 # ── objective function ─────────────────────────────────────────────────────────
@@ -227,6 +249,15 @@ def preprocess_targets(tc_path, ps_path, outdir, fmin=1.0, fmax=40.0):
     return tc_out_path, ps_out_path
 
 
+# Error returned for a parameter set with no ongoing pre-stimulus activity (see
+# _prestim_signal_ok). Four orders of magnitude above any real pre-stim error (~1e-4), so the
+# GA is driven out of fixed-point regimes instead of scoring their numerical residue: with the
+# background noise off, a settled fixed point leaves a pre-stimulus signal ~1e-9 of the evoked
+# peak, which the unit-sum normalisation in compute_error_prestim_spectrum then rescales into
+# an arbitrary, perfectly fittable spectrum.
+PS_FLAT_PENALTY = 1.0
+
+
 def objective(**params):
     """
     Run one full simulation and return the selected error (see ERROR_MODE):
@@ -234,6 +265,9 @@ def objective(**params):
     The GA minimises (0 - objective)**2, i.e. the squared selected error.
     When target_dip is set, errors are computed against the synthetic target instead
     of the measured CSVs.
+
+    Parameter sets whose pre-stimulus period carries no ongoing activity are rejected with
+    PS_FLAT_PENALTY rather than scored (only relevant when the pre-stim spectrum is fitted).
     """
     model.apply_params(params)
     model.initialize_state()
@@ -245,15 +279,33 @@ def objective(**params):
     if ERROR_MODE in ("tc", "both", "all"):
         err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
     if ERROR_MODE in ("ps", "all"):
-        # flatten the simulated spectrum only for measured-data fits, where the target
-        # CSV has been 1/f-removed; the synthetic target (target_dip) is left raw.
-        err_ps, _, _ = model.compute_error_prestim_spectrum(
-            ps_data_path, sim_dip, target_dip=target_dip, flatten_sim=(target_dip is None), rois=FIT_ROIS)
+        if not model._prestim_signal_ok(sim_dip):
+            # Settled fixed point: the spectrum would be numerical residue, so reject the
+            # parameter set instead of letting the GA fit it.
+            err_ps = PS_FLAT_PENALTY
+            print("  [rejected] pre-stimulus signal flat (settled fixed point)")
+        elif not model._prestim_stationary(sim_dip):
+            # Ring-down of the initialisation transient rather than a sustained rhythm; its
+            # spectrum piles into the lowest bin and is not an oscillation the model keeps.
+            err_ps = PS_FLAT_PENALTY
+            print("  [rejected] pre-stimulus amplitude decaying (transient, not sustained)")
+        else:
+            # flatten the simulated spectrum only for measured-data fits, where the target
+            # CSV has been 1/f-removed; the synthetic target (target_dip) is left raw.
+            err_ps, _, _ = model.compute_error_prestim_spectrum(
+                ps_data_path, sim_dip, target_dip=target_dip, flatten_sim=(target_dip is None), rois=FIT_ROIS)
     combined = err_tf + err_tc + err_ps
     print(f"  params={params}  →  err_tf={err_tf:.4f}  err_tc={err_tc:.4f}  err_ps={err_ps:.4f}  total={combined:.4f}")
     return combined
 
 # ── GA setup ───────────────────────────────────────────────────────────────────
+# The evoked-input parameters (Iext_strength, Iext_duration) are searched in the tf/tc/both/all
+# modes, where the evoked response is what is being fitted; their bounds match the SBI priors in
+# run_sbi.py so both methods search the same space. Drop them again (together with
+# receptor_thalamus_delay) when switching ERROR_MODE back to "ps": the pre-stimulus segments end
+# at stimulus onset, so they cannot change that error and would only waste evaluations on
+# dimensions with no gradient. scaling_factor is never searched in any mode — the model never
+# reads it (it is only a keyword of compute_error_timecourse).
 opt_config = {
     "model_parameters": [
         "coupling_strength",
@@ -261,15 +313,15 @@ opt_config = {
         "g_intercortical",
         "g_thalPOm",
         "Ib_strength",
-        "Iext_strength",
-        "Iext_duration",
-        "scaling_factor",
         "e3b_tau",
         "e1_tau",
         "e2_tau",
         "thal_delay_factor",
         "delay_factor",
-        "receptor_thalamus_delay"
+        "p_2PVE",
+        "p_4PVE",
+        "Iext_strength",
+        "Iext_duration",
     ],
     "bounds": np.array([
         [0,     50  ],   # coupling_strength
@@ -277,24 +329,28 @@ opt_config = {
         [0.5,      2  ],   # g_intercortical
         [0,      2  ],   # g_thalPOm (scales POm output connectivity)
         [3,     10  ],   # Ib_strength
-        [0,    100  ],   # Iext_strength
-        [0.001,  0.05],   # Iext_duration
-        [0.5,      1.1],   # scaling factor
         [2,     10  ],   # e3b_tau (ms, default 6)
         [2,     10  ],   # e1_tau  (ms, default 6)
         [2,     10  ],   # e2_tau  (ms, default 6)
         [0.001,  0.005],  # thal_delay_factor (s, default 3e-3)
         [0.001,  0.008],  # delay_factor      (s, default 5e-3)
-        [0.010,  0.03],   # receptor_thalamus_delay (s, default 0.050; ~N20 latency minus thalamus to cortex and synaptic delay)
+        [10,     40  ],   # p_2PVE (L4 PV<-E connection probability, %; default 37.6)
+        [10,     40  ],   # p_4PVE (L6 PV<-E connection probability, %; default 39.4)
+        [0,    100  ],   # Iext_strength (evoked input amplitude)
+        [0.001,  0.1],   # Iext_duration (s; > 0 so the pulse is at least one integration step)
     ]),
     "reference":  0.0,
     "simulation": objective,
     "op":         -1,    # minimise
-    "N1":         30, #30,    # initial population size
-    "N2":         30, #40,    # crossover offspring per iteration
-    "N3":         30, #40,    # mutation offspring per iteration
-    "n_iter":     10,
-    "tolerance":  0.05,
+    "N1":         80, #30,    # initial population size
+    "N2":         80,        # crossover offspring per iteration
+    "N3":         80,       # mutation offspring per iteration
+    "n_iter":     30,
+    "tolerance":  0.05,   # gradient-search tolerance (conf['gTol'])
+    # Early-stop threshold on the GA cost, which is err**2. The default 1e-5 is far above
+    # a typical pre-stim error (~1e-3 -> cost ~1e-6), so the GA would break after its first
+    # iteration and just return a random draw from the initial population.
+    "single_run_tol": 1e-12,
     "verbose":    1,
 }
 

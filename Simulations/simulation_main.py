@@ -54,7 +54,7 @@ ps_target_path = os.path.join(
 
 # add model to datapath
 sys.path.append(os.path.join(WDDIR, 'Simulations', 'model'))
-from somato_model import SomatoModel, read_simulation_params
+from somato_model import SomatoModel, read_simulation_params, load_optimized_params
 #from somato_model_pyrates_no_conn_operators_complete_pycobi import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 
@@ -115,25 +115,47 @@ filedir = params['filedir']
 if not os.path.exists(filedir):
     os.makedirs(filedir)
 
-# set parameters to loop over 
-coupling_strengths = [5.7774]  # np.arange(0,20,1)#[100, 120, 140, 160]
-backgrndI_strengths = [3.9546] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
-Ib_noise_std = 5
+# set parameters to loop over
+# Values below are the best fit of the GA run opt_20260803_124557_tc_roi-A1
+# (error mode "tc", ROI A1, best combined error 0.008113): best_params from its
+# optimization_summary.json plus the fixed base_params from its run_config.json.
+# They are overrides on top of the simulation_parameter.json defaults loaded above,
+# and are only applied in the `if not use_opt:` branch below - with use_opt = True
+# the whole block is unused and the parameters come from load_optimized_params().
+coupling_strengths = [3.293441306598355]  # np.arange(0,20,1)#[100, 120, 140, 160]
+backgrndI_strengths = [9.994769237606103] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
 input_durations = [0.0291] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [99.8497] # np.arange(0,50,10)
-strength_I = [0.7286] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-ginters = [0.8204] #np.arange(0,2,0.2)
-g_thalPOms = [0.3253] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
-delay_factor = 0.0031
-receptor_thalamus_delay = 0.0113 # from periphery to thal
-thal_delay_factor = 0.0032 # from thal to cortex delay
-e1_tau = 8.1386
-e2_tau = 2.3385
-e3b_tau = 6.5648
+input_strengths = [20] # np.arange(0,50,10)
+strength_Is = [0.5950270376909454] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
+ginters = [2.0] #np.arange(0,2,0.2)
+g_thalPOms = [1.258205044608075] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
+delay_factor = 0.0017424379080450052
+receptor_thalamus_delay = 0.01127 # from periphery to thal
+thal_delay_factor = 0.004355885296978261 # from thal to cortex delay
+e3b_tau = 9.98520373331793
+e1_tau = 8.680392487165907
+e2_tau = 4.290026558869845
+p_2PVE = 16.351739686255572 # L4 PV <- E connection probability (S1 and S2); original value 37.4
+p_4PVE = 15.198587424769887 # L6 PV <- E connection probability (S1 and S2); original value 39.6
 resistance_factor = 1
 area = 'all'
 pyrates = False
+use_opt = True
+save_connectivity = True
 
+Ib_noise_std = 0
+
+
+if use_opt:
+    # option to read file from optimization run: simulation_parameter.json base params
+    # updated with the run's best_params (keeps input_onset, cell counts, filedir, ...)
+    # EEGSimulation/plot_dipole_computation.py plots this same configuration - update
+    # its opt_run too when changing it here.
+    opt_run = "opt_20260804_090235_tc_roi-S2" #"opt_20260803_124557_tc_roi-A1"
+    params = load_optimized_params(opt_run, overrides={'Ib_noise_std': Ib_noise_std})
+
+
+    
 for ginter in ginters:
     print("ginter", np.round(ginter, 3))
     for g_thalPOm in g_thalPOms:
@@ -147,32 +169,34 @@ for ginter in ginters:
                 all_durations_saving = []
 
                 for g in coupling_strengths:
-                    for sI in strength_I:
+                    for sI in strength_Is:
                         
-                        params['g_intercortical'] = np.round(ginter, 3)
-                        params['coupling_strength'] = g 
-                        params['strength_I'] = np.round(sI, 4)
-                        params['Iext_duration'] = np.round(d, 3)
-                        params['Iext_strength'] = s
-                        params['Ib_strength'] = sb
-                        params['Ib_noise_std'] = Ib_noise_std
-                        params['area'] = area
-                        params['resistance_factor'] = resistance_factor
+                        
+                        if not use_opt:
+                            params['g_intercortical'] = np.round(ginter, 4)
+                            params['coupling_strength'] = g 
+                            params['strength_I'] = np.round(sI, 4)
+                            params['Iext_duration'] = np.round(d, 4)
+                            params['Iext_strength'] = s
+                            params['Ib_strength'] = sb
+                            params['Ib_noise_std'] = Ib_noise_std
+                            params['area'] = area
+                            params['resistance_factor'] = resistance_factor
 
-                        # additional parameters (that are usually fixed)
-                        params['g_thal'] = 2
-                        params['g_thalPOm'] = np.round(g_thalPOm, 3)
-                        params['sI_thal'] = 0.5
-                        params['delay_factor'] = delay_factor
-                        params['receptor_thalamus_delay'] = receptor_thalamus_delay
-                        params['thal_delay_factor'] = thal_delay_factor
-                        params['e3b_tau'] = e3b_tau
-                        params['e1_tau'] = e1_tau
-                        params['e2_tau'] = e2_tau
-                        params['extI_cellcounts'] = 1000
-                        params['bI_cellcounts'] = 100
-                        
-                        # thalE_cellcounts / thalI_cellcounts / pom_cellcounts come from the JSON
+                            # additional parameters (that are usually fixed)
+                            params['g_thalPOm'] = np.round(g_thalPOm, 4)
+                            params['delay_factor'] = delay_factor
+                            params['receptor_thalamus_delay'] = receptor_thalamus_delay
+                            params['thal_delay_factor'] = thal_delay_factor
+                            params['e3b_tau'] = e3b_tau
+                            params['e1_tau'] = e1_tau
+                            params['e2_tau'] = e2_tau
+                            params['p_2PVE'] = p_2PVE
+                            params['p_4PVE'] = p_4PVE
+
+
+                        # everything not set above (g_thal, sI_thal, the cell counts,
+                        # thal_connect, ...) comes from simulation_parameter.json
 
                         if pyrates:
                             model = SomatoModelPyrates(params)
@@ -183,6 +207,13 @@ for ginter in ginters:
                         if save_connectivity and not pyrates:
                             run_dir = model.prepare_run_dir(filedir)
                             model.plot_W_heatmap(save_dir=run_dir)
+                            # per-area connectivity grids (columns = layers, rows = cell types)
+                            pop_labels = model.get_population_labels()
+                            pf.plot_connectivity(model.W, run_dir, pop_labels=pop_labels,
+                                                    area=model.area, direction='in')
+                            pf.plot_connectivity(model.W, run_dir, pop_labels=pop_labels,
+                                                    area=model.area, direction='out')
+
 
                         # simulate rates and potentials
                         start = time.time()
@@ -261,8 +292,8 @@ for ginter in ginters:
                             all_durations_saving.append(duration)
                             #print("Saving duration (in s):", duration)
 
+                        start_plot = 1980
                         if plot_rates:
-                            start_plot = 0
                             pf.plot_results(
                                 model.rate,
                                 model.Iext[-2],
@@ -285,7 +316,6 @@ for ginter in ginters:
                                 potential_sum = model.potential
                             else:
                                 potential_sum = np.sum(model.potential, axis=1)
-
 
                             pf.plot_potentials(
                                 potential_sum,
@@ -310,6 +340,13 @@ for ginter in ginters:
                                 model.step_size,
                                 simulation_dur,
                                 start_plot,
+                                figure_dir,
+                                sI,
+                                g,
+                                d,
+                                sb,
+                                s,
+                                pop_labels=model.get_population_labels(),
                             )
 
             # if (len(coupling_strengths) > 1):
