@@ -2,7 +2,6 @@
 Visualize dipole_parameters.json: dipole lengths and orientations per population.
 """
 # %%
-import json
 import os
 import sys
 import numpy as np
@@ -19,6 +18,7 @@ for _p in [_eeg_dir,
         sys.path.insert(0, _p)
 
 from sim_eeg import get_population_mapping
+from somato_model import read_dipole_params
 
 
 _CELL_COLORS = {
@@ -54,8 +54,10 @@ N_POPS = 32
 def load_dipole_json(json_path=None):
     if json_path is None:
         json_path = os.path.join(_eeg_dir, 'dipole_parameters.json')
-    with open(json_path, 'r') as f:
-        return json.load(f)
+    # read_dipole_params flattens the file's per-source-region / layer / cell type
+    # nesting into vectors over the 33 source populations, in the order the plots below
+    # index (SomatoModel.get_population_labels())
+    return read_dipole_params(json_path)
 
 
 def _build_pop_labels(pop_mapping):

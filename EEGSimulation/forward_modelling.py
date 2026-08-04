@@ -13,7 +13,6 @@ from mne.datasets import sample
 from mne.datasets import eegbci
 from sim_meg import read_3D_potential, get_population_mapping
 import os
-import json
 import h5py
 import sys
 import matplotlib.pyplot as plt
@@ -33,10 +32,12 @@ if location == "mpi":
     WDDIR = os.getenv("WDDIR")
     figure_dir = os.path.join(SIMDIR, "Figures")
 
-param_path = sys.path.append(os.path.abspath(os.path.join(WDDIR, 'Simulations')))
-if param_path not in sys.path:
-    sys.path.append(param_path)
+for _p in [os.path.abspath(os.path.join(WDDIR, 'Simulations')),
+           os.path.abspath(os.path.join(WDDIR, 'Simulations', 'model'))]:
+    if _p not in sys.path:
+        sys.path.append(_p)
 from parameters import Parameter
+from somato_model import read_dipole_params
 
 # %%
 # setup sample data for forward modelling
@@ -65,8 +66,9 @@ print(f"Potentials size: {potentials.shape[0]} x {potentials.shape[1]}")
 start = time.time()
 # defining the dipole characteristics
 # Read in preprocessing parameters
-with open(os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters.json'), 'r') as json_file:
-    params = json.load(json_file)
+# read_dipole_params flattens the file's per-source-region / layer / cell type nesting
+# into vectors over the 33 source populations, in connectivity-matrix order
+params = read_dipole_params(os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters.json'))
 
 dipole_length = params['dipole_lengths']
 dipole_orientation = params['dipole_orientation']

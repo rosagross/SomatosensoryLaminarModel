@@ -1,7 +1,7 @@
 {
-  "description": "This file contains the parameters for the dipole simulation. It is used to define the length and orientation of the dipoles for each population. The length of the dipole depends on where the neuron is targeted and what type of E neuron it is that is beeing targeted (basket cells for example have dipole length of close to 0). The orientation of the dipole is defined as the direction of the (intracellular) current flow, which can be either positive or negative. The order of the values correspond to connectivity matrix ordering (E, PV, SST, VIP, ...)",
+  "description": "This file contains the parameters for the dipole simulation. It is used to define the length and orientation of the dipoles for each population. The length of the dipole depends on where the neuron is targeted and what type of E neuron it is that is beeing targeted (basket cells for example have dipole length of close to 0). The orientation of the dipole is defined as the direction of the (intracellular) current flow, which can be either positive or negative. The order of the values correspond to connectivity matrix ordering (E, PV, SST, VIP, ...) VARIANT: the PV and SST orientations are flipped relative to dipole_parameters.json (PV -1 -> +1, SST +1 -> -1). In the model the synaptic potential already carries the sign of the connection weight W (inhibitory input gives a negative PSP), so with the original values the inhibitory sign is applied twice and PV/SST inputs enter the dipole with the polarity opposite to the one this file's orientation column states. With these flipped values, E and PV inputs contribute with the same (inward) polarity and SST opposes it. Dipole lengths are unchanged; VIP and the reticular thalamic population have length 0 and stay at 0.",
   "structure": "Both 'dipole_lengths' and 'dipole_orientation' are keyed by the TARGET whose dipole is computed: 'A3b' (unlaminated, one entry) and 'A1'/'S2' split into the target layers L2/3, L4, L5, L6. Inside each target, the values are labelled by the SOURCE population the synaptic potential comes from: source region ('A3b', 'S1', 'S2', 'Thalamus'), then the source layer for the laminated regions S1/S2 (L2/3, L4, L5, L6; VIP exists only in L2/3), then the cell type. The source region 'S1' is the same area as the target 'A1'. Reading order and completeness are checked by read_dipole_params() in Simulations/model/somato_model.py, which flattens this into vectors over the 33 source populations in SomatoModel.get_population_labels() order.",
-  "orientation_convention": "Orientation is the sign of the intracellular current per SOURCE cell type: E = -1, PV = -1, SST = +1, VIP = 0 and ThalI = 0 (dipole-silent, length 0 as well).",
+  "orientation_convention": "Orientation is the sign of the intracellular current per SOURCE cell type, with PV and SST flipped relative to dipole_parameters.json: E = -1, PV = +1, SST = -1, VIP = 0 and ThalI = 0 (dipole-silent, length 0 as well).",
   "dipole_lengths_unit": "mm",
   "dipole_lengths": {
     "A3b": {
@@ -543,59 +543,59 @@
   "dipole_orientation": {
     "A3b": {
       "A3b": {
-        "E": -1,
-        "PV": -1,
-        "SST": 1,
+        "E": 1,
+        "PV": 1,
+        "SST": -1,
         "VIP": 0
       },
       "S1": {
         "L2/3": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "L4": {
-          "E": -1,
-          "PV": -1,
-          "SST": 1
+          "E": 1,
+          "PV": 1,
+          "SST": -1
         },
         "L5": {
           "E": -1,
-          "PV": -1,
-          "SST": 1
+          "PV": 1,
+          "SST": -1
         },
         "L6": {
           "E": -1,
-          "PV": -1,
-          "SST": 1
+          "PV": 1,
+          "SST": -1
         }
       },
       "S2": {
         "L2/3": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "L4": {
-          "E": -1,
-          "PV": -1,
-          "SST": 1
+          "E": 1,
+          "PV": 1,
+          "SST": -1
         },
         "L5": {
           "E": -1,
-          "PV": -1,
-          "SST": 1
+          "PV": 1,
+          "SST": -1
         },
         "L6": {
-          "E": -1,
-          "PV": -1,
-          "SST": 1
+          "E": 1,
+          "PV": 1,
+          "SST": -1
         }
       },
       "Thalamus": {
-        "ThalE": -1,
+        "ThalE": 1,
         "ThalI": 0,
         "ThalPOm": -1
       }
@@ -604,58 +604,58 @@
       "L2/3": {
         "A3b": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "S1": {
           "L2/3": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "E": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "S2": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 0,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "Thalamus": {
-          "ThalE": -1,
+          "ThalE": 1,
           "ThalI": 0,
           "ThalPOm": -1
         }
@@ -663,58 +663,58 @@
       "L4": {
         "A3b": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "S1": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "S2": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 0,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "Thalamus": {
-          "ThalE": -1,
+          "ThalE": 1,
           "ThalI": 0,
           "ThalPOm": -1
         }
@@ -722,58 +722,58 @@
       "L5": {
         "A3b": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "S1": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "S2": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 0,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "Thalamus": {
-          "ThalE": -1,
+          "ThalE": 1,
           "ThalI": 0,
           "ThalPOm": -1
         }
@@ -781,58 +781,58 @@
       "L6": {
         "A3b": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "S1": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 0,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "S2": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "Thalamus": {
-          "ThalE": -1,
+          "ThalE": 1,
           "ThalI": 0,
           "ThalPOm": -1
         }
@@ -842,58 +842,58 @@
       "L2/3": {
         "A3b": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "S1": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 0,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "S2": {
           "L2/3": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "E": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "Thalamus": {
-          "ThalE": -1,
+          "ThalE": 1,
           "ThalI": 0,
           "ThalPOm": -1
         }
@@ -901,58 +901,58 @@
       "L4": {
         "A3b": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "S1": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "S2": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "Thalamus": {
-          "ThalE": -1,
+          "ThalE": 1,
           "ThalI": 0,
           "ThalPOm": -1
         }
@@ -960,58 +960,58 @@
       "L5": {
         "A3b": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "S1": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 0,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "S2": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "Thalamus": {
-          "ThalE": -1,
+          "ThalE": 1,
           "ThalI": 0,
           "ThalPOm": -1
         }
@@ -1019,58 +1019,58 @@
       "L6": {
         "A3b": {
           "E": -1,
-          "PV": -1,
-          "SST": 1,
+          "PV": 1,
+          "SST": -1,
           "VIP": 0
         },
         "S1": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 0,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "S2": {
           "L2/3": {
             "E": -1,
-            "PV": -1,
-            "SST": 1,
+            "PV": 1,
+            "SST": -1,
             "VIP": 0
           },
           "L4": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           },
           "L5": {
             "E": -1,
-            "PV": -1,
-            "SST": 1
+            "PV": 1,
+            "SST": -1
           },
           "L6": {
-            "E": -1,
-            "PV": -1,
-            "SST": 1
+            "E": 1,
+            "PV": 1,
+            "SST": -1
           }
         },
         "Thalamus": {
-          "ThalE": -1,
+          "ThalE": 1,
           "ThalI": 0,
           "ThalPOm": -1
         }
