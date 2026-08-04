@@ -14,6 +14,7 @@ Description: Compute the charasteristics of the simulated time series.
 # %%
 import os
 import json
+import glob
 import pandas as pd
 import numpy as np
 from helper_functions import *
@@ -30,37 +31,6 @@ if not os.path.exists(figure_dir):
 
 # read params
 params = load_parameters(WDDIR)
-coupling_strengths = params['coupling_strengths'] # parse_coupling() coupling_strengths
-
-# connectivity 
-extI_cellcounts = params['extI_cellcounts']
-bI_cellcounts = params['bI_cellcounts']
-thal_cellcounts = params['thal_cellcounts']
-
-# coupling strengths, balance and area selection
-strength_I = params['strength_I']
-g_thal = params['g_thal']
-sI_thal = params['sI_thal']
-step_size = params['step_size']
-area = params['area']
-filedir = params['filedir']
-g_intercortical = [2] # params['g_inter']
-g_thalPOms = np.arange(0.99,1.01,0.001) # e.g. np.round(np.arange(0.8, 1.2, 0.01), 3) to match simulation_main.py; scales POm output connectivity
-
-# inputs
-input_type = params['input_type']
-input_onset = params['input_onset']
-simulation_dur = params['simulation_dur']
-input_durations = params['input_durations']
-input_strengths = params['input_strengths']
-backgroundI_strengths = params['backgrndI_strengths']
-
-coupling_strengths = [11.24] #np.arange(0,55,5) #[100, 120, 140, 160]
-backgroundI_strengths = [3] #np.arange(0,8,2) #[40, 60, 80] #,6,7]
-input_durations = [0.044] #np.arange(0, 0.02, 0.002) # [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [80] #np.arange(0,50,10)
-strength_I = [0.5927]
-
 
 # sampling parameters
 sampling_params = params['sampling']
@@ -75,64 +45,97 @@ response_window = sampling_params['response_window']
 
 # %%
 
-# loop over all simulations
-for g_inter in g_intercortical:
-    print("g_inter", g_inter)
-    for g_thalPOm in g_thalPOms:
-      print("g_thalPOm", np.round(g_thalPOm, 3))
-      for d in input_durations:
-        print("input dur", d)
-        for bI in backgroundI_strengths:
-            print("background", bI)
-            for s in input_strengths:
-                for g in coupling_strengths:
-                    for sI in strength_I:
+# Which runs to process: every per-run folder in sim_dir that holds a results.hdf5 and whose
+# name does not end in _thalUncon (the older, thalamus-unconnected batch). Each folder's own
+# params.json supplies its parameters, so no filename stem has to be reconstructed here and
+# batches with different parameter grids are handled in one pass.
+run_dirs = sorted(
+    d for d in glob.glob(os.path.join(sim_dir, "*"))
+    if os.path.isdir(d)
+    and not os.path.basename(d).endswith("_thalUncon")
+    and os.path.exists(os.path.join(d, "results.hdf5"))
+)
+print(f"found {len(run_dirs)} runs to process in {sim_dir}")
 
-                        df = pd.DataFrame()
-                        
-                        # read data 
-                        rates_df, potentials_df, filename = load_simulation_data(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, sim_dir, g_thalPOm=np.round(g_thalPOm, 3))
+n_done, failed = 0, []
+for i, run_dir in enumerate(run_dirs, start=1):
+    try:
+        with open(os.path.join(run_dir, "params.json"), 'r') as f:
+            run_params = json.load(f)
 
-                        # compute characteristics
-                        compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)
-                        compute_longeterm_late(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_late, sample_dur)
-                        compute_input_response(df, rates_df, potentials_df, input_onset, d, step_size, response_window)
-                        compute_baseline(df, rates_df, potentials_df, input_onset, step_size, sample_dur, offset)
-                        compare_longterm_baseline(df)             
-                        classify_response(df)
-                        
-                        # compute oscillation frequency in different windows
-                        baseline_start = int((input_onset - (sample_dur+offset))/step_size) 
-                        baseline_stop = int(baseline_start + sample_dur/step_size)
-                        compute_window_frequency(
-                            df, rates_df, potentials_df,
-                            baseline_start, baseline_stop,
-                            "baseline", step_size,
-                            rate_osc_threshold, potential_osc_threshold
-                        )
+        # simulation parameters of this run (not from analysis_parameter.json, which
+        # describes a different setup)
+        g = run_params['coupling_strength']
+        sI = run_params['strength_I']
+        d = run_params['Iext_duration']
+        s = run_params['Iext_strength']
+        bI = run_params['Ib_strength']
+        g_thalPOm = run_params['g_thalPOm']
+        g_inter = run_params['g_intercortical']
+        Ib_noise_std = run_params['Ib_noise_std']
+        input_onset = run_params['input_onset']
+        step_size = run_params['resolution_tstep']  # of saving, not of simulation!
 
-                        start_sample_during = int((input_onset)/step_size)
-                        stop_sample_during = int((input_onset+d)/step_size)
-                        compute_window_frequency(
-                            df, rates_df, potentials_df,
-                            start_sample_during, stop_sample_during,
-                            "duringInput", step_size,
-                            rate_osc_threshold, potential_osc_threshold
-                        )
+        df = pd.DataFrame()
 
-                        start_sample_late = int((input_onset+d+sample_delay_late)/step_size)
-                        stop_sample_late = int(start_sample_late + sample_dur/step_size)
-                        compute_window_frequency(
-                            df, rates_df, potentials_df,
-                            start_sample_late, stop_sample_late,
-                            "lateLongterm", step_size,
-                            rate_osc_threshold, potential_osc_threshold
-                        )
+        # read data
+        results_path = os.path.join(run_dir, "results.hdf5")
+        rates_df = pd.read_hdf(results_path, key='rates')
+        potentials_df = load_hdf_safe(results_path)
 
-                        set_sim_info(df, potentials_df, g, sI, d, s, bI)
+        # compute characteristics
+        compute_longeterm_immediate(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_immediate, sample_dur)
+        compute_longeterm_late(df, rates_df, potentials_df, input_onset, d, step_size, sample_delay_late, sample_dur)
+        compute_input_response(df, rates_df, potentials_df, input_onset, d, step_size, response_window)
+        compute_baseline(df, rates_df, potentials_df, input_onset, step_size, sample_dur, offset)
+        compare_longterm_baseline(df)
+        classify_response(df)
 
-                        # save to csv inside the per-run folder, next to results.hdf5
-                        run_dir = os.path.join(sim_dir, filename.replace('.hdf5', ''))
-                        outpath = os.path.join(run_dir, "processed.csv")
-                        df.to_csv(outpath, index=False)
-                        
+        # compute oscillation frequency in different windows
+        baseline_start = int((input_onset - (sample_dur+offset))/step_size)
+        baseline_stop = int(baseline_start + sample_dur/step_size)
+        compute_window_frequency(
+            df, rates_df, potentials_df,
+            baseline_start, baseline_stop,
+            "baseline", step_size,
+            rate_osc_threshold, potential_osc_threshold
+        )
+
+        start_sample_during = int((input_onset)/step_size)
+        stop_sample_during = int((input_onset+d)/step_size)
+        compute_window_frequency(
+            df, rates_df, potentials_df,
+            start_sample_during, stop_sample_during,
+            "duringInput", step_size,
+            rate_osc_threshold, potential_osc_threshold
+        )
+
+        start_sample_late = int((input_onset+d+sample_delay_late)/step_size)
+        stop_sample_late = int(start_sample_late + sample_dur/step_size)
+        compute_window_frequency(
+            df, rates_df, potentials_df,
+            start_sample_late, stop_sample_late,
+            "lateLongterm", step_size,
+            rate_osc_threshold, potential_osc_threshold
+        )
+
+        set_sim_info(df, potentials_df, g, sI, d, s, bI,
+                     g_thalPOm=g_thalPOm, g_intercortical=g_inter, Ib_noise_std=Ib_noise_std)
+
+        # save to csv inside the per-run folder, next to results.hdf5
+        outpath = os.path.join(run_dir, "processed.csv")
+        df.to_csv(outpath, index=False)
+        n_done += 1
+
+    except Exception as err:
+        # one unreadable run should not abort the batch
+        failed.append((os.path.basename(run_dir), err))
+        print(f"  FAILED {os.path.basename(run_dir)}: {err}")
+
+    if i % 25 == 0 or i == len(run_dirs):
+        print(f"  {i}/{len(run_dirs)} processed")
+
+print(f"done: {n_done} processed, {len(failed)} failed")
+for name, err in failed:
+    print(f"  {name}: {err}")
+

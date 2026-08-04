@@ -182,7 +182,7 @@ def read_simulation_data(output_dir, figure_dir, input_durations, input_strength
                         df = pd.DataFrame()
 
                         # read in firing rates in data matrix (datapoints x populations)
-                        filename = f"g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_thalUncon_S1S2{suffix}.hdf5"
+                        filename = f"g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}{suffix}.hdf5"
                         rates_df = pd.read_hdf(os.path.join(output_dir, filename), key='rates')
                         
                         # read in potentials in data matrix (datapoints x populations)
@@ -405,14 +405,26 @@ def classify_response(df):
     df.loc[memory,'dynamic_function_potential'] = 3 #'memory'
     
 
-def set_sim_info(df, potentials_df, g, sI, d, s, bI):
-    """ set info in data frame """
+def set_sim_info(df, potentials_df, g, sI, d, s, bI,
+                 g_thalPOm=None, g_intercortical=None, Ib_noise_std=None):
+    """ set info in data frame
+
+    g_thalPOm / g_intercortical / Ib_noise_std : optional
+        Written as extra columns when given. Needed whenever a batch varies them,
+        otherwise the runs cannot be told apart from the processed.csv alone.
+    """
     df['population'] = potentials_df.columns
     df['globalCoupling'] = g
     df['strength_I'] = sI
     df['InputDuration'] = d
     df['InputStrength'] = s
     df['BckgndInputStrength'] = bI
+    if g_thalPOm is not None:
+        df['gthalPOm'] = g_thalPOm
+    if g_intercortical is not None:
+        df['gIntercortical'] = g_intercortical
+    if Ib_noise_std is not None:
+        df['IbNoiseStd'] = Ib_noise_std
 
 
 def load_trajectory(rates_df, potentials_df, g, sI, d, s, bI, step_size):
@@ -456,8 +468,14 @@ def load_parameters(WDDIR):
         params = json.load(json_file)
     return params
 
-def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False, suffix='', g_thalPOm=1):
-    """ Read simulation data """
+def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False, suffix='', g_thalPOm=1, Ib_noise_std=None):
+    """ Read simulation data
+
+    Ib_noise_std : optional
+        Runs saved after the background-noise parameter was added carry an
+        Ibnoise{std} token in the folder name (see SomatoModel.filename); pass the
+        run's Ib_noise_std to address those. None keeps the older stem.
+    """
     # read in firing rates in data matrix (datapoints x populations)
     if pyrates:
         filename = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_PYRATES.hdf5"
@@ -466,13 +484,14 @@ def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cel
         # each run now lives in its own folder named by the parameter stem; the
         # rates/potentials are stored in results.hdf5 inside that folder
         # (alongside params.json and optional tf/tc comparison files).
-        stem = f"gthal2_gthalPOm{g_thalPOm}_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}_thalUncon"
+        noise_token = '' if Ib_noise_std is None else f"_Ibnoise{Ib_noise_std}"
+        stem = f"gthal2_gthalPOm{g_thalPOm}_sIthal0.5_g{g}_sI{sI}_Ib{bI}{noise_token}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}"
         filename = stem + ".hdf5"
         filepath = os.path.join(data_dir, stem, "results.hdf5")
         # backward-compat: runs saved before g_thalPOm was added to the filename
         # have no gthalPOm token; fall back to that older stem if the new one is absent.
         if not os.path.exists(filepath):
-            stem_old = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}_thalUncon"
+            stem_old = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}"
             old_path = os.path.join(data_dir, stem_old, "results.hdf5")
             if os.path.exists(old_path):
                 stem, filename, filepath = stem_old, stem_old + ".hdf5", old_path
@@ -495,15 +514,20 @@ def load_hdf_safe(fname):
     potentials_safe = pd.DataFrame(values, columns=cols, index=idx)
     return potentials_safe
 
-def load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix='', g_thalPOm=1):
-    """ load the characteristics/processed data of one simulation """
+def load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix='', g_thalPOm=1, Ib_noise_std=None):
+    """ load the characteristics/processed data of one simulation
+
+    Ib_noise_std : optional
+        Same Ibnoise{std} folder-name token as in load_simulation_data.
+    """
     # the processed characteristics now live inside the per-run folder (named by
     # the parameter stem) as processed.csv, next to results.hdf5 / params.json
-    stem = f"gthal2_gthalPOm{g_thalPOm}_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}_thalUncon{suffix}"
+    noise_token = '' if Ib_noise_std is None else f"_Ibnoise{Ib_noise_std}"
+    stem = f"gthal2_gthalPOm{g_thalPOm}_sIthal0.5_g{g}_sI{sI}_Ib{bI}{noise_token}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}{suffix}"
     filepath = os.path.join(deriv_dir, stem, "processed.csv")
     # backward-compat: runs saved before g_thalPOm was in the filename lack the gthalPOm token
     if not os.path.exists(filepath):
-        stem_old = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}_thalUncon{suffix}"
+        stem_old = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}{suffix}"
         old_path = os.path.join(deriv_dir, stem_old, "processed.csv")
         if os.path.exists(old_path):
             filepath = old_path
@@ -516,7 +540,7 @@ def check_list(sim_param):
 
     return sim_param
 
-def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix='', g_thalPOm=1):
+def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix='', g_thalPOm=1, Ib_noise_std=None):
     """ load all selected combinations of processed simulation (with their characteristics) into one dataframe
     All parameters can be either lists of single values. If they are single values, 
     convert them into lists with one entry.
@@ -545,7 +569,7 @@ def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_on
                     for g_inter in g_inters:
                         for sI in sIs:
                             for bI in Ib_str:
-                                data_single_df = load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm)
+                                data_single_df = load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
                                 data_df = pd.concat([data_df, data_single_df], ignore_index=True)
 
     return data_df
