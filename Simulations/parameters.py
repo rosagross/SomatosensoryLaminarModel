@@ -5,7 +5,12 @@ import pandas as pd
 # %%
 class Parameter():
     
-    def __init__(self, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6):
+    def __init__(self, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6,
+                 p_2PVE=15, p_4PVE=20):
+        # kept on the instance because get_raw_connectivity() and save_to_yaml() call
+        # get_connectProb() without arguments, and they must see these values
+        self.p_2PVE = p_2PVE
+        self.p_4PVE = p_4PVE
         self.tau, self.nPop = self.get_params(delay_factor, thal_delay_factor, e3b_tau, e1_tau, e2_tau)
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
@@ -26,9 +31,10 @@ class Parameter():
         # the last two values are used for the external input and background input
         # with nPopTotal = 33 the shape of tau should be (33, 33) 
         # order: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 
-        tauA3b = np.tile(np.array([e3b_tau,3,20,15])*1e-3, (nPopTotal,1)) # sec
-        tauS1 = np.tile(np.array([e1_tau,3,20,15,e1_tau,3,20,e1_tau,3,20,e1_tau,3,20])*1e-3, (nPopTotal,1)) # sec
-        tauS2 = np.tile(np.array([e2_tau,3,20,15,e2_tau,3,20,e2_tau,3,20,e2_tau,3,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
+        pv_tau = 3 # 3 is the original value
+        tauA3b = np.tile(np.array([e3b_tau,pv_tau,20,15])*1e-3, (nPopTotal,1)) # sec
+        tauS1 = np.tile(np.array([e1_tau,pv_tau,20,15,e1_tau,pv_tau,20,e1_tau,pv_tau,20,e1_tau,pv_tau,20])*1e-3, (nPopTotal,1)) # sec
+        tauS2 = np.tile(np.array([e2_tau,pv_tau,20,15,e2_tau,pv_tau,20,e2_tau,pv_tau,20,e2_tau,pv_tau,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
         # add delay to long range connections
@@ -65,39 +71,52 @@ class Parameter():
         
         return tau, nPopTotal
 
-    def get_connectProb(self):
+    def get_connectProb(self, p_2PVE=None, p_4PVE=None):
+        """Connection probabilities (targets in rows, sources in columns).
 
-        # Connection probabilies
-        # Targets in rows, sources in columns 
-        # Values for area 3b are merged values from S1 (after already computed W = P*S*C)
-        
+        Values for area 3b are merged values from S1 (after already computed W = P*S*C).
+
+        Args:
+            p_2PVE: probability of the layer 4 PV <- E connection (row PV2, column E2).
+                    37.4 is the original value but it seems very strong in relation to
+                    all others, hence the instance default of 15.
+            p_4PVE: probability of the layer 6 PV <- E connection (row PV4, column E4).
+                    39.6 is the original value, hence the instance default of 20.
+
+        Both default to the values the Parameter instance was constructed with, and both
+        are used for S1 and S2 alike, so one value sets that layer's PV <- E drive in
+        both areas.
+        """
+        p_2PVE = self.p_2PVE if p_2PVE is None else p_2PVE
+        p_4PVE = self.p_4PVE if p_4PVE is None else p_4PVE
+
         # E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (Thalamus is added later!)
         P_S1 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
-                    [28.5, 31.8, 11.8,  5.5,  0.4,  1.7,  3.2,  0.05,  0.1,  1.4,  0.01, 0.01, 0.6],
-                    [24.3, 29.1,  0., 27.1,  0.4, 1.2, 4.4, 0.03, 0.1, 2.1, 0., 0., 0],
-                    [16., 20.6, 46.3,  6.3,  0.2,  1.,  1.7,  0.02,  0.1,  0.6, 0, 0.01,  0.5],
-                    [ 1.3,  3.5,  5.9,  7.,  9.9, 37.4, 19.8,  0.6,  2.8,  5.2, 0, 0.2, 2.4],
-                    [ 3.6,  1.6,  2.3,  5.3, 37.4, 28.8, 36.3,  0.9,  2.8,  4.7,  0.1, 0.3, 1.8],
-                    [ 3.6,  1.8,  2.4,  4.9, 19., 33.2,  1.2,  0.9,  3.2,  4.7,  0.2, 0.2, 2.3],
-                    [ 8.6,  4.2,  9.4,  6.2,  8.7,  7.,  7.6,  9.8, 39.6, 15.1,  1., 1.8, 5.1],
-                    [ 1.7,  0.5,  1.1,  1.9,  3.5,  3.,  2.3, 39.6, 24.6, 24.1,  0.4, 1.3, 2.6],
-                    [ 1.6,  0.4,  1.,  1.9,  3.8,  3.0,  2.5, 20.5, 31.1,  0.6,  0.6, 1-.5,  3.2],
-                    [0, 0.2, 0.3, 0.8, 3.0, 1.5, 1.0, 4.0, 1.9, 1.7, 2.1, 39.6, 15.1],
-                    [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, 39.6, 24.6, 24.1],
-                    [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
+                         [28.5, 31.8, 11.8,  5.5,  0.4,  1.7,  3.2,  0.05,  0.1,  1.4,  0.01, 0.01, 0.6],
+                         [24.3, 29.1,  0., 27.1,  0.4, 1.2, 4.4, 0.03, 0.1, 2.1, 0., 0., 0],
+                         [16., 20.6, 46.3,  6.3,  0.2,  1.,  1.7,  0.02,  0.1,  0.6, 0, 0.01,  0.5],
+                         [ 1.3,  3.5,  5.9,  7.,  9.9, 37.4, 19.8,  0.6,  2.8,  5.2, 0, 0.2, 2.4],
+                         [ 3.6,  1.6,  2.3,  5.3, p_2PVE, 28.8, 36.3,  0.9,  2.8,  4.7,  0.1, 0.3, 1.8],
+                         [ 3.6,  1.8,  2.4,  4.9, 19., 33.2,  1.2,  0.9,  3.2,  4.7,  0.2, 0.2, 2.3],
+                         [ 8.6,  4.2,  9.4,  6.2,  8.7,  7.,  7.6,  9.8, 39.6, 15.1,  1., 1.8, 5.1],
+                         [ 1.7,  0.5,  1.1,  1.9,  3.5,  3.,  2.3, 39.6, 24.6, 24.1,  0.4, 1.3, 2.6],
+                         [ 1.6,  0.4,  1.,  1.9,  3.8,  3.0,  2.5, 20.5, 31.1,  0.6,  0.6, 1-.5,  3.2],
+                         [0, 0.2, 0.3, 0.8, 3.0, 1.5, 1.0, 4.0, 1.9, 1.7, 2.1, 39.6, 15.1],
+                         [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, p_4PVE, 24.6, 24.1],
+                         [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
 
         P_S2 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
                     [28.5, 31.8, 11.8,  5.5,  0.4,  1.7,  3.2,  0.05,  0.1,  1.4,  0.01, 0.01, 0.6],
                     [24.3, 29.1,  0., 27.1,  0.4, 1.2, 4.4, 0.03, 0.1, 2.1, 0., 0., 0],
                     [16., 20.6, 46.3,  6.3,  0.2,  1.,  1.7,  0.02,  0.1,  0.6, 0, 0.01,  0.5],
                     [ 1.3,  3.5,  5.9,  7.,  9.9, 37.4, 19.8,  0.6,  2.8,  5.2, 0, 0.2, 2.4],
-                    [ 3.6,  1.6,  2.3,  5.3, 37.4, 28.8, 36.3,  0.9,  2.8,  4.7,  0.1, 0.3, 1.8],
+                    [ 3.6,  1.6,  2.3,  5.3, p_2PVE, 28.8, 36.3,  0.9,  2.8,  4.7,  0.1, 0.3, 1.8],
                     [ 3.6,  1.8,  2.4,  4.9, 19., 33.2,  1.2,  0.9,  3.2,  4.7,  0.2, 0.2, 2.3],
                     [ 8.6,  4.2,  9.4,  6.2,  8.7,  7.,  7.6,  9.8, 39.6, 15.1,  1., 1.8, 5.1],
                     [ 1.7,  0.5,  1.1,  1.9,  3.5,  3.,  2.3, 39.6, 24.6, 24.1,  0.4, 1.3, 2.6],
                     [ 1.6,  0.4,  1.,  1.9,  3.8,  3.0,  2.5, 20.5, 31.1,  0.6,  0.6, 1-.5,  3.2],
                     [0, 0.2, 0.3, 0.8, 3.0, 1.5, 1.0, 4.0, 1.9, 1.7, 2.1, 39.6, 15.1],
-                    [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, 39.6, 24.6, 24.1],
+                    [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, p_4PVE, 24.6, 24.1],
                     [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
         
         
@@ -388,9 +407,9 @@ class Parameter():
         W_from_thal = np.hstack((W_A3bThal.T, W_from_thal_A1, W_from_thal_S2))
         # add within thalamus (E and I) connectivity 
         tEE, tEI, tIE, tII, tPOmI = thal_connect
-        # tIPOm: input to the POm from the reticular nucleus I
+        # tPOmI: input to the POm from the reticular nucleus I
         # POm connectivity to other thalamic neurons is not present (=0)
-        W_from_thal = np.hstack((W_from_thal, [[tEE,tEI,0],[tIE,tII,0],[0,tPOmI,0]]))
+        W_from_thal = np.hstack((W_from_thal, [[tEE,tIE,0],[tEI,tII,tPOmI],[0,0,0]]))
 
         # Create the external input matrix
         # Thalamic block order is [thal E (VPM), thal I (reticular), POm] = indices -3, -2, -1.
@@ -460,47 +479,60 @@ class Parameter():
         W = np.concatenate((W0, Wb, Wext), axis=1)
 
         
-        # if we don't want to use the entire model, just use one area 
-        # based on what area was chosen, set the respective connectivity values to 0 
+        # if we don't want to use the entire model, just use one area
+        # based on what area was chosen, set the respective connectivity values to 0
+        #
+        # Block boundaries of W. The rows are the nPop populations, the columns are
+        # those same populations plus the background (i_input) and external
+        # (i_input+1) input synapses:
+        #   [0:i_S1) A3b | [i_S1:i_S2) S1 | [i_S2:i_thal) S2 |
+        #   [i_thal:i_input) ThalE, ThalI, ThalPOm | i_input background | +1 external
+        # Address the thalamic block through i_thal/i_input rather than with negative
+        # indices: it grew from two to three columns when POm was added, which shifted
+        # every hard-coded negative column index by one and left POm connected in the
+        # branches that are supposed to cut the thalamus out.
+        i_S1, i_S2 = 4, 4 + 13
+        i_thal = W.shape[0] - 3
+        i_input = W.shape[0]
         if area=='ThalA3b':
-            W[4:-2,:] = 0 # to A1, S2 from everywhere
-            W[:,4:-4] = 0 # to everywhere from A1, S2
+            W[i_S1:i_thal,:] = 0 # to A1, S2 from everywhere
+            W[:,i_S1:i_thal] = 0 # to everywhere from A1, S2
         elif area=='A3b':
-            W[4:] = 0 # to A1, S2, Thal from everywhere
-            W[:,4:-2] = 0 
+            W[i_S1:] = 0 # to A1, S2, Thal from everywhere
+            W[:,i_S1:i_input] = 0
         elif area=='S1':
-            W[4+13:,4+13:] = 0
+            W[i_S2:,i_S2:] = 0
         elif area=='ThalS1':
             # this still includes A3b
-            W[4+13:-2,:] = 0  # cut out S2 
-            W[:,4+13:-4] = 0  # cut out S2 
+            W[i_S2:i_thal,:] = 0  # cut out S2
+            W[:,i_S2:i_thal] = 0  # cut out S2
         elif area=='A1':
-            W[:4,:] = 0 # cut out Area3b
-            W[:,:4] = 0 # cut out Area3b
-            W[4+13:,:] = 0 
-            W[:,4+13:-2] = 0 
-            W[-2:,:] = 0 # cut out Thalamus
-            W[:,-4:-2] = 0 # cut out input from Thalamus
+            W[:i_S1,:] = 0 # cut out Area3b
+            W[:,:i_S1] = 0 # cut out Area3b
+            W[i_S2:,:] = 0
+            W[:,i_S2:i_thal] = 0
+            W[i_thal:,:] = 0 # cut out Thalamus
+            W[:,i_thal:i_input] = 0 # cut out input from Thalamus
         elif area=='ThalA1':
-            W[:4,:] = 0 # cut out Area3b
-            W[:,:4] = 0 # cut out Area3b
-            W[4+13:-2,:] = 0  # cut out S2 
-            W[:,4+13:-4] = 0  # cut out S2
+            W[:i_S1,:] = 0 # cut out Area3b
+            W[:,:i_S1] = 0 # cut out Area3b
+            W[i_S2:i_thal,:] = 0  # cut out S2
+            W[:,i_S2:i_thal] = 0  # cut out S2
         elif area=='ThalA1S2':
-            W[:4,:] = 0 # cut out Area3b
-            W[:,:4] = 0 # cut out Area3b
+            W[:i_S1,:] = 0 # cut out Area3b
+            W[:,:i_S1] = 0 # cut out Area3b
         elif area=='A1S2':
-            W[:4,:] = 0 # cut out Area3b
-            W[:,:4] = 0 # cut out Area3b  
-            W[-2:,:] = 0 # cut out Thalamus
-            W[:,-4:-2] = 0 # cut out input from Thalamus
+            W[:i_S1,:] = 0 # cut out Area3b
+            W[:,:i_S1] = 0 # cut out Area3b
+            W[i_thal:,:] = 0 # cut out Thalamus
+            W[:,i_thal:i_input] = 0 # cut out input from Thalamus
         elif area=='S2':
-            W[:4,:] = 0 # cut out Area3b
-            W[:,:4] = 0 # cut out Area3b 
-            W[4:4+13,:] = 0 
-            W[:,4:4+13] = 0 
-            W[-2:,:] = 0 # cut out Thalamus
-            W[:,-4:-2] = 0 # cut out input from Thalamus
+            W[:i_S1,:] = 0 # cut out Area3b
+            W[:,:i_S1] = 0 # cut out Area3b
+            W[i_S1:i_S2,:] = 0
+            W[:,i_S1:i_S2] = 0
+            W[i_thal:,:] = 0 # cut out Thalamus
+            W[:,i_thal:i_input] = 0 # cut out input from Thalamus
 
         return W
 
