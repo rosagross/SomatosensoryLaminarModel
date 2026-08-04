@@ -1,0 +1,262 @@
+\documentclass[11pt,a4paper,onecolumn]{article}
+
+\usepackage{latexsym}      % needed math symbols
+\usepackage{hyperref}
+\hypersetup{
+ colorlinks=true,
+ citecolor=blue,
+ linkcolor=blue,
+ urlcolor=blue,
+ pdfpagemode=UseNone,
+ pdfstartview=FitH}
+\usepackage{graphicx}      % for importing eps figures
+\usepackage{amsmath}       % for advanced math symbols
+\usepackage[affil-it]{authblk} 			% found in preprint bundle package, http://ctan.org/pkg/preprint
+\usepackage[margin=1.97cm]{geometry} % paper and margin formats as set by SPP
+
+\parindent 0.5cm    % paragraphs indent
+
+% authblk style
+\renewcommand\Authfont{\large}
+\renewcommand\Affilfont{\normalsize	\itshape}
+\setlength{\affilsep}{5pt}
+
+% for abstract style
+\makeatletter
+\newbox\abstract@box
+\renewenvironment{abstract}
+  {\global\setbox\abstract@box=\vbox\bgroup
+     \hsize=\textwidth\linewidth=\textwidth
+    \small
+    \begin{center}%
+    {\bfseries \abstractname\vspace{-.5em}\vspace{\z@}}%
+    \end{center}%
+    \quotation}
+  {\endquotation\egroup}
+\expandafter\def\expandafter\@maketitle\expandafter{\@maketitle
+  \ifvoid\abstract@box\else\unvbox\abstract@box\if@twocolumn\vskip1.5em\fi\fi}
+\makeatother
+\providecommand{\keywords}[1]{\noindent \mdseries{{Keywords:}} #1}
+\providecommand{\DOI}[1]{\vspace{1\baselineskip}}
+\providecommand{\dateline}[1]{\vspace*{-1\baselineskip}\normalsize #1\vspace*{-1.5\baselineskip}}
+
+% for the figure and tables, captions
+\usepackage{booktabs}
+\usepackage{dcolumn}
+\newcolumntype{d}[1]{D{.}{.}{#1}}
+
+\usepackage{caption}
+\captionsetup[table]{position=above,font={rm,small}}
+\captionsetup[figure]{font={rm,small}}
+
+% for citations formatting style
+\usepackage[numbers,square,sort&compress]{natbib}
+\setlength\bibsep{1pt}
+
+% other packages and macros
+\usepackage{float}
+\usepackage{bm}
+\renewcommand{\vec}[1]{\text{\bfseries #1}}
+
+% turn off hyphenation
+\hyphenchar\font=-1
+
+% page numbering
+\pagenumbering{arabic}
+
+\begin{document}
+
+%--------------------------------------------------------------------------
+%  fill in the paper's title, author(s), and corresponding institutions
+%--------------------------------------------------------------------------
+
+\title{Discovering the dynamics of evoked responses to near-threshold tactile stimuli: A layer-specific neural mass model of the somatosensory microcircuit}
+\author{R. Großmann, Vincent S.C. Chien, S. Meccozzi, A. Villringer, T. R. Knösche}
+\affil{Max-Planck-Institut für Kognitions- und Neurowissenschaften, Leipzig, Germany}
+
+\date{04.08.2026}
+
+\begin{abstract}
+\noindent
+%---------------------------------------------------------------------------
+%               Include abstract and keywords here
+%---------------------------------------------------------------------------
+[Placeholder]
+We present a laminar neural mass model of the human somatosensory system comprising thalamus (VPM, reticular nucleus, POm), Brodmann area 3b, and the primary and secondary somatosensory cortices (S1, S2), each resolved into cortical layers and into excitatory, PV, SST and VIP populations. Model dipoles are projected to the scalp through an individual forward model, allowing a direct comparison of simulated and measured somatosensory evoked potentials and of pre-stimulus spectral activity.
+\DOI{} % do not delete this line
+\end{abstract}
+
+\maketitle
+\thispagestyle{empty}
+
+%---------------------------------------------------------------------------
+%               the main text of your paper begins here
+%---------------------------------------------------------------------------
+
+\section*{Introduction}
+
+[Placeholder]
+
+
+\section*{Methods}
+
+\subsection*{Neural mass model of the somatosensory system}
+\vspace{-7pt}
+
+\subsubsection*{Model architecture}
+\vspace{-7pt}
+
+The model consists of 33 interacting neural populations distributed over four regions. The thalamus is represented by three populations: a first-order excitatory relay population (ventral posteromedial nucleus, VPM), an inhibitory population representing the reticular nucleus, and a higher-order excitatory population (posterior medial nucleus, POm). Brodmann area 3b is modelled as a single, layer-collapsed cortical column with four populations (excitatory pyramidal cells E, and the inhibitory interneuron classes PV, SST and VIP). The primary (S1) and secondary (S2) somatosensory cortices are each modelled with 13 populations: an excitatory, a PV and an SST population in each of the layers 2/3, 4, 5 and 6, plus a single VIP population in layer 2/3.
+
+Each population $i$ is described by its mean membrane potential $V_i$ and its mean firing rate $r_i$. Every connection from a source population $j$ to a target population $i$ has its own postsynaptic potential state $v_{ij}$, so that excitatory and inhibitory input to the same target are filtered with different kinetics before being summed.
+
+\subsubsection*{Population dynamics}
+\vspace{-7pt}
+
+Synaptic transmission is modelled by the convolution of the presynaptic firing rate with an alpha function, as in the classical Jansen--Rit formulation. In differential form, the postsynaptic potential $v_{ij}$ evoked in population $i$ by the firing rate $r_j$ of population $j$ obeys
+
+\begin{equation}
+\label{eq:psp}
+\frac{d^2 v_{ij}}{dt^2}
+=
+\frac{H_{ij}}{\tau_{ij}}W_{ij}r_j
+-\frac{2}{\tau_{ij}}\frac{dv_{ij}}{dt}
+-\frac{1}{\tau_{ij}^2}v_{ij},
+\end{equation}
+
+where $W_{ij}$ is the effective connectivity weight, $H_{ij}$ the synaptic gain and $\tau_{ij}$ the synaptic time constant. The two input channels of the model, the external (stimulus) input $I_{\mathrm{ext}}$ and the background input $I_{\mathrm{bg}}$, are filtered by the same synaptic kernel,
+
+\begin{equation}
+\label{eq:ext}
+\frac{d^2 v_i^{\mathrm{ext}}}{dt^2}
+=
+\frac{H_i}{\tau_i}W_i^{\mathrm{ext}}I_{\mathrm{ext}}
+-\frac{2}{\tau_i}\frac{dv_i^{\mathrm{ext}}}{dt}
+-\frac{1}{\tau_i^2}v_i^{\mathrm{ext}},
+\end{equation}
+
+\begin{equation}
+\label{eq:bg}
+\frac{d^2 v_i^{\mathrm{bg}}}{dt^2}
+=
+\frac{H_i}{\tau_i}W_i^{\mathrm{bg}}I_{\mathrm{bg}}
+-\frac{2}{\tau_i}\frac{dv_i^{\mathrm{bg}}}{dt}
+-\frac{1}{\tau_i^2}v_i^{\mathrm{bg}}.
+\end{equation}
+
+The total membrane potential of a population is the sum of all postsynaptic contributions it receives, together with the two input channels,
+
+\begin{equation}
+\label{eq:vtotal}
+V_i=\sum_j v_{ij}+v_i^{\mathrm{ext}}+v_i^{\mathrm{bg}},
+\end{equation}
+
+and is converted into a mean firing rate by a sigmoidal transfer function,
+
+\begin{equation}
+\label{eq:sigmoid}
+r_i=\frac{r_i^{\max}}
+{1+\exp\left[a_i(\theta_i-V_i)\right]}.
+\end{equation}
+
+The parameters of Eq.~\eqref{eq:sigmoid} are cell-type specific: excitatory populations use $a=0.128$~mV$^{-1}$, $\theta=32.1$~mV and $r^{\max}=31.4$~s$^{-1}$; PV populations $a=0.142$~mV$^{-1}$, $\theta=40.0$~mV and $r^{\max}=166.8$~s$^{-1}$; SST populations $a=0.079$~mV$^{-1}$, $\theta=42.0$~mV and $r^{\max}=57.0$~s$^{-1}$; and VIP populations $a=0.070$~mV$^{-1}$, $\theta=37.9$~mV and $r^{\max}=38.5$~s$^{-1}$. The synaptic time constant $\tau_{ij}$ is determined by the presynaptic cell type, with 6~ms for excitatory, 3~ms for PV, 20~ms for SST and 15~ms for VIP synapses. In the present implementation the synaptic gains $H_{ij}$ are set to unity, so that the amplitude of each connection is carried entirely by the connectivity weight $W_{ij}$ described below.
+
+\subsubsection*{Connectivity}
+\vspace{-7pt}
+
+The connectivity weight of each projection is constructed from anatomical quantities as
+\begin{equation}
+\label{eq:weights}
+W_{ij}=P_{ij}\,S_{ij}\,C_j ,
+\end{equation}
+that is, the probability $P_{ij}$ that a neuron of population $j$ contacts a neuron of population $i$, multiplied by the mean unitary postsynaptic potential amplitude $S_{ij}$ of that connection and by the number of neurons $C_j$ in the presynaptic population. Connection probabilities and unitary amplitudes for the intra-columnar connectivity of S1 and S2 were taken from published cell-type and layer resolved connectivity data; the connectivity of area 3b was obtained by collapsing the S1 matrix over layers, using cell-count weighted averages of both the source and the target populations.
+
+The resulting weights are then scaled by a small number of free gain parameters. All excitatory columns of the matrix are multiplied by $g_E$ and all inhibitory columns by $-g_I$, so that inhibitory projections enter Eq.~\eqref{eq:psp} with a negative sign. The output of the thalamic populations is scaled separately, with $g_{E}^{\mathrm{thal}}$ for the VPM, $-g_{I}^{\mathrm{thal}}$ for the reticular nucleus and $g^{\mathrm{POm}}$ for the POm. Inter-areal excitatory projections (area 3b~$\leftrightarrow$~S1~$\leftrightarrow$~S2, feedforward from layers 2/3 and 5 onto layers 2/3, 4 and 5 of the receiving area, and the corresponding feedback projections) are scaled by a separate parameter $g_{\mathrm{inter}}$, which allows the strength of the cortico-cortical hierarchy to be varied independently of the local circuitry. Corticothalamic projections originate from layer 6 (to VPM and reticular nucleus) and from layer 5 (to POm).
+
+Conduction delays are implemented as additive offsets on the synaptic time constants of the corresponding projections: 5~ms for long-range cortico-cortical connections between area 3b, S1 and S2, and 3~ms for thalamocortical connections. When simulated responses are compared to the measured evoked potentials, an additional fixed delay of 20~ms accounts for the conduction time from the periphery to the thalamus, which is not part of the simulated network.
+
+\subsubsection*{Inputs and background noise}
+\vspace{-7pt}
+
+The stimulus is delivered as an external input $I_{\mathrm{ext}}$ to the VPM population only, modelled as a rectangular pulse of a given amplitude and duration starting at the stimulus onset; all other populations receive $W_i^{\mathrm{ext}}=0$. All cortical populations additionally receive a background input $I_{\mathrm{bg}}$ that represents ongoing drive from areas outside the modelled network. To generate ongoing activity with a realistic spectrum, this background input carries independent colored noise for each population, implemented as an Ornstein--Uhlenbeck process with zero mean, stationary standard deviation $\sigma_{\mathrm{bg}}$ (in units of the mean background drive) and correlation time $\tau_{\mathrm{bg}}=16$~ms. The process is generated with the exact discrete update
+\begin{equation}
+\label{eq:ou}
+\eta_i(t+\Delta t)=e^{-\Delta t/\tau_{\mathrm{bg}}}\,\eta_i(t)
++\sigma_{\mathrm{bg}}\sqrt{1-e^{-2\Delta t/\tau_{\mathrm{bg}}}}\;\xi_i(t),
+\qquad \xi_i(t)\sim\mathcal{N}(0,1),
+\end{equation}
+so that the noise statistics are independent of the integration step size, and it is initialised from its stationary distribution. Setting $\sigma_{\mathrm{bg}}=0$ recovers the deterministic model with constant background drive. Because the network needs time to settle into its stationary regime, the stimulus onset is placed at least 2~s after the start of the simulation whenever pre-stimulus spectral properties are analysed.
+
+\subsubsection*{Numerical integration}
+\vspace{-7pt}
+
+The system of Eqs.~\eqref{eq:psp}--\eqref{eq:sigmoid} was integrated with a forward Euler scheme at a step size of $\Delta t = 1$~ms over a total simulation duration of 3~s. All state variables were initialised at zero. Table~\ref{tab:symbols} summarises the symbols used above.
+
+\begin{table}[H]
+\caption{Variables and parameters of the neural mass model.}
+\label{tab:symbols}
+\centering
+\begin{tabular}{ll}
+\toprule
+Symbol & Description\\
+\midrule
+$v_{ij}$ & Postsynaptic potential in population $i$ from population $j$\\
+$v_i^{\mathrm{ext}}$, $v_i^{\mathrm{bg}}$ & Postsynaptic potential from external and background input\\
+$V_i$ & Total membrane potential\\
+$r_i$ & Population firing rate\\
+$r_i^{\max}$ & Maximum firing rate\\
+$a_i$ & Sigmoid slope\\
+$\theta_i$ & Firing threshold\\
+$W_{ij}$ & Effective connectivity weight\\
+$H_{ij}$ & Synaptic gain\\
+$\tau_{ij}$ & Synaptic time constant\\
+$P_{ij}$ & Connection probability from population $j$ to population $i$\\
+$S_{ij}$ & Mean unitary postsynaptic potential amplitude\\
+$C_j$ & Number of neurons in population $j$\\
+$g_E$, $g_I$ & Coupling strength of excitatory and inhibitory populations\\
+$g_{\mathrm{inter}}$ & Coupling strength of inter-areal projections\\
+$I_{\mathrm{ext}}$ & External stimulus\\
+$I_{\mathrm{bg}}$ & Background input\\
+$\sigma_{\mathrm{bg}}$, $\tau_{\mathrm{bg}}$ & Standard deviation and correlation time of the background noise\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection*{Forward modelling of the EEG}
+\vspace{-7pt}
+
+[Placeholder]
+
+\subsection*{Model fitting}
+\vspace{-7pt}
+
+[Placeholder]
+
+
+\section*{Results}
+
+\subsubsection*{[Placeholder]}
+\vspace{-7pt}
+
+
+\section*{Discussion}
+
+\subsubsection*{Limitations}
+\vspace{-7pt}
+
+\subsubsection*{Implications}
+\vspace{-7pt}
+
+\subsubsection*{Conclusion}
+\vspace{-7pt}
+
+
+\section*{References}
+
+\vfill\null
+
+% Please use pisikabst.bst. You may your own *.bib file.
+\bibliographystyle{pisikabst}
+\bibliography{MyLibrary}
+
+\end{document}
