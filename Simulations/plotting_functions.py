@@ -150,7 +150,7 @@ def _grid_rows(pop_grid, row_labels, pop_labels, panel_titles=None):
 
 
 def _plot_potential_grid(rows, all_potentials, steps, start_plot, source_styles,
-                         stim_window, suptitle, savepath):
+                         stim_window, suptitle, savepath, stop_plot=None):
     """
     Plot one figure of per-synapse potential decompositions.
 
@@ -177,7 +177,7 @@ def _plot_potential_grid(rows, all_potentials, steps, start_plot, source_styles,
     fig, axes = plt.subplots(nrows, ncols, figsize=(3.6*ncols, 2.6*nrows),
                              sharex=True, sharey=False)
     axes = np.atleast_2d(axes)
-    time_ms = steps[start_plot:]
+    time_ms = steps[start_plot:stop_plot]
 
     for r, (row_label, titles, pop_idxs) in enumerate(rows):
         for c in range(ncols):
@@ -191,7 +191,7 @@ def _plot_potential_grid(rows, all_potentials, steps, start_plot, source_styles,
                 ax.axvspan(stim_window[0], stim_window[1], color=[0.9, 0.9, 0.9],
                            linewidth=0, zorder=0)
             for src, (color, linestyle, _) in enumerate(source_styles):
-                ax.plot(time_ms, all_potentials[idx, src, start_plot:], color=color,
+                ax.plot(time_ms, all_potentials[idx, src, start_plot:stop_plot], color=color,
                         linestyle=linestyle, linewidth=0.6)
 
             ax.set_title(titles[c], fontweight='bold')
@@ -232,7 +232,7 @@ def _plot_potential_grid(rows, all_potentials, steps, start_plot, source_styles,
 
 
 def plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, start_plot,
-                        figdir, sI, g, d, sb, s, pop_labels=None, area='all'):
+                        figdir, sI, g, d, sb, s, pop_labels=None, area='all', stop_plot=None):
     """
     Plot the per-synapse decomposition of every population potential.
 
@@ -326,7 +326,7 @@ def plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, st
     for name, title, rows in figures:
         savepath = os.path.join(figdir, f'all_potentials_{name}_{suffix}.pdf')
         _plot_potential_grid(rows, all_potentials, steps, start_plot, source_styles,
-                             stim_window, title, savepath)
+                             stim_window, title, savepath, stop_plot)
 
 
 def _conn_grid_columns(pop_grid, col_labels, pop_labels, panel_titles=None):
@@ -547,7 +547,7 @@ def plot_connectivity(W, figdir, pop_labels=None, area='all', direction='in', su
                                 savepath, xlabel=xlabel, legend_title=legend_title)
 
 
-def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot, figdir, sI, g, d, sb, s, area='all'):
+def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot, figdir, sI, g, d, sb, s, area='all', stop_plot=None):
     """
     Plot population potentials for different areas and layers.
     Parameters:
@@ -584,8 +584,8 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
         axes = np.array(axes)
 
         # --- Column 0: external input, thalamus, POm, Area 3b ---
-        axes[0, 0].plot(steps[start_plot:], Iext[start_plot:], label='Iext rate')
-        axes[0, 0].plot(steps[start_plot:], Ib[start_plot:], label='Ib rate')
+        axes[0, 0].plot(steps[start_plot:stop_plot], Iext[start_plot:stop_plot], label='Iext rate')
+        axes[0, 0].plot(steps[start_plot:stop_plot], Ib[start_plot:stop_plot], label='Ib rate')
         axes[0, 0].legend(title='')
         axes[0, 0].set_title('External input')
         axes[0, 0].set_ylabel('Hz')
@@ -595,17 +595,18 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
         # POm gets its own panel: its potential is on a very different scale, so sharing
         # the axes with ThalE/ThalI flattens those two.
         plot_population_rates(axes[1, 0], [-3, -2], potentials, steps, start_plot,
-                              ['Thalamus E', 'Thalamus I'], colors=['green', 'purple'])
+                              ['Thalamus E', 'Thalamus I'], colors=['green', 'purple'],
+                              stop_plot=stop_plot)
         axes[1, 0].set_title('Thalamus')
         axes[1, 0].set_ylabel('mV')
 
         plot_population_rates(axes[2, 0], [-1], potentials, steps, start_plot,
-                              ['POm'], colors=['grey'])
+                              ['POm'], colors=['grey'], stop_plot=stop_plot)
         axes[2, 0].set_title('POm')
         axes[2, 0].set_ylabel('mV')
 
         plot_population_rates(axes[3, 0], POP_GRID_A3B[0], potentials, steps, start_plot,
-                              CELLTYPE_COLUMNS)
+                              CELLTYPE_COLUMNS, stop_plot=stop_plot)
         axes[3, 0].set_title('Area 3b')
         axes[3, 0].set_ylabel('mV')
 
@@ -615,7 +616,7 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
             for i, layer_row in enumerate(pop_grid):
                 layer_idx = [idx for idx in layer_row if idx is not None]
                 plot_population_rates(axes[i, col], layer_idx, potentials, steps, start_plot,
-                                      CELLTYPE_COLUMNS[:len(layer_idx)])
+                                      CELLTYPE_COLUMNS[:len(layer_idx)], stop_plot=stop_plot)
                 axes[i, col].set_title(f'{area_name} - {LAYER_ROWS[i]}')
                 axes[i, col].set_ylabel('mV')
 
@@ -645,25 +646,25 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
         axs_flat = axs.flatten()
 
         # Layer 2/3
-        axs_flat[0].plot(steps[start_plot:], potentials[:4].T[start_plot:])
+        axs_flat[0].plot(steps[start_plot:stop_plot], potentials[:4].T[start_plot:stop_plot])
         axs_flat[0].set_title('L2/3')
 
         # Layer 4
-        axs_flat[1].plot(steps[start_plot:], potentials[4:4+3].T[start_plot:])
+        axs_flat[1].plot(steps[start_plot:stop_plot], potentials[4:4+3].T[start_plot:stop_plot])
         axs_flat[1].set_title('L4')
         # Layer 5
-        axs_flat[2].plot(steps[start_plot:], potentials[4+3:4+6].T[start_plot:])
+        axs_flat[2].plot(steps[start_plot:stop_plot], potentials[4+3:4+6].T[start_plot:stop_plot])
         # Layer 6
-        axs_flat[3].plot(steps[start_plot:], potentials[4+6:4+9].T[start_plot:])
+        axs_flat[3].plot(steps[start_plot:stop_plot], potentials[4+6:4+9].T[start_plot:stop_plot])
         
         axs_flat[0].legend(['E', 'PV', 'SST', 'VIP'])
 
         plt.show()
 
-def plot_axis(axs, steps, start_plot, rates, idx_rates, color=None):
-    axs.plot(steps[start_plot:], rates[idx_rates].T[start_plot:], linewidth=1, color=color)
+def plot_axis(axs, steps, start_plot, rates, idx_rates, color=None, stop_plot=None):
+    axs.plot(steps[start_plot:stop_plot], rates[idx_rates].T[start_plot:stop_plot], linewidth=1, color=color)
 
-def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels, colors=None):
+def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels, colors=None, stop_plot=None):
     """ Plot population rates for given labels and indices.
 
     colors : list, optional
@@ -672,21 +673,21 @@ def plot_population_rates(axs_op, idxs_pop, rates, steps, start_plot, labels, co
     legend_list = []
     for i, idx in enumerate(idxs_pop):
         plot_axis(axs_op, steps, start_plot, rates, idx,
-                  color=None if colors is None else colors[i])
+                  color=None if colors is None else colors[i], stop_plot=stop_plot)
         legend_list.append(f'{labels[i]} {np.round(rates[idx].T[-1], 6)}')
 
     axs_op.legend(legend_list, loc='upper right')
 
 
-def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, sI, g, area, d, sb, s, figure_dir):
+def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, sI, g, area, d, sb, s, figure_dir, stop_plot=None):
     steps = np.arange(step_size, simulation_time+step_size, step_size)*1e3
     fig, axs = plt.subplots(4, 3, figsize=(15, 15))  # Set figure size
     figure_style()
 
     # external input 
     axs_extI = axs[0][0]
-    axs_extI.plot(steps[start_plot:], Iext[start_plot:], label='Iext rate')
-    axs_extI.plot(steps[start_plot:], Ib[start_plot:], label='Ib rate')
+    axs_extI.plot(steps[start_plot:stop_plot], Iext[start_plot:stop_plot], label='Iext rate')
+    axs_extI.plot(steps[start_plot:stop_plot], Ib[start_plot:stop_plot], label='Ib rate')
     axs_extI.legend(title='')
     axs_extI.set_ylabel('Hz')
     # thalamus
@@ -694,15 +695,15 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, sI, g,
     # Thalamus block = last three populations, in array order: Thalamus E/VPM (-3,
     # the externally-driven population), Thalamus I/reticular (-2), POm (-1).
     # Order matches get_population_labels().
-    axs_thal.plot(steps[start_plot:], rates[-3].T[start_plot:], color='green')
-    axs_thal.plot(steps[start_plot:], rates[-2].T[start_plot:], color='purple')
-    axs_thal.plot(steps[start_plot:], rates[-1].T[start_plot:], color='grey')
+    axs_thal.plot(steps[start_plot:stop_plot], rates[-3].T[start_plot:stop_plot], color='green')
+    axs_thal.plot(steps[start_plot:stop_plot], rates[-2].T[start_plot:stop_plot], color='purple')
+    axs_thal.plot(steps[start_plot:stop_plot], rates[-1].T[start_plot:stop_plot], color='grey')
     axs_thal.legend(['Thalamus E', 'Thalamus I', 'POm'])
     axs_thal.set_ylabel('Hz')
 
     # area 3b
     axsA3b = axs[2][0]
-    axsA3b.plot(steps[start_plot:], rates[:4].T[start_plot:], linewidth=1)
+    axsA3b.plot(steps[start_plot:stop_plot], rates[:4].T[start_plot:stop_plot], linewidth=1)
     axsA3b.legend([f'E {np.round(rates[0].T[-1], 6)}', f'PV {np.round(rates[1].T[-1], 6)}', f'SOM {np.round(rates[2].T[-1], 6)}', f'VIP {np.round(rates[3].T[-1], 6)}'])
     axsA3b.set_ylabel('Hz')
 
@@ -714,22 +715,22 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, sI, g,
     for i, labels in enumerate(labels_pops):
         if i<3:
             axs_pop = axs[i][1]
-            plot_population_rates(axs_pop, idxs_E+i, rates, steps, start_plot, labels)
+            plot_population_rates(axs_pop, idxs_E+i, rates, steps, start_plot, labels, stop_plot=stop_plot)
         else:
             # VIP
             axsVIPS1 = axs[i][1]
-            axsVIPS1.plot(steps[start_plot:], rates[3+4].T[start_plot:], linewidth=1)
+            axsVIPS1.plot(steps[start_plot:stop_plot], rates[3+4].T[start_plot:stop_plot], linewidth=1)
             axsVIPS1.legend([f'VIP1 {np.round(rates[3+4].T[-1], 6)}'])
 
         # plot results S2
         nr_pops = 13 # number of pops in S1
         if i<3:
             axs_pop = axs[i][2]
-            plot_population_rates(axs_pop, idxs_E+i+nr_pops, rates, steps, start_plot, labels)
+            plot_population_rates(axs_pop, idxs_E+i+nr_pops, rates, steps, start_plot, labels, stop_plot=stop_plot)
         else:
             # VIP
             axsVIPS2 = axs[i][2]
-            axsVIPS2.plot(steps[start_plot:], rates[3+nr_pops].T[start_plot:], linewidth=1)
+            axsVIPS2.plot(steps[start_plot:stop_plot], rates[3+nr_pops].T[start_plot:stop_plot], linewidth=1)
             axsVIPS2.legend([f'VIP1 {np.round(rates[3+nr_pops].T[-1], 6)}'])
     
     # Hide extra figure cell in col 0

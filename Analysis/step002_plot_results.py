@@ -16,8 +16,6 @@ Plots:
         - y axis: Steady state potential of Layer 5 population 
 
 4) Effect of connection strength from and to PV interneurons
-    - 
-
 '''
 
 # %% 
@@ -60,6 +58,12 @@ offset = sampling_params['offset']
 input_onset = params['input_onset']
 input_type = 'step'
 thalamus_source = 'Jiang'
+# POm output gain and background-noise std of the runs analysed here. Both are part of the
+# run-folder name (see SomatoModel.filename), so every load_* call has to pass them or it
+# builds a stem that matches nothing. Change here to look at a different slice of the sweep;
+# cells that sweep g_thalPOm themselves pass their own value.
+g_thalPOm = params['g_thalPOms'][0]
+Ib_noise_std = params['Ib_noise_std']
 # connectivity params
 params = load_parameters(WDDIR)
 extI_cellcounts = params['extI_cellcounts']
@@ -77,14 +81,14 @@ if not os.path.exists(figure_dir):
 # %% Make plots that demonstrate the sampling time line 
 
 # load trajectory to plot
-g = 8
-Iext_dur = 0.016
-Iext_str = 40
-Ib_str = 6
-sI = 0.44
-g_inter = 0.8
+g = 2.0
+Iext_dur = 0.0291
+Iext_str = 99.85
+Ib_str = 9.994769237606103
+sI = 0.55
+g_inter = 2.0
 
-rates_df, potentials_df, filename = load_simulation_data(g, g_inter, sI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir, suffix=suffix) 
+rates_df, potentials_df, filename = load_simulation_data(g, g_inter, sI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std) 
 trajectory_df = load_trajectory(rates_df, potentials_df, g, sI, Iext_dur, Iext_str, Ib_str, step_size)
 
 # choose population
@@ -137,15 +141,15 @@ plt.show()
     - x axis: time
 '''
 
-# choose example settings
-g = 40
-sI = 0.28
-Iext_dur = 0.0
-Iext_str = 20
-Ib_str = 4
-g_inter = 0.0
+# choose example settings: the grid point closest to the A1 best fit (g=3.293, sI=0.595)
+g = 3.25
+sI = 0.6
+Iext_dur = params['input_durations'][0]
+Iext_str = params['input_strengths'][0]
+Ib_str = params['backgrndI_strengths'][0]
+g_inter = params['g_inter']
 
-rates_df, potentials_df, filename = load_simulation_data(g, g_inter, sI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir, suffix=suffix) 
+rates_df, potentials_df, filename = load_simulation_data(g, g_inter, sI, Ib_str, Iext_dur, Iext_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, raw_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std) 
 trajectory_df = load_trajectory(rates_df, potentials_df, g, sI, Iext_dur, Iext_str, Ib_str, step_size)
 
 population = 'E3' # 'E1'
@@ -167,37 +171,47 @@ plt.show()
 # %%
 '''
 1.1b) RESPONSE-TYPE EXAMPLES (publication / poster figure)
-Show how one population (E3, S1 L5) reacts to the SAME brief stimulus under four
+Show how one population (E3S2, S2 L5) reacts to the SAME brief stimulus under four
 different parameter settings, one stacked panel each:
     - non-responsive : barely reacts, returns to baseline
     - transfer       : transient response, returns to baseline
     - memory         : switches to a persistent active state
-    - oscillation halted : sustained baseline rhythm terminated by the pulse
+    - oscillation onset / continued : post-stimulus rhythm that either appears with the
+      pulse or was already running in the baseline
 Only g / sI differ between panels; the stimulus (duration/strength/background) is fixed.
+
+The four (g, sI) pairs below were read off the processed characteristics of this batch
+(dynamic_function_rate and diffRate_baseline / diffRate_lateLongterm), so each panel really
+does show the behaviour it is labelled with. The population is E3S2 rather than E3 because
+in this batch the S1 populations never oscillate - every rhythm lives in S2.
 '''
 
 dark2 = sns.color_palette('Dark2')
 response_examples = [
-    {'label': 'Transfer',           'g': 2, 'sI': 0.50, 'color': dark2[2]},
-    {'label': 'Memory',             'g': 2, 'sI': 0.40, 'color': dark2[3]},
-    {'label': 'Oscillation continued', 'g': 11, 'sI': 0.58, 'color': [0.5, 0.5, 0.5]},
-    {'label': 'Oscillation halted', 'g': 8, 'sI': 0.44, 'color': dark2[0]},
+    {'label': 'Non-responsive',       'g': 2.5,  'sI': 0.50, 'color': dark2[1]},
+    {'label': 'Transfer',             'g': 2.0,  'sI': 0.60, 'color': dark2[2]},
+    # also picks up a rhythm later on (diffRate_lateLongterm 0.18), but that is outside
+    # the plotted window, so the panel is labelled for what it actually shows
+    {'label': 'Memory',               'g': 3.25, 'sI': 0.65, 'color': dark2[3]},
+    {'label': 'Oscillation continued', 'g': 3.75, 'sI': 0.60, 'color': [0.5, 0.5, 0.5]},
 ]
 
 fixed_params = {
-    'g_inter': 0.8,
-    'Ib_str': 6,
-    'Iext_dur': 0.016,
-    'Iext_str': 40,
+    'g_inter': params['g_inter'],
+    'Ib_str': params['backgrndI_strengths'][0],
+    'Iext_dur': params['input_durations'][0],
+    'Iext_str': params['input_strengths'][0],
     'input_onset': input_onset,
     'thal_cellcounts': thal_cellcounts,
     'bI_cellcounts': bI_cellcounts,
     'extI_cellcounts': extI_cellcounts,
     'input_type': input_type,
     'step_size': step_size,
+    'g_thalPOm': g_thalPOm,
+    'Ib_noise_std': Ib_noise_std,
 }
 
-plot_response_type_examples(response_examples, fixed_params, 'E3', raw_dir, figure_dir, suffix=suffix)
+plot_response_type_examples(response_examples, fixed_params, 'E3S2', raw_dir, figure_dir, suffix=suffix)
 
 
 # %%
@@ -209,22 +223,24 @@ few hand-picked values each land in a different regime (oscillation / elevated /
 / quenched / extreme high). All other parameters are fixed at the processed operating point.
 '''
 
-# five g_thalPOm values that show the greatest divergence in the post-stimulus response
-gthalPOm_values = [0.997, 0.998, 0.999, 1.0, 1.001]
+# the g_thalPOm values simulated in this batch
+gthalPOm_values = params['g_thalPOms']
 
 gthalPOm_fixed = {
-    'g': 11.24,
-    'g_inter': 2,
-    'sI': 0.5927,
-    'Ib_str': 3,
-    'Iext_dur': 0.044,
-    'Iext_str': 80,
+    'g': 3.25,
+    'g_inter': params['g_inter'],
+    'sI': 0.6,
+    'Ib_str': params['backgrndI_strengths'][0],
+    'Iext_dur': params['input_durations'][0],
+    'Iext_str': params['input_strengths'][0],
     'input_onset': input_onset,
     'thal_cellcounts': thal_cellcounts,
     'bI_cellcounts': bI_cellcounts,
     'extI_cellcounts': extI_cellcounts,
     'input_type': input_type,
     'step_size': step_size,
+    'g_thalPOm': g_thalPOm,
+    'Ib_noise_std': Ib_noise_std,
 }
 
 plot_gthalPOm_potential_sweep(gthalPOm_values, gthalPOm_fixed, [['E2', 'E2S2'], ['E3', 'E3S2']], raw_dir, figure_dir, suffix=suffix, plot_window=(-0.1,0.3))
@@ -238,16 +254,16 @@ needs the full source-resolved potential (SomatoModel.compute_dipoles), which is
 each parameter set is re-simulated here and projected through a subject forward model.
 Requires DATADIR / SUBJECTS_DIR env vars (the model reads them at import).
 '''
-gthalPOm_values = [0.997, 0.998, 0.999, 1.0, 1.001]
+gthalPOm_values = params['g_thalPOms']
 
 # model-side overrides (model parameter names) for the same operating point as 1.1c
 gthalPOm_sim = {
-    'coupling_strength': 11.24,
-    'strength_I': 0.5927,
-    'Iext_duration': 0.044,
-    'Iext_strength': 80,
-    'Ib_strength': 3,
-    'g_intercortical': 2,
+    'coupling_strength': 3.25,
+    'strength_I': 0.6,
+    'Iext_duration': params['input_durations'][0],
+    'Iext_strength': params['input_strengths'][0],
+    'Ib_strength': params['backgrndI_strengths'][0],
+    'g_intercortical': params['g_inter'],
     'g_thal': 2,
     'sI_thal': 0.5,
     'area': 'all',
@@ -272,7 +288,7 @@ Ib_str = 2
 g_inters = [0.0]
 Iext_str = params['input_strengths']
 Iext_dur = params['input_durations']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 population = 'E3b'
 
 data_df = data_df[data_df['globalCoupling']==g]
@@ -300,7 +316,7 @@ sI = 0.68
 Iext_str = params['input_strengths']
 Iext_dur = params['input_durations']
 Ib_str = 4
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 
 population = 'E3b'
 data_df = data_df[data_df['globalCoupling']==g]
@@ -326,7 +342,7 @@ Iext_dur = params['input_durations']
 populations = ['E3b']
 for ib in Ib_strs:
     for p in populations:
-        data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sIs, ib, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+        data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sIs, ib, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
         sImulti_fingerprint_IextDurVsStr(data_df, g, sIs, Ib_str, p, thalamus_source, figure_dir)
 
 # %%
@@ -337,7 +353,7 @@ Iext_dur = params['input_durations']
 Iext_str = params['input_strengths']
 Ib_str = params['backgrndI_strengths']
 sIs = params['strength_I']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 population = 'E3b'
 fingerprint_sI_vs_IextStr(data_df, g, Iext_dur, Ib_str, population, thalamus_source, figure_dir)
 
@@ -346,10 +362,10 @@ fingerprint_sI_vs_IextStr(data_df, g, Iext_dur, Ib_str, population, thalamus_sou
 sI = 0.68 #params['strength_I'][0]
 Iext_dur = params['input_durations'][0]
 Iext_str = params['input_strengths']
-Ib_str = params['backgrndI_strengths'][1]
+Ib_str = params['backgrndI_strengths'][0]
 g = params['coupling_strengths']
 g_inters = [0.8]
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 population = 'E3b'
 fingerprint_g_vs_IextStr(data_df, sI, Iext_dur, Ib_str, population, thalamus_source, figure_dir)
 
@@ -370,7 +386,7 @@ sI = 0.68
 Ib_str = 4
 Iext_dur = params['input_durations']
 Iext_str = params['input_strengths']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 
 populations = np.array(['E1', 'E2', 'E3', 'E4']) 
 #populations = np.array(['P1', 'P2', 'P3', 'P4']) 
@@ -384,12 +400,15 @@ multiPop_heatmap_IextDurVsStr(data_df, g, sI, Ib_str, populations, rate_measure,
 Plot difference between Mininum and Maximum Firing rates 
 """
 
-# choose settings (make sure that there is no input in the samples)
-Iext_dur = 0.0
-Iext_str = 0
-sI = 0.24
-Ib_str = 6
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+# choose settings. This batch has no stimulus-free runs, so the single stimulus it does have
+# is used; the late-longterm window sampled here still sits well after the input offset.
+g = params['coupling_strengths']
+g_inters = [params['g_inter']]
+Iext_dur = params['input_durations'][0]
+Iext_str = params['input_strengths'][0]
+sI = 0.6
+Ib_str = params['backgrndI_strengths'][0]
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 multiLayer_couplingOnLongeterm_diffRate(data_df, Iext_dur, Iext_str, Ib_str, sI, thalamus_source, figure_dir)
 
 
@@ -406,55 +425,55 @@ Iext_str = params['input_strengths']
 Iext_dur = [0.016] #params['input_durations']
 Ib_str = 6
 g_inters = [1.0]
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 population = 'E1S2'
 heatmap_frequency_IextDurVsStr(data_df, g, sI, Ib_str, population, "lateLongterm", "Rate", Iext_dur, Iext_str, thalamus_source, figure_dir)
 
 # %%
 
 # 4.2) Coupling strength vs frequency (late longterm)
-Iext_dur = 0.016
-Iext_str = 0
-sI = 0.68
+# S2 populations: in this batch the S1 side never crosses the oscillation gate.
+Iext_dur = params['input_durations'][0]
+Iext_str = params['input_strengths'][0]
+sI = 0.6
 population = 'E1S2'
-Ib_str = 6
-g_inters = [0.8]
+Ib_str = params['backgrndI_strengths'][0]
+g_inters = [params['g_inter']]
 g = params['coupling_strengths']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 multiLayer_couplingOnFrequency(data_df, Iext_dur, Iext_str, Ib_str, sI, "baseline", "Potential", thalamus_source, figure_dir)
 
 #%%
 # 4.3) Heatmap: frequency vs coupling strength and sI (single population)
-Iext_dur = 0.016
-Iext_str = 0
-Ib_strs= [6]
-g_inters = [0.8]
+Iext_dur = params['input_durations'][0]
+Iext_str = params['input_strengths'][0]
+Ib_strs = [params['backgrndI_strengths'][0]]
+g_inters = [params['g_inter']]
 vmax=40
 
 areas = ['A3b', 'A1', 'S2']
-g = params['coupling_strengths'][4:]
+g = params['coupling_strengths']
 sI = params['strength_I']
 for a in areas:
     for ib in Ib_strs:
-        data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, ib, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+        data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, ib, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
         heatmap_frequency_coupling_vs_sI(data_df, a, "baseline", "Potential", Iext_dur, Iext_str, Ib_str, figure_dir, vmin=0, vmax=vmax)
 
 #%%
 # 4.3b) Heatmap: frequency vs coupling strength and sI (single chosen population)
-Iext_dur = 0.016
-Iext_str = 0
-Ib_str = 6
+Iext_dur = params['input_durations'][0]
+Iext_str = params['input_strengths'][0]
+Ib_str = params['backgrndI_strengths'][0]
 population = 'E3S2'
-g = params['coupling_strengths'][7:-6]
-sI = [0.68 , 0.685, 0.69 , 0.695, 0.7  , 0.705, 0.71 , 0.715, 0.72 ,
-       0.725, 0.73 , 0.735, 0.74 , 0.745, 0.75 , 0.755] #params['strength_I']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+g = params['coupling_strengths']
+sI = params['strength_I']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 heatmap_frequency_couplingVsSI_singlePop(data_df, population, "baseline", "Potential", Iext_dur, Iext_str, Ib_str, figure_dir, vmin=0, vmax=vmax)
 
 # %%
 
 # 4.4) Frequency vs oscillation amplitude scatter (late longterm)
-population = 'E1'
+population = 'E3S2'  # S2: the S1 populations never cross the oscillation gate in this batch
 scatter_frequency_vs_diff(data_df, "lateLongterm", "Potential", population, figure_dir)
 
 # %%
@@ -465,7 +484,7 @@ Iext_dur = 0.016
 Iext_str = 0
 g_inters = [0.8]
 Ib_str = params['backgrndI_strengths']  # list -> background input sweep
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 backgroundInputOnPeakPower(data_df, g, sI, Iext_dur, Iext_str, "baseline", "Potential", thalamus_source, figure_dir)
 
 # %%
@@ -477,15 +496,15 @@ backgroundInputOnPeakPower(data_df, g, sI, Iext_dur, Iext_str, "baseline", "Pote
 
 # 5.1) Baseline spectrum vs global coupling g
 sI = 0.6
-Ib_str = 6
-Iext_dur = 0.016
-Iext_str = 0
-g_inter = 0.8
-g_values = [6, 8, 10, 12] #params['coupling_strengths']
+Ib_str = params['backgrndI_strengths'][0]
+Iext_dur = params['input_durations'][0]
+Iext_str = params['input_strengths'][0]
+g_inter = params['g_inter']
+g_values = params['coupling_strengths']
 baseline_spectrum_by_coupling('g', g_values, None, g_inter, sI, Ib_str,
     Iext_dur, Iext_str, input_onset, step_size, sample_dur, offset,
     thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type,
-    raw_dir, figure_dir, suffix=suffix)
+    raw_dir, figure_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 
 # %%
 
@@ -499,7 +518,7 @@ g_inter_values = [0.4, 0.6, 0.8, 1.0]  # set to the g_inter values on disk
 baseline_spectrum_by_coupling('g_inter', g_inter_values, g, None, sI, Ib_str,
     Iext_dur, Iext_str, input_onset, step_size, sample_dur, offset,
     thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type,
-    raw_dir, figure_dir, suffix=suffix)
+    raw_dir, figure_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 
 # %%
 '''
@@ -515,7 +534,7 @@ Ib_str = params['backgrndI_strengths']
 Iext_dur = 0.016
 Iext_str = 40 #, 200, 300, 400]
 g = params['coupling_strengths']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 population = 'E3S2'
 rate_measure = 'baseline' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
 multisI_couplingOnMinmaxRate(data_df, sI, Ib_str, population, rate_measure, thalamus_source, figure_dir)
@@ -526,14 +545,15 @@ multisI_couplingOnDiffRate(data_df, sI, Ib_str, population, rate_measure, thalam
 BACKGROUND INPUT
 3.2) all layers
 '''
-Iext_dur = 0.016
-Iext_str = 40
-Ib_str = 6
-sI = 0.68
+Iext_dur = params['input_durations'][0]
+Iext_str = params['input_strengths'][0]
+Ib_str = params['backgrndI_strengths'][0]
+sI = 0.6
 g = params['coupling_strengths']
+g_inters = [params['g_inter']]
 rate_measure = 'baseline' #('lateLongterm', 'immediateLongterm', 'duringInput', or 'baseline')
 
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 multiLayer_couplingOnMinMaxRate(data_df, Iext_dur, Iext_str, Ib_str, sI, rate_measure, thalamus_source, figure_dir)
 
 
@@ -551,7 +571,7 @@ Iext_str = params['input_strengths']
 sI = 0.42
 Ib_str = 6
 g = params['coupling_strengths']
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 
 potential_measure = 'lateLongterm'
 population = 'E1S2'
@@ -574,12 +594,12 @@ Look at the change of rate difference comparing populations
 Look at the interaction between global coupling and E-I balance in different populations.
 '''
 
-Iext_dur = 0.006
-Iext_str = [10, 20, 30]
-g = [10.0, 20.0, 30.0]
-Ib_str = 6
-sI = [0.7, 0.8, 0.9]
-data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix)
+Iext_dur = params['input_durations'][0]
+Iext_str = params['input_strengths']  # single value in this batch -> one row of panels
+g = params['coupling_strengths']
+Ib_str = params['backgrndI_strengths'][0]
+sI = params['strength_I']
+data_df = load_all_derivatives(Iext_dur, Iext_str, g, g_inters, sI, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
 
 rate_measure = 'longtermVSbaseline_rate'
 
@@ -588,6 +608,8 @@ populations = np.array(['E1', 'E2', 'E3', 'E4'])
 #populations = np.array(['S1', 'S2', 'S3', 'S4', 'V1']) 
 
 fig, axes = plt.subplots(len(Iext_str), len(populations), figsize=(20,15) ,sharex=True, sharey=True)
+# with a single input strength plt.subplots returns a 1-D array; the loop below indexes [row, col]
+axes = np.atleast_2d(axes)
 
 # Create a single colorbar axis
 #cbar_ax = fig.add_axes([1.01, 0.3, 0.02, 0.4])

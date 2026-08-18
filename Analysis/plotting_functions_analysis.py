@@ -573,7 +573,8 @@ def heatmap_frequency_couplingVsSI_singlePop(data_df, population, window_prefix,
 def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_str,
                                   Iext_dur, Iext_str, input_onset, step_size, sample_dur,
                                   offset, thal_cellcounts, bI_cellcounts, extI_cellcounts,
-                                  input_type, raw_dir, figure_dir, suffix='', fmax=80.0):
+                                  input_type, raw_dir, figure_dir, suffix='', fmax=80.0,
+                                  g_thalPOm=1.0, Ib_noise_std=None):
     """
     Grid of baseline power spectra (summed potential), one subplot per excitatory
     population, one curve per swept coupling value (colour = value).
@@ -616,7 +617,7 @@ def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_s
             _, potentials_df, _ = load_simulation_data(
                 g_k, g_inter_k, sI, Ib_str, Iext_dur, Iext_str, input_onset,
                 thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type,
-                raw_dir, suffix=suffix)
+                raw_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
         except (FileNotFoundError, OSError):
             print(f'Missing run: {sweep_name}={val} (g={g_k}, g_inter={g_inter_k}) - skipping')
             continue
@@ -1094,7 +1095,8 @@ def plot_response_type_examples(examples, fixed_params, population, raw_dir, fig
         rates_df, _, _ = load_simulation_data(
             g, fp['g_inter'], sI, fp['Ib_str'], Iext_dur, fp['Iext_str'], input_onset,
             fp['thal_cellcounts'], fp['bI_cellcounts'], fp['extI_cellcounts'],
-            fp['input_type'], raw_dir, suffix=suffix)
+            fp['input_type'], raw_dir, suffix=suffix,
+            g_thalPOm=fp.get('g_thalPOm', 1.0), Ib_noise_std=fp.get('Ib_noise_std'))
 
         rate = rates_df[population].values
         # time re-zeroed to stimulus onset
@@ -1190,7 +1192,8 @@ def plot_gthalPOm_potential_sweep(g_thalPOms, fixed_params, populations, raw_dir
             _, potentials_df, _ = load_simulation_data(
                 fp['g'], fp['g_inter'], fp['sI'], fp['Ib_str'], fp['Iext_dur'], fp['Iext_str'],
                 input_onset, fp['thal_cellcounts'], fp['bI_cellcounts'], fp['extI_cellcounts'],
-                fp['input_type'], raw_dir, suffix=suffix, g_thalPOm=np.round(gp, 3))
+                fp['input_type'], raw_dir, suffix=suffix, g_thalPOm=np.round(gp, 3),
+                Ib_noise_std=fp.get('Ib_noise_std'))
         except (FileNotFoundError, OSError, KeyError):
             print(f'Missing run for g_thalPOm={gp} - skipping')
             continue

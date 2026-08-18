@@ -39,6 +39,32 @@ PRESTIM_SPECTRUM_DIR = os.path.join(SIMDIR, "prestim_spectrum_comparison")
 # aligns with the measured response instead of leading it.
 RECEPTOR_THALAMUS_DELAY_S = 0.020  # 20 ms
 
+# ── pre-stimulus peak fitting (compute_error_prestim_peaks) ────────────────────
+# The bands the pre-stimulus fit is scored on, each with the flanking windows that define its
+# local aperiodic reference (see signal_preprocessing.spectral_prominence).
+#
+# The alpha reference deliberately starts at 5 Hz rather than at the lowest bin: with the
+# background noise off, whatever is left of the initialisation transient piles into the 2.5 Hz
+# bin, and letting that bin anchor the reference line tilts it steeply enough to report a
+# ~0.5 "alpha peak" for a signal that is a pure slow drift. Excluding it makes any smooth
+# power law score exactly 0, as it should.
+PRESTIM_ALPHA_BAND   = (8.0, 13.0)
+PRESTIM_ALPHA_FLANKS = ((5.0, 7.5), (14.0, 17.5))
+PRESTIM_BETA_BAND    = (17.5, 30.0)
+PRESTIM_BETA_FLANKS  = ((12.5, 15.0), (32.5, 40.0))
+
+# Term weights of the pre-stimulus peak error. Alpha dominates by design: the target is an
+# alpha peak with a smaller beta peak, and alpha is the one that has to come out right.
+# (On the 2.5 Hz measured grid the beta prominence is in fact the *larger* of the two — alpha
+# is one bin wide while beta is a broad shoulder — so the weighting is what makes alpha lead.)
+W_PRESTIM_ALPHA = 1.0    # alpha prominence match
+W_PRESTIM_BETA  = 0.3    # beta prominence match
+W_PRESTIM_FREQ  = 0.5    # relative error on the alpha peak frequency
+W_PRESTIM_SHAPE = 0.1    # broadband log-residual shape, keeps the rest of the band sane
+
+# Target features are constant across a GA run; computed once per (csv, fmin, fmax).
+_PRESTIM_TARGET_FEATURES = {}
+
 
 helper_path = os.path.join(WDDIR, 'Analysis')
 
@@ -72,7 +98,7 @@ REQUIRED_PARAMS = (
     # gains
     'coupling_strength', 'strength_I', 'g_thal', 'sI_thal', 'g_thalPOm', 'g_intercortical',
     # delays / time constants / connection probabilities (passed to Parameter)
-    'delay_factor', 'thal_delay_factor', 'receptor_thalamus_delay',
+    'delay_factor_short', 'delay_factor', 'thal_delay_factor', 'receptor_thalamus_delay',
     'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE',
     # structure
     'area', 'thal_connect', 'extI_cellcounts', 'bI_cellcounts',
@@ -238,7 +264,7 @@ class SomatoModel():
         # Analysis/step001_process_simulations.py reads back key by key.
         self.params = {**defaults, **params}
 
-        self.p = Parameter(delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
+        self.p = Parameter(delay_factor_short=self.delay_factor_short, delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
                            p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE)
         self.tau = self.p.tau
@@ -313,10 +339,14 @@ class SomatoModel():
         self.params.update(params)
 
         # rebuild the Parameter tables so the params baked into them take effect on
-        # every update: the tau/delay-shaping ones (delay_factor, thal_delay_factor,
-        # e3b_tau, e1_tau, e2_tau) and the connection probabilities (p_2PVE, p_4PVE),
-        # which self.W below is then recomputed from
-        self.p = Parameter(delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
+        # every update: the tau/delay-shaping ones (delay_factor_short, delay_factor,
+        # thal_delay_factor, e3b_tau, e1_tau, e2_tau) and the connection probabilities
+        # (p_2PVE, p_4PVE), which self.W below is then recomputed from.
+        # delay_factor_short used to be left out here, so it silently reverted to the
+        # Parameter default (3 ms) on every update - a sweep over it would have
+        # produced a flat result.
+        self.p = Parameter(delay_factor_short=self.delay_factor_short,
+                           delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
                            p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE)
         self.tau = self.p.tau
@@ -1320,6 +1350,19 @@ class SomatoModel():
 
 
 
+    @staticmethod
+    def _roi_dipoles(sim_dip):
+        """The three ROI dipole traces pooled from the 9 simulated area dipoles.
+
+        Single definition of the ROI -> dipole-row mapping, shared by the spectrum,
+        the pre-stimulus gates and the errors, so they can never disagree about which
+        signal an ROI refers to.
+        """
+        return {"A3b": sim_dip[0],
+                "A1":  np.sum(sim_dip[1:5], axis=0),
+                "S2":  np.sum(sim_dip[5:9], axis=0)}
+
+
     def _prestim_segments(self, seg_dur=0.4, overlap=0.5, settle_s=0.5):
         """Start indices of the pre-stimulus segments used for the spectrum (Welch layout).
 
@@ -1369,7 +1412,7 @@ class SomatoModel():
         Returns:
             (freqs, dict roi -> power) restricted to [fmin, fmax] Hz.
         """
-        rois = {"A3b": sim_dip[0], "A1": np.sum(sim_dip[1:5], axis=0), "S2": np.sum(sim_dip[5:9], axis=0)}
+        rois = self._roi_dipoles(sim_dip)
         starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
         win = np.hanning(seg_len)
         freqs = np.fft.rfftfreq(seg_len, d=self.step_size)
@@ -1383,43 +1426,91 @@ class SomatoModel():
                 psd += ((np.abs(np.fft.rfft(x)) ** 2) / seg_len**2)[fmask]
             spectra[roi] = psd / len(starts)
 
-        if not self._prestim_signal_ok(sim_dip, seg_dur, overlap, settle_s):
-            print("[compute_prestim_spectrum] WARNING: the pre-stimulus signal is flat "
-                  "(std < 1e-6 x evoked peak) — with background noise off (Ib_noise_std=0) "
-                  "there is no ongoing activity, so this spectrum is numerical residue.")
+        fluct = self._prestim_fluctuation(sim_dip, seg_dur, overlap, settle_s)
+        if fluct <= 1e-6:
+            print(f"[compute_prestim_spectrum] WARNING: the pre-stimulus signal of at least one "
+                  f"ROI is flat (fluctuation {fluct:.2e} of its own level) — the network has "
+                  f"settled to a fixed point, so that ROI's spectrum is numerical residue.")
         return freqs[fmask], spectra
 
 
-    def _prestim_signal_ok(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, rel_tol=1e-6):
-        """True if the pre-stimulus period carries meaningful fluctuations.
+    def _prestim_fluctuation(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, rois=None):
+        """Size of the pre-stimulus fluctuation relative to the signal's own level, in [0, ~1].
 
-        Compares the pre-stimulus std against the evoked peak of the same (A1) signal, so a
-        settled fixed point with no background noise (`Ib_noise_std=0`, where the residue is
-        ~1e-9 of the evoked response) is recognised as "no signal".
+        `std(pre-stimulus) / max|pre-stimulus|` over the worst of the `rois`. Measuring the
+        fluctuation against the ROI's **own** signal level rather than against its evoked peak
+        is what makes this un-gameable: in "ps" mode the stimulus parameters used to be part of
+        the GA search space, so a candidate could clear an evoked-relative bar simply by
+        shrinking `Iext_strength` towards 0 (the Aug-6 A1 run settled on Iext_strength = 2.3
+        out of [0, 100]). Referenced to itself, a settled fixed point reads ~1e-9 whether the
+        evoked response is large or absent.
+
+        Returned as a continuous number so the optimizer can grade its penalty by it: with the
+        background noise off almost the whole parameter space settles to a fixed point (36 of
+        40 random draws from the GA bounds), and this value says how *close* a fixed point is
+        to losing stability — a nearly-unstable one keeps a much larger residual fluctuation
+        than a deeply stable one, so following it uphill leads towards the Hopf boundary.
         """
         starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
-        stim_idx = round(self.input_onset / self.step_size) - 1
-        sig = np.sum(sim_dip[1:5], axis=0)
-        pre = sig[starts[0]:starts[-1] + seg_len]
-        evoked = np.abs(sig[stim_idx:stim_idx + 250] - pre.mean()).max()
-        return pre.std() > rel_tol * max(evoked, 1e-30)
+        signals = self._roi_dipoles(sim_dip)
+        worst = np.inf
+        for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
+            pre = signals[roi][starts[0]:starts[-1] + seg_len]
+            level = max(float(np.abs(pre).max()), np.finfo(float).tiny)
+            worst = min(worst, float(pre.std()) / level)
+        return worst
 
 
-    def _prestim_stationary(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, min_ratio=0.5):
+    def _prestim_signal_ok(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, rel_tol=1e-6,
+                           rois=None):
+        """True if the pre-stimulus period carries meaningful fluctuations in every fitted ROI.
+
+        `rois` selects which ROIs must carry activity (default: all three). This matters
+        because the gate used to test A1 unconditionally, so a `ROI=S2` run could pass on A1's
+        activity while the S2 dipole itself was numerically dead — which is exactly what
+        happened in opt_20260806_170111_ps_roi-S2.
+        """
+        return self._prestim_fluctuation(sim_dip, seg_dur, overlap, settle_s, rois) > rel_tol
+
+
+    def _prestim_amplitude_ratio(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, rois=None):
+        """How well the pre-stimulus amplitude holds up across the segments, in [0, 1].
+
+        `min(segment std) / max(segment std)` over the pre-stimulus segments, taken over the
+        worst of the `rois`. A self-sustained oscillation holds its amplitude (ratio ~1),
+        while a ring-down of the initialisation transient decays away (ratio « 1).
+
+        Returned as a continuous number rather than a pass/fail so the optimizer can build a
+        *graded* penalty out of it: with the background noise off much of the parameter space
+        settles to a fixed point, and a hard reject leaves the GA no gradient towards the
+        oscillatory region.
+        """
+        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
+        signals = self._roi_dipoles(sim_dip)
+        worst = 1.0
+        for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
+            sig = signals[roi]
+            stds = np.array([sig[s0:s0 + seg_len].std() for s0 in starts])
+            worst = min(worst, float(stds.min() / stds.max()) if stds.max() > 0 else 0.0)
+        return worst
+
+
+    def _prestim_stationary(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, min_ratio=0.8,
+                            rois=None):
         """True if the pre-stimulus amplitude is sustained rather than decaying.
 
-        Compares the (A1) amplitude of the last pre-stimulus segment against the first: a
-        self-sustained oscillation holds its amplitude (ratio ~1), while a damped ring-down
-        of the initialisation transient decays away (ratio « 1). Needed only with the
-        background noise off, where a decaying transient is otherwise indistinguishable
-        from ongoing activity to `_prestim_signal_ok` — its spectrum then concentrates in
-        the lowest frequency bin and looks like a slow rhythm that the model does not have.
+        Needed only with the background noise off, where a decaying transient is otherwise
+        indistinguishable from ongoing activity to `_prestim_signal_ok` — its spectrum then
+        concentrates in the lowest frequency bin and looks like a slow rhythm that the model
+        does not have.
+
+        The test compares the weakest against the strongest segment (see
+        `_prestim_amplitude_ratio`) instead of only last-vs-first, and the threshold is 0.8
+        rather than the previous 0.5: over the ~1.5 s pre-stimulus window a signal that has
+        merely halved is still a ring-down, not a rhythm. A limit cycle varies by no more than
+        a few percent between overlapping 400 ms windows, so 0.8 leaves ample margin.
         """
-        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
-        sig = np.sum(sim_dip[1:5], axis=0)
-        first = sig[starts[0]:starts[0] + seg_len].std()
-        last = sig[starts[-1]:starts[-1] + seg_len].std()
-        return bool(last >= min_ratio * first) if first > 0 else False
+        return self._prestim_amplitude_ratio(sim_dip, seg_dur, overlap, settle_s, rois) >= min_ratio
 
 
     def load_target_prestim_spectrum(self, data_path):
@@ -1461,10 +1552,17 @@ class SomatoModel():
         the slope drive the error. Both sides must end up on the same footing: set only
         `flatten_sim` when the target CSV has already been 1/f-removed (run_optimization.py's
         preprocess_targets), and both when comparing against the raw measured CSV
-        (simulation_main.py).
+        (simulation_main.py). Flattened spectra are log10 residuals, which are already
+        scale-free, so those are compared directly and the unit-sum step is skipped.
+
+        Note this is *not* what the "ps" optimization scores — see
+        compute_error_prestim_peaks, which targets the alpha/beta peaks specifically. This
+        whole-shape comparison is kept for the diagnostic path in simulation_main.py.
 
         Returns:
-            (float mean MSE over ROIs, sim spectra dict, target spectra dict).
+            (float mean MSE over ROIs, sim spectra dict, target spectra dict). The error is
+            NaN if a compared spectrum carries no power at all (a dead ROI), so the caller
+            can reject the parameter set rather than score numerical residue.
         """
         f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
         f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax)
@@ -1484,18 +1582,117 @@ class SomatoModel():
         common = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt[tmask], 6))
         sim_sel = np.isin(np.round(f_sim, 6), common)
         tgt_sel = np.isin(np.round(f_tgt, 6), common)
-        eps, errors = 1e-10, []
+        errors = []
         for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
             s = spec_sim[roi][sim_sel]
-            s = s / (s.sum() + eps)
             t = spec_tgt[roi][tgt_sel]
-            t = t / (t.sum() + eps)
+            if not (flatten_sim or flatten_target):
+                # Raw spectra: normalise away the sim/data amplitude-scale mismatch. Guard the
+                # division instead of adding an eps — a dead ROI used to divide ~0 by eps and
+                # come out as an all-zero "spectrum" that scored like any other candidate.
+                if s.sum() <= 0 or t.sum() <= 0:
+                    errors.append(np.nan)
+                    continue
+                s = s / s.sum()
+                t = t / t.sum()
             errors.append(np.mean((s - t) ** 2))
 
+        err = float(np.mean(errors))
+        print('prestim error', err)
 
-        print('prestim error', float(np.mean(errors)))
+        return err, spec_sim, spec_tgt
 
-        return float(np.mean(errors)), spec_sim, spec_tgt
+
+    def prestim_peak_features(self, freqs, power):
+        """Reduce one pre-stimulus spectrum to the features the "ps" fit is scored on.
+
+        Returns:
+            dict with `alpha` / `beta` (prominence above the local 1/f reference, in log10
+            power ratio), `alpha_freq` (Hz of the strongest alpha bin) and `shape` (the
+            broadband log10 residual over the whole band). Prominences are NaN for a spectrum
+            with no usable power.
+        """
+        from signal_preprocessing import log_aperiodic_residual, spectral_prominence
+
+        alpha, alpha_freq, _ = spectral_prominence(freqs, power, PRESTIM_ALPHA_BAND,
+                                                   PRESTIM_ALPHA_FLANKS)
+        beta, _, _ = spectral_prominence(freqs, power, PRESTIM_BETA_BAND, PRESTIM_BETA_FLANKS)
+        return {"alpha": alpha, "alpha_freq": alpha_freq, "beta": beta,
+                "shape": log_aperiodic_residual(freqs, power)}
+
+
+    def compute_error_prestim_peaks(self, data_path, sim_dip, fmin=1.0, fmax=40.0,
+                                    target_dip=None, rois=None):
+        """Error between the simulated and measured pre-stimulus *oscillatory peaks*.
+
+        Replaces the whole-spectrum MSE of compute_error_prestim_spectrum for the "ps"
+        optimization. That comparison could not drive a GA: the flattened spectra were
+        normalised to unit sum, which pushed every candidate onto ~1/n_bins, and over 40512
+        evaluations of the July A1 run 5% of all errors fell inside a 0.1%-wide plateau
+        (1.842e-4 to 1.844e-4) — six distinct parameter sets scored identically to eight
+        significant figures. There was nothing to select on.
+
+        Here each spectrum is instead reduced to the few numbers that describe the target
+        ("a peak at alpha, a smaller one at beta"): the alpha and beta prominences above a
+        *local* 1/f reference, plus where the alpha peak sits. These are in log10 power-ratio
+        units, so a missing alpha peak costs the full W_PRESTIM_ALPHA * alpha_target**2
+        instead of a rounding error, and both sides are scale-free without any normalisation.
+
+        The terms are weighted by the module-level W_PRESTIM_* constants; alpha dominates by
+        design. A low-weight `shape` term keeps the rest of the 1-40 Hz range from drifting
+        somewhere absurd while the peaks are fitted.
+
+        `rois` selects which ROIs the error averages over (default: all three). `target_dip`
+        computes the target from a saved dipole trace instead of `data_path`
+        (parameter-recovery mode). Target features are cached per data path, since the target
+        does not change across evaluations.
+
+        Returns:
+            (float mean error over ROIs, sim spectra dict, target spectra dict). The error is
+            NaN when a fitted ROI has no usable spectrum, so the caller can reject the
+            parameter set. The per-ROI features of the last call are kept on
+            `self.last_prestim_features` for plotting and logging.
+        """
+        f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax)
+        if target_dip is not None:
+            f_tgt, spec_tgt = self.compute_prestim_spectrum(target_dip, fmin, fmax)
+            tgt_feat = {roi: self.prestim_peak_features(f_tgt, spec_tgt[roi]) for roi in spec_tgt}
+        else:
+            f_tgt, spec_tgt = self.load_target_prestim_spectrum(data_path)
+            key = (data_path, fmin, fmax)
+            if key not in _PRESTIM_TARGET_FEATURES:
+                tmask = (f_tgt >= fmin) & (f_tgt <= fmax)
+                _PRESTIM_TARGET_FEATURES[key] = {
+                    roi: self.prestim_peak_features(f_tgt[tmask], spec_tgt[roi][tmask])
+                    for roi in spec_tgt}
+            tgt_feat = _PRESTIM_TARGET_FEATURES[key]
+
+        features, errors = {}, []
+        for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
+            sim = self.prestim_peak_features(f_sim, spec_sim[roi])
+            tgt = tgt_feat[roi]
+            features[roi] = {"sim": sim, "target": tgt}
+            if not (np.isfinite(sim["alpha"]) and np.isfinite(sim["beta"])):
+                errors.append(np.nan)
+                continue
+            # the shape term only covers bins both sides define (the sim grid may be shorter)
+            n = min(len(sim["shape"]), len(tgt["shape"]))
+            shape_diff = sim["shape"][:n] - tgt["shape"][:n]
+            errors.append(
+                W_PRESTIM_ALPHA * (sim["alpha"] - tgt["alpha"]) ** 2
+                + W_PRESTIM_BETA * (sim["beta"] - tgt["beta"]) ** 2
+                + W_PRESTIM_FREQ * ((sim["alpha_freq"] - tgt["alpha_freq"]) / tgt["alpha_freq"]) ** 2
+                + W_PRESTIM_SHAPE * float(np.nanmean(shape_diff ** 2))
+            )
+
+        self.last_prestim_features = features
+        err = float(np.mean(errors))
+        print(f"prestim peak error {err:.6f}  " + "  ".join(
+            f"{roi}: alpha {f['sim']['alpha']:+.3f}@{f['sim']['alpha_freq']:.1f}Hz "
+            f"(target {f['target']['alpha']:+.3f}@{f['target']['alpha_freq']:.1f}Hz) "
+            f"beta {f['sim']['beta']:+.3f} (target {f['target']['beta']:+.3f})"
+            for roi, f in features.items()))
+        return err, spec_sim, spec_tgt
 
 
     def compute_timefreq(self, simulated_dip):
@@ -1623,7 +1820,7 @@ class SomatoModel():
         return float(np.mean(errors)), tf_sim, tf_target
 
 
-    def plot_timefreq_comparison(self, tf_sim, tf_target):
+    def plot_timefreq_comparison(self, tf_sim, tf_target, show=False):
         """
         Plot simulated vs. measured Morlet TF power side-by-side for each ROI.
 
@@ -1690,7 +1887,10 @@ class SomatoModel():
             f"_area-{self.area}.png"
         )
         fig.savefig(os.path.join(figuredir, fname), dpi=300, bbox_inches="tight")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
 
     def compute_timecourse(self, simulated_dip):
@@ -1824,7 +2024,7 @@ class SomatoModel():
         return float(np.mean(errors)), tc_sim, tc_target
 
 
-    def plot_timecourse_comparison(self, tc_sim, tc_target, scaling_factor=None):
+    def plot_timecourse_comparison(self, tc_sim, tc_target, scaling_factor=None, show=False):
         """
         Plot simulated vs. measured ROI time courses (peak-normalized) per ROI.
 
@@ -1881,21 +2081,31 @@ class SomatoModel():
             f"_area-{self.area}.png"
         )
         fig.savefig(os.path.join(figuredir, fname), dpi=300, bbox_inches="tight")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
 
     def plot_prestim_spectrum_comparison(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None,
-                                         seg_dur=0.4, overlap=0.5, settle_s=0.5):
-        """Plot simulated vs measured pre-stim power spectra (unit-sum relative power) per ROI.
+                                         seg_dur=0.4, overlap=0.5, settle_s=0.5, show=False):
+        """Plot simulated vs measured pre-stim spectra per ROI, as the "ps" fit sees them.
 
-        Layout 2x3: columns are the ROIs (A3b, A1, S2) on the shared 2.5 Hz grid, rows are the
-        two views of the same comparison —
-          - top: the raw spectra, so the aperiodic (1/f) shape of both signals is visible;
-          - bottom: both sides 1/f-removed with FOOOF, i.e. exactly what
-            compute_error_prestim_spectrum(..., flatten_sim=True) scores.
-        `data_path` must therefore be the *raw* measured CSV (this function does its own
-        flattening); the same remove_aperiodic call as preprocess_targets is used, so the
-        bottom-row target matches the flattened target CSV the optimization fits against.
+        Layout 3x3: columns are the ROIs (A3b, A1, S2) on the shared 2.5 Hz grid, rows are
+        three views of the same comparison —
+          - top: the raw spectra on log-log axes, each scaled to its own maximum, so the
+            aperiodic slope and any peak are visible whatever the amplitude mismatch;
+          - middle / bottom: the log10 residual above the *local* 1/f reference of the alpha
+            and the beta band respectively — exactly the quantity compute_error_prestim_peaks
+            scores, with the scored band shaded and the prominences annotated.
+
+        `data_path` must be the *raw* measured CSV; the referencing happens here.
+
+        The raw row used to be unit-sum normalised, which hid the failure it was supposed to
+        expose: a numerically dead ROI divided ~0 by an eps floor and drew as a flat zero line
+        that looked no worse than any other miss, while the flattened row below it showed a
+        near-perfect fit to what was actually numerical residue. Log-log raw power plus the
+        annotated residuals makes both the amplitude and the peak structure legible.
 
         Self-contained (recomputes the sim spectrum and reloads the target) so the target's own
         frequency grid is available for alignment. When `target_dip` is given, the target
@@ -1903,9 +2113,9 @@ class SomatoModel():
         `seg_dur`/`overlap`/`settle_s` are passed to compute_prestim_spectrum.
         Saves to PRESTIM_SPECTRUM_DIR/prestim_spectrum_comparison_g-<g>_sI-<sI>_area-<area>.png.
         """
-        from signal_preprocessing import remove_aperiodic
+        from signal_preprocessing import log_aperiodic_residual
 
-        rois, eps = ("A3b", "A1", "S2"), 1e-10
+        rois = ("A3b", "A1", "S2")
         seg_kw = dict(seg_dur=seg_dur, overlap=overlap, settle_s=settle_s)
         f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax, **seg_kw)
         f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax, **seg_kw)
@@ -1914,73 +2124,79 @@ class SomatoModel():
         f_tgt     = f_tgt[tmask]
         spec_tgt  = {roi: spec_tgt[roi][tmask] for roi in rois}
 
-        # 1/f-removed counterparts (FOOOF returns its own cropped grid, so realign afterwards).
-        # Skipped when there is no ongoing pre-stim activity at all (Ib_noise_std=0), where the
-        # spectrum is numerical residue and fitting an aperiodic component to it is meaningless.
         signal_ok = self._prestim_signal_ok(sim_dip, **seg_kw)
-        flat_sim, flat_tgt = {}, {}
-        f_sim_flat = f_tgt_flat = None
-        if signal_ok:
-            for roi in rois:
-                f_sim_flat, flat_sim[roi] = remove_aperiodic(f_sim, spec_sim[roi], fmin, fmax)
-                f_tgt_flat, flat_tgt[roi] = remove_aperiodic(f_tgt, spec_tgt[roi], fmin, fmax)
-
-        def _aligned(f_s, f_t):
-            """Bins present in both grids, plus the selectors onto each."""
-            common = np.intersect1d(np.round(f_s, 6), np.round(f_t, 6))
-            return (common,
-                    np.isin(np.round(f_s, 6), common),
-                    np.isin(np.round(f_t, 6), common))
-
-        n_seg = len(self._prestim_segments(**seg_kw)[0])
-        views = [("Relative power (unit-sum normalized)", spec_sim, f_sim, spec_tgt, f_tgt, "", "")]
-        if signal_ok:
-            views.append(("Relative power, 1/f removed", flat_sim, f_sim_flat, flat_tgt, f_tgt_flat,
-                          " (1/f removed)", " (1/f removed)"))
+        amp_ratio = self._prestim_amplitude_ratio(sim_dip, **seg_kw)
 
         figuredir = PRESTIM_SPECTRUM_DIR
         os.makedirs(figuredir, exist_ok=True)
-        fig, axes = plt.subplots(2, 3, figsize=(13, 6.4), sharex=True)
+        n_seg = len(self._prestim_segments(**seg_kw)[0])
+        fig, axes = plt.subplots(3, 3, figsize=(13, 9.4), sharex=True)
         fig.suptitle(
             f"Pre-stim spectrum - g={self.coupling_strength}, sI={self.strength_I}, "
-            f"area={self.area} ({n_seg} x {int(seg_dur * 1000)} ms segments)"
-            + ("" if signal_ok else " - WARNING: no ongoing pre-stim activity (Ib_noise_std=0)"),
+            f"area={self.area} ({n_seg} x {int(seg_dur * 1000)} ms segments, "
+            f"amplitude ratio {amp_ratio:.2f})"
+            + ("" if signal_ok else " - WARNING: no ongoing pre-stim activity"),
             fontsize=11,
         )
-        if not signal_ok:
-            for ax in axes[1]:
-                ax.text(0.5, 0.5, "1/f removal skipped:\nno ongoing pre-stim activity",
-                        ha="center", va="center", fontsize=9, color="0.4", transform=ax.transAxes)
-                ax.set_axis_off()
-        for row, (ylabel, sim_d, f_s, tgt_d, f_t, sim_sfx, tgt_sfx) in enumerate(views):
-            common, sim_sel, tgt_sel = _aligned(f_s, f_t)
-            row_axes = axes[row]
+
+        # --- row 0: raw power, log-log, each side on its own scale ---
+        for col, roi in enumerate(rois):
+            ax = axes[0][col]
+            for f, p, colour, lbl in ((f_sim, spec_sim[roi], "C1", "Simulated"),
+                                      (f_tgt, spec_tgt[roi], "black", "Measured")):
+                p = np.asarray(p, dtype=float)
+                if np.nanmax(p) > 0:
+                    ax.loglog(f, p / np.nanmax(p), color=colour, lw=1.5, marker="o", ms=3, label=lbl)
+                else:
+                    ax.plot([], [], color=colour, label=f"{lbl} (no power)")
+            ax.set_title(roi)
+            ax.legend(frameon=False, fontsize=8)
+        axes[0][0].set_ylabel("Raw power (each / own max)")
+
+        # --- rows 1-2: the log residual the peak error scores, one row per band ---
+        band_rows = ((1, "alpha", PRESTIM_ALPHA_BAND, PRESTIM_ALPHA_FLANKS),
+                     (2, "beta",  PRESTIM_BETA_BAND,  PRESTIM_BETA_FLANKS))
+        for row, name, band, flanks in band_rows:
             for col, roi in enumerate(rois):
-                ax = row_axes[col]
-                s = sim_d[roi][sim_sel]; s = s / (s.sum() + eps)
-                t = tgt_d[roi][tgt_sel]; t = t / (t.sum() + eps)
-                ax.plot(common, s, color="C1", lw=1.5, marker="o", ms=3, label=f"Simulated{sim_sfx}")
-                ax.plot(common, t, color="black", lw=1.5, marker="o", ms=3, label=f"Measured{tgt_sfx}")
-                ax.set_title(roi)
-                if row == len(views) - 1:
+                ax = axes[row][col]
+                ax.axhline(0, color="k", lw=0.5, alpha=0.3)
+                ax.axvspan(band[0], band[1], color="0.85", zorder=0)
+                for lo, hi in flanks:
+                    ax.axvspan(lo, hi, color="C0", alpha=0.12, zorder=0)
+                notes = []
+                for f, p, colour, lbl in ((f_sim, spec_sim[roi], "C1", "Simulated"),
+                                          (f_tgt, spec_tgt[roi], "black", "Measured")):
+                    resid = log_aperiodic_residual(f, p, flanks)
+                    ax.plot(f, resid, color=colour, lw=1.5, marker="o", ms=3, label=lbl)
+                    in_band = (f >= band[0]) & (f <= band[1]) & np.isfinite(resid)
+                    if in_band.any():
+                        idx = np.flatnonzero(in_band)[np.argmax(resid[in_band])]
+                        ax.plot(f[idx], resid[idx], marker="v", ms=7, color=colour)
+                        notes.append(f"{lbl[:3].lower()} {resid[idx]:+.3f} @ {f[idx]:.1f} Hz")
+                    else:
+                        notes.append(f"{lbl[:3].lower()} n/a")
+                ax.set_title(f"{roi} - {name}: " + " | ".join(notes), fontsize=9)
+                if row == 2:
                     ax.set_xlabel("Frequency (Hz)")
-                if col == 0:
-                    ax.set_ylabel(ylabel)
                 ax.legend(frameon=False, fontsize=8)
-            # share the y range within the row (the two rows live on different scales)
-            lo = min(a.get_ylim()[0] for a in row_axes)
-            hi = max(a.get_ylim()[1] for a in row_axes)
-            for a in row_axes:
+            axes[row][0].set_ylabel(f"log10 residual ({name} reference)")
+            # share the y range within the row so the ROIs are directly comparable
+            lo = min(a.get_ylim()[0] for a in axes[row])
+            hi = max(a.get_ylim()[1] for a in axes[row])
+            for a in axes[row]:
                 a.set_ylim(lo, hi)
 
-        fig.tight_layout(rect=[0, 0, 1, 0.96])
+        fig.tight_layout(rect=[0, 0, 1, 0.97])
         fname = (
             f"prestim_spectrum_comparison_g-{self.coupling_strength}"
             f"_sI-{self.strength_I}"
             f"_area-{self.area}.png"
         )
         fig.savefig(os.path.join(figuredir, fname), dpi=300, bbox_inches="tight")
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
 
     def _comparison_param_attrs(self):

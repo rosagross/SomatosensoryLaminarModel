@@ -5,19 +5,19 @@ import pandas as pd
 # %%
 class Parameter():
     
-    def __init__(self, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6,
+    def __init__(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6,
                  p_2PVE=15, p_4PVE=20):
         # kept on the instance because get_raw_connectivity() and save_to_yaml() call
         # get_connectProb() without arguments, and they must see these values
         self.p_2PVE = p_2PVE
         self.p_4PVE = p_4PVE
-        self.tau, self.nPop = self.get_params(delay_factor, thal_delay_factor, e3b_tau, e1_tau, e2_tau)
+        self.tau, self.nPop = self.get_params(delay_factor_short=delay_factor_short, delay_factor=delay_factor, thal_delay_factor=thal_delay_factor, e3b_tau=e3b_tau, e1_tau=e1_tau, e2_tau=e2_tau)
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
         self.C = self.get_cellcounts()
         self.sigmoid_params = self.get_sigmoid()
 
-    def get_params(self, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6):
+    def get_params(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6):
 
         # nr. of populations
         nPopA3b = 4 # E, PV, SST, VIP
@@ -37,6 +37,15 @@ class Parameter():
         tauS2 = np.tile(np.array([e2_tau,pv_tau,20,15,e2_tau,pv_tau,20,e2_tau,pv_tau,20,e2_tau,pv_tau,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
+        
+        # add delay to short range connections
+        # delay between A3b  A1
+        # from A3b to A1
+        tau[4:17, 0:4] += delay_factor_short
+        # from A1 to S2
+        tau[0:4, 4:17] += delay_factor_short
+        
+        
         # add delay to long range connections
         # from S2 to A3b
         tau[0, 0+4+13] += delay_factor
@@ -287,16 +296,15 @@ class Parameter():
         WS1_collapse_targets_S = np.dot(W0[idx_S1_S,:int(len(W0)/2)].T, C[idx_S1_S])/np.sum(C[idx_S1_S])
         WS1_collapse_targets_V = np.dot(W0[idx_S1_V,:int(len(W0)/2)].T, C[idx_S1_V])/np.sum(C[idx_S1_V])
         W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
-        #W_A3bS1 = np.zeros((4, 13))
 
         # connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
-        W_S2A3b[0,0] = 3 * g_intercortical # to E in layer 2/3 from E in A3b
-        W_S2A3b[4,0] = 4 * g_intercortical # to E in layer 4 from E in A3b
-        W_S2A3b[7,0] = 3 * g_intercortical # to E in layer 5 from E in A3b
+        W_S2A3b[0,0] = 30 * g_intercortical # to E in layer 2/3 from E in A3b
+        W_S2A3b[4,0] = 60 * g_intercortical # to E in layer 4 from E in A3b
+        W_S2A3b[7,0] = 30 * g_intercortical # to E in layer 5 from E in A3b
         W_A3bS2 = np.zeros(W_A3bS1.shape) 
-        W_A3bS2[0,0] = 5 * g_intercortical # to E from E in layer 2/3 in S2
-        W_A3bS2[0,7] = 3 * g_intercortical # to E from E in layer 5 in S2
+        W_A3bS2[0,0] = 50 * g_intercortical # to E from E in layer 2/3 in S2
+        W_A3bS2[0,7] = 30 * g_intercortical # to E from E in layer 5 in S2
         #print("A3b to S1", W_S1A3b[0,0], W_S1A3b[7,0])
         #print("A3b to S2", W_S2A3b[0,0], W_S2A3b[7,0])
 
@@ -305,18 +313,18 @@ class Parameter():
 
 
         # feedforward
-        W0[idx_S1_E[0]+13,idx_S1_E[0]] = 2 * g_intercortical # S1 layer 2/3 E to S2 layer 2/3 E
-        W0[idx_S1_E[0]+13,idx_S1_E[2]] = 1 * g_intercortical # S1 layer 5 E to S2 layer 2/3 E
-        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 3 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
-        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 3 * g_intercortical # S1 layer 5 E to S2 layer 5 E
-        W0[idx_S1_E[2]+13,idx_S1_E[0]] = 2 * g_intercortical # S1 layer 2/3 E to S2 layer 5 E
-        W0[idx_S1_E[2]+13,idx_S1_E[2]] = 1 * g_intercortical # S1 layer 5 E to S2 layer 5 E
+        W0[idx_S1_E[0]+13,idx_S1_E[0]] = 20 * g_intercortical # S1 layer 2/3 E to S2 layer 2/3 E
+        W0[idx_S1_E[0]+13,idx_S1_E[2]] = 10 * g_intercortical # S1 layer 5 E to S2 layer 2/3 E
+        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 30 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
+        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 30 * g_intercortical # S1 layer 5 E to S2 layer 5 E
+        W0[idx_S1_E[2]+13,idx_S1_E[0]] = 20 * g_intercortical # S1 layer 2/3 E to S2 layer 5 E
+        W0[idx_S1_E[2]+13,idx_S1_E[2]] = 10 * g_intercortical # S1 layer 5 E to S2 layer 5 E
         
         # feedback
-        W0[idx_S1_E[0],idx_S1_E[0]+13] = 3 * g_intercortical # S2 layer 2 E to S1 layer 2/3 E
-        W0[idx_S1_E[0],idx_S1_E[2]+13] = 1.5 * g_intercortical # S2 layer 5 E to S1 layer 2/3 E
-        W0[idx_S1_E[2],idx_S1_E[0]+13] = 3 * g_intercortical # S2 layer 2 E to S1 layer 5 E
-        W0[idx_S1_E[2],idx_S1_E[2]+13] = 1.5 * g_intercortical # S2 layer 5 E to S1 layer 5 E
+        W0[idx_S1_E[0],idx_S1_E[0]+13] = 30 * g_intercortical # S2 layer 2 E to S1 layer 2/3 E
+        W0[idx_S1_E[0],idx_S1_E[2]+13] = 150 * g_intercortical # S2 layer 5 E to S1 layer 2/3 E
+        W0[idx_S1_E[2],idx_S1_E[0]+13] = 30 * g_intercortical # S2 layer 2 E to S1 layer 5 E
+        W0[idx_S1_E[2],idx_S1_E[2]+13] = 1.50 * g_intercortical # S2 layer 5 E to S1 layer 5 E
 
         # stack the matrices together 
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))

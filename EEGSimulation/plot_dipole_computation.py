@@ -76,7 +76,7 @@ subjects = [15]
 # Simulations/simulation_main.py: the simulation_parameter.json base params
 # updated with the run's best_params, background noise switched off.
 # Keep opt_run in sync with simulation_main.py's - the two are set independently.
-opt_run = "opt_20260804_090235_tc_roi-S2" #"opt_20260729_093613_tc_roi-S2" #"opt_20260729_114525_tc_roi-A1"
+opt_run = "opt_20260806_141628_tc_roi-S2" #"opt_20260729_093613_tc_roi-S2" #"opt_20260729_114525_tc_roi-A1"
 #"opt_20260729_093613_tc_roi-S2"
 params = load_optimized_params(opt_run, overrides={'Ib_noise_std': 0})
 
