@@ -122,28 +122,31 @@ if not os.path.exists(filedir):
 # They are overrides on top of the simulation_parameter.json defaults loaded above,
 # and are only applied in the `if not use_opt:` branch below - with use_opt = True
 # the whole block is unused and the parameters come from load_optimized_params().
-coupling_strengths = [3.293441306598355]  # np.arange(0,20,1)#[100, 120, 140, 160]
-backgrndI_strengths = [9.994769237606103] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
-input_durations = [0.0291] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [20] # np.arange(0,50,10)
-strength_Is = [0.5950270376909454] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-ginters = [2.0] #np.arange(0,2,0.2)
-g_thalPOms = [1.258205044608075] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
-delay_factor = 0.0017424379080450052
-receptor_thalamus_delay = 0.01127 # from periphery to thal
-thal_delay_factor = 0.004355885296978261 # from thal to cortex delay
-e3b_tau = 9.98520373331793
-e1_tau = 8.680392487165907
-e2_tau = 4.290026558869845
-p_2PVE = 16.351739686255572 # L4 PV <- E connection probability (S1 and S2); original value 37.4
-p_4PVE = 15.198587424769887 # L6 PV <- E connection probability (S1 and S2); original value 39.6
+coupling_strengths = [11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
+strength_Is = [0.4133] # [0.8499] #[0.76131] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
+backgrndI_strengths = [18.26] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+input_durations = [0.02] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
+input_strengths = [5] # np.arange(0,50,10)
+ginters = [0.1] #[0.7994] #[1.418] #np.arange(0,2,0.2)
+g_thalPOms = [0.5766] #[0.325] # [0.2097] # [0.2766] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
+delay_factor = 0.005189 #0.00565 #0.00637 #0.00615
+delay_factor_short = 0.003488 #0.00352 # 0.00472 # 0.004
+receptor_thalamus_delay = 0.015 # from periphery to thal
+thal_delay_factor = 0.003154 # 0.00426 # 0.00426 #0.00498 # from thal to cortex delay
+e3b_tau = 9.026 # 2.247 #4.814 
+e1_tau = 8.682 #7.126 #4.132 
+e2_tau = 2.297 #4.15 #4.712
+p_2PVE = 21.02 # 22.51 #21.65 # 31.1 # L4 PV <- E connection probability (S1 and S2); original value 37.4
+p_4PVE = 21.65 #28.4 #38.41 # L6 PV <- E connection probability (S1 and S2); original value 39.6
+params['input_onset'] = 2.001
+params['g_thal'] = 4.726 #4.17 #2 #0.4211 #1.315 
 resistance_factor = 1
 area = 'all'
 pyrates = False
 use_opt = True
-save_connectivity = True
+save_connectivity = False
 
-Ib_noise_std = 0
+Ib_noise_std = 5
 
 
 if use_opt:
@@ -151,8 +154,9 @@ if use_opt:
     # updated with the run's best_params (keeps input_onset, cell counts, filedir, ...)
     # EEGSimulation/plot_dipole_computation.py plots this same configuration - update
     # its opt_run too when changing it here.
-    opt_run = "opt_20260804_090235_tc_roi-S2" #"opt_20260803_124557_tc_roi-A1"
-    params = load_optimized_params(opt_run, overrides={'Ib_noise_std': Ib_noise_std})
+    opt_run = "opt_20260806_141628_tc_roi-S2" 
+    #"opt_20260804_090235_tc_roi-S2" #"opt_20260803_124557_tc_roi-A1"
+    params = load_optimized_params(opt_run, overrides={'Ib_noise_std': Ib_noise_std, 'delay_factor_short': 0})
 
 
     
@@ -185,6 +189,7 @@ for ginter in ginters:
 
                             # additional parameters (that are usually fixed)
                             params['g_thalPOm'] = np.round(g_thalPOm, 4)
+                            params['delay_factor_short'] = delay_factor_short
                             params['delay_factor'] = delay_factor
                             params['receptor_thalamus_delay'] = receptor_thalamus_delay
                             params['thal_delay_factor'] = thal_delay_factor
@@ -234,14 +239,17 @@ for ginter in ginters:
                         # time-course error against measured data
                         tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path, sim_dip)
                         print("Time-course error (peak-norm MSE):", tc_error)
-                        model.plot_timecourse_comparison(tc_sim, tc_target)
+                        model.plot_timecourse_comparison(tc_sim, tc_target, show=True)
 
                         # pre-stimulus spectrum error against measured data
                         # ps_target_path is the raw measured CSV, so flatten both sides
                         ps_error, ps_sim, ps_target = model.compute_error_prestim_spectrum(
                             ps_target_path, sim_dip, flatten_sim=True, flatten_target=True)
-                        print("Pre-stim spectrum error (rel-power MSE):", ps_error)
-                        model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip)  # saves to PRESTIM_SPECTRUM_DIR
+                        print("Pre-stim spectrum error (log-residual MSE):", ps_error)
+                        # the alpha/beta peak error is what the "ps" optimization actually scores
+                        ps_peak_error, _, _ = model.compute_error_prestim_peaks(ps_target_path, sim_dip)
+                        print("Pre-stim peak error (alpha-weighted):", ps_peak_error)
+                        model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip, show=True)  # saves to PRESTIM_SPECTRUM_DIR
 
                         # persist per-run comparison maps/traces + values for later animation
                         run_dir = model.prepare_run_dir(filedir)
@@ -293,6 +301,7 @@ for ginter in ginters:
                             #print("Saving duration (in s):", duration)
 
                         start_plot = 1980
+                        stop_plot = 2200
                         if plot_rates:
                             pf.plot_results(
                                 model.rate,
@@ -307,7 +316,8 @@ for ginter in ginters:
                                 d,
                                 sb,
                                 s,
-                                figure_dir
+                                figure_dir,
+                                stop_plot = stop_plot
                             )
 
                         if plot_potentials:
@@ -329,7 +339,8 @@ for ginter in ginters:
                                 g,
                                 d,
                                 sb,
-                                s
+                                s,
+                                stop_plot = stop_plot
                             )
 
                         if plot_all_potentials:
@@ -347,6 +358,7 @@ for ginter in ginters:
                                 sb,
                                 s,
                                 pop_labels=model.get_population_labels(),
+                                stop_plot=stop_plot
                             )
 
             # if (len(coupling_strengths) > 1):
