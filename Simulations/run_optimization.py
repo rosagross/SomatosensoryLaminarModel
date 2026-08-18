@@ -189,7 +189,12 @@ def preprocess_targets(tc_path, ps_path, outdir, fmin=1.0, fmax=40.0):
 
     - Timecourse: Savitzky-Golay smoothing per ROI (avoid overfitting sample noise).
     - Prestim spectrum: FOOOF removal of the aperiodic 1/f component per ROI, so the
-      oscillatory peaks (not the slope) drive the error.
+      oscillatory peaks (not the slope) drive the error. The result is a log10 residual
+      (0 = on the aperiodic fit), matching what remove_aperiodic now returns.
+
+    Only the timecourse output is used by the "ps" fit's siblings; the flattened prestim CSV
+    feeds compute_error_prestim_spectrum, which the "ps" mode no longer scores on (it uses
+    compute_error_prestim_peaks against the raw CSV). It is still written as a diagnostic.
 
     Processed CSVs are written to `outdir` with the same schema as the originals
     (so the model's load_target_* readers work unchanged); the raw measured CSVs
@@ -236,8 +241,8 @@ def preprocess_targets(tc_path, ps_path, outdir, fmin=1.0, fmax=40.0):
         n_sub = int(sub["n_subjects"].iloc[0]) if "n_subjects" in sub.columns else 0
         for f, p in zip(f_flat, flat):
             rows.append({"modality": "elec", "roi": roi, "freq_hz": f, "power": p, "n_subjects": n_sub})
-        ax.plot(freqs, power, color="0.7", label="raw")
-        ax.plot(f_flat, flat, color="C0", label="1/f removed")
+        ax.plot(freqs, power / power.max(), color="0.7", label="raw (scaled)")
+        ax.plot(f_flat, flat, color="C0", label="1/f removed (log10 residual)")
         ax.set_title(roi); ax.set_xlabel("freq (Hz)"); ax.set_xlim(0, fmax)
     axes_ps[0].legend(); axes_ps[0].set_ylabel("power")
     fig_ps.suptitle("Prestim spectrum target: raw vs 1/f removed"); fig_ps.tight_layout()
@@ -249,13 +254,29 @@ def preprocess_targets(tc_path, ps_path, outdir, fmin=1.0, fmax=40.0):
     return tc_out_path, ps_out_path
 
 
-# Error returned for a parameter set with no ongoing pre-stimulus activity (see
-# _prestim_signal_ok). Four orders of magnitude above any real pre-stim error (~1e-4), so the
-# GA is driven out of fixed-point regimes instead of scoring their numerical residue: with the
-# background noise off, a settled fixed point leaves a pre-stimulus signal ~1e-9 of the evoked
-# peak, which the unit-sum normalisation in compute_error_prestim_spectrum then rescales into
-# an arbitrary, perfectly fittable spectrum.
-PS_FLAT_PENALTY = 1.0
+# ── pre-stimulus rejection penalties ───────────────────────────────────────────
+# With the background noise off, the pre-stimulus rhythm has to be a self-sustained
+# oscillation, and almost the whole parameter space instead settles to a fixed point — 36 of
+# 40 random draws from the bounds below, with 3 more still ringing down. A single hard reject
+# for all of them (the old PS_FLAT_PENALTY of 1.0, against scored errors of ~1e-4) made the
+# landscape binary and left the GA nothing to follow: 69 % of the evaluations of a short A1
+# run landed on the same constant.
+#
+# So every rejection is graded, and the three regimes are stacked into disjoint bands:
+#
+#   scored (sustained)      0    ..  0.5    the alpha/beta peak error
+#   decaying transient      1.0  ..  2.0    graded by how fast the amplitude decays
+#   settled fixed point     5.0  .. ~29     graded by how far below the activity floor it is,
+#                                           i.e. how close it is to losing stability
+#
+# The gradings are what matter. Within the fixed-point band the penalty falls as the residual
+# fluctuation grows, so the GA can walk uphill towards the Hopf boundary; within the transient
+# band it falls as the ring-down slows. Ordering is preserved under the GA's err**2 cost.
+PS_FLAT_PENALTY = 5.0
+PS_FLAT_DECADE = 1.0            # penalty added per decade of fluctuation below PS_ACTIVITY_FLOOR
+PS_ACTIVITY_FLOOR = 1e-6        # relative fluctuation below which there is no ongoing activity
+PS_OSC_PENALTY = 1.0
+PS_STATIONARY_MIN_RATIO = 0.8   # amplitude ratio a run must hold to count as sustained
 
 
 def objective(**params):
@@ -266,8 +287,10 @@ def objective(**params):
     When target_dip is set, errors are computed against the synthetic target instead
     of the measured CSVs.
 
-    Parameter sets whose pre-stimulus period carries no ongoing activity are rejected with
-    PS_FLAT_PENALTY rather than scored (only relevant when the pre-stim spectrum is fitted).
+    In "ps"/"all" the pre-stim term is the alpha/beta peak error
+    (model.compute_error_prestim_peaks) rather than a whole-spectrum MSE. Parameter sets whose
+    pre-stimulus period carries no ongoing activity, or whose amplitude is still decaying, are
+    penalised rather than scored (see PS_FLAT_PENALTY / PS_OSC_PENALTY).
     """
     model.apply_params(params)
     model.initialize_state()
@@ -279,66 +302,69 @@ def objective(**params):
     if ERROR_MODE in ("tc", "both", "all"):
         err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
     if ERROR_MODE in ("ps", "all"):
-        if not model._prestim_signal_ok(sim_dip):
+        # the gates are scored on the ROIs being fitted, not on A1 regardless of FIT_ROIS
+        fluct = model._prestim_fluctuation(sim_dip, rois=FIT_ROIS)
+        if fluct <= PS_ACTIVITY_FLOOR:
             # Settled fixed point: the spectrum would be numerical residue, so reject the
-            # parameter set instead of letting the GA fit it.
-            err_ps = PS_FLAT_PENALTY
-            print("  [rejected] pre-stimulus signal flat (settled fixed point)")
-        elif not model._prestim_stationary(sim_dip):
-            # Ring-down of the initialisation transient rather than a sustained rhythm; its
-            # spectrum piles into the lowest bin and is not an oscillation the model keeps.
-            err_ps = PS_FLAT_PENALTY
-            print("  [rejected] pre-stimulus amplitude decaying (transient, not sustained)")
+            # parameter set instead of letting the GA fit it. Graded by how deeply settled it
+            # is, so the GA still has a direction to move in across this (very large) region.
+            decades = np.log10(PS_ACTIVITY_FLOOR / max(fluct, 1e-30))
+            err_ps = PS_FLAT_PENALTY + PS_FLAT_DECADE * decades
+            print(f"  [rejected] pre-stimulus signal flat (settled fixed point, "
+                  f"fluctuation {fluct:.2e}, {decades:.1f} decades below floor)")
         else:
-            # flatten the simulated spectrum only for measured-data fits, where the target
-            # CSV has been 1/f-removed; the synthetic target (target_dip) is left raw.
-            err_ps, _, _ = model.compute_error_prestim_spectrum(
-                ps_data_path, sim_dip, target_dip=target_dip, flatten_sim=(target_dip is None), rois=FIT_ROIS)
+            amp_ratio = model._prestim_amplitude_ratio(sim_dip, rois=FIT_ROIS)
+            if amp_ratio < PS_STATIONARY_MIN_RATIO:
+                # Ring-down of the initialisation transient rather than a sustained rhythm; its
+                # spectrum piles into the lowest bin and is not an oscillation the model keeps.
+                # Penalised in proportion to the decay so the GA can climb towards sustained.
+                err_ps = PS_OSC_PENALTY * (2.0 - amp_ratio / PS_STATIONARY_MIN_RATIO)
+                print(f"  [rejected] pre-stimulus amplitude decaying "
+                      f"(amplitude ratio {amp_ratio:.3f} < {PS_STATIONARY_MIN_RATIO})")
+            else:
+                err_ps, _, _ = model.compute_error_prestim_peaks(
+                    ps_data_path_raw, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
+                if not np.isfinite(err_ps):
+                    err_ps = PS_FLAT_PENALTY
+                    print("  [rejected] pre-stimulus spectrum has no usable power")
     combined = err_tf + err_tc + err_ps
     print(f"  params={params}  →  err_tf={err_tf:.4f}  err_tc={err_tc:.4f}  err_ps={err_ps:.4f}  total={combined:.4f}")
     return combined
 
 # ── GA setup ───────────────────────────────────────────────────────────────────
-# The evoked-input parameters (Iext_strength, Iext_duration) are searched in the tf/tc/both/all
-# modes, where the evoked response is what is being fitted; their bounds match the SBI priors in
-# run_sbi.py so both methods search the same space. Drop them again (together with
-# receptor_thalamus_delay) when switching ERROR_MODE back to "ps": the pre-stimulus segments end
-# at stimulus onset, so they cannot change that error and would only waste evaluations on
-# dimensions with no gradient. scaling_factor is never searched in any mode — the model never
-# reads it (it is only a keyword of compute_error_timecourse).
+# The searchable parameters and their bounds. scaling_factor is never searched in any mode —
+# the model never reads it (it is only a keyword of compute_error_timecourse).
+SEARCH_SPACE = {
+    "coupling_strength": (0,     20   ),
+    "strength_I":        (0.4,    0.8 ),
+    "g_intercortical":   (0.5,    2   ),
+    "g_thalPOm":         (0,      5   ),   # scales POm output connectivity
+    "Ib_strength":       (3,     20   ),
+    "e3b_tau":           (2,     10   ),   # ms, default 6
+    "e1_tau":            (2,     10   ),   # ms, default 6
+    "e2_tau":            (2,     10   ),   # ms, default 6
+    "thal_delay_factor": (0.001,  0.005),  # s, default 3e-3
+    "delay_factor":      (0.001,  0.008),  # s, default 5e-3
+    "p_2PVE":            (10,     40   ),  # L4 PV<-E connection probability, %; default 37.6
+    "p_4PVE":            (10,     40   ),  # L6 PV<-E connection probability, %; default 39.4
+    "Iext_strength":     (0,    100    ),  # evoked input amplitude
+    "Iext_duration":     (0.0005,  0.003  ),  # s; > 0 so the pulse is at least one integration step
+}
+
+# The evoked-input parameters are searched in the tf/tc/both/all modes, where the evoked
+# response is what is being fitted; their bounds match the SBI priors in run_sbi.py so both
+# methods search the same space. In "ps" they are dropped: the pre-stimulus segments end at
+# stimulus onset, so they cannot change that error. This is not just wasted evaluations — with
+# no gradient they wander freely, and in the Aug-6 runs they were the *only* parameters that
+# moved at all, which is how a completely stalled fit could still look like it was searching.
+# Their fixed values come from base_params above.
+EVOKED_PARAMS = ("Iext_strength", "Iext_duration", "receptor_thalamus_delay")
+fitted_params = [p for p in SEARCH_SPACE
+                 if not (ERROR_MODE == "ps" and p in EVOKED_PARAMS)]
+
 opt_config = {
-    "model_parameters": [
-        "coupling_strength",
-        "strength_I",
-        "g_intercortical",
-        "g_thalPOm",
-        "Ib_strength",
-        "e3b_tau",
-        "e1_tau",
-        "e2_tau",
-        "thal_delay_factor",
-        "delay_factor",
-        "p_2PVE",
-        "p_4PVE",
-        "Iext_strength",
-        "Iext_duration",
-    ],
-    "bounds": np.array([
-        [0,     50  ],   # coupling_strength
-        [0.4,      0.8],   # strength_I
-        [0.5,      2  ],   # g_intercortical
-        [0,      2  ],   # g_thalPOm (scales POm output connectivity)
-        [3,     10  ],   # Ib_strength
-        [2,     10  ],   # e3b_tau (ms, default 6)
-        [2,     10  ],   # e1_tau  (ms, default 6)
-        [2,     10  ],   # e2_tau  (ms, default 6)
-        [0.001,  0.005],  # thal_delay_factor (s, default 3e-3)
-        [0.001,  0.008],  # delay_factor      (s, default 5e-3)
-        [10,     40  ],   # p_2PVE (L4 PV<-E connection probability, %; default 37.6)
-        [10,     40  ],   # p_4PVE (L6 PV<-E connection probability, %; default 39.4)
-        [0,    100  ],   # Iext_strength (evoked input amplitude)
-        [0.001,  0.1],   # Iext_duration (s; > 0 so the pulse is at least one integration step)
-    ]),
+    "model_parameters": fitted_params,
+    "bounds": np.array([SEARCH_SPACE[p] for p in fitted_params], dtype=float),
     "reference":  0.0,
     "simulation": objective,
     "op":         -1,    # minimise
@@ -347,9 +373,10 @@ opt_config = {
     "N3":         80,       # mutation offspring per iteration
     "n_iter":     30,
     "tolerance":  0.05,   # gradient-search tolerance (conf['gTol'])
-    # Early-stop threshold on the GA cost, which is err**2. The default 1e-5 is far above
-    # a typical pre-stim error (~1e-3 -> cost ~1e-6), so the GA would break after its first
-    # iteration and just return a random draw from the initial population.
+    # Early-stop threshold on the GA cost, which is err**2. Kept far below any error the
+    # objectives actually reach so the GA always runs its full n_iter: the default 1e-5 sits
+    # above a converged fit's cost and would break after the first iteration, returning a
+    # random draw from the initial population.
     "single_run_tol": 1e-12,
     "verbose":    1,
 }
@@ -393,7 +420,7 @@ def plot_fit_diagnostics(ga, config, outdir):
 
     fig.tight_layout()
     fig.savefig(os.path.join(outdir, "fit_diagnostics.png"), dpi=300, bbox_inches="tight")
-    plt.show()
+    plt.close()
 
 
 def plot_best_fit(model, best_params, outdir):
@@ -412,11 +439,10 @@ def plot_best_fit(model, best_params, outdir):
     err_tc, tc_sim, tc_target = model.compute_error_timecourse(tc_data_path, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
     model.plot_timecourse_comparison(tc_sim, tc_target)      # saves to the model's TIMECOURSE_DIR
 
-    err_ps, ps_sim, ps_target = model.compute_error_prestim_spectrum(
-        ps_data_path, sim_dip, target_dip=target_dip, flatten_sim=(target_dip is None), rois=FIT_ROIS)
-    # the figure flattens both sides itself, so it gets the *raw* measured CSV (ps_data_path
-    # points at the already-flattened one after preprocess_targets); its bottom row then
-    # reproduces the flattened comparison the error above scores.
+    # the peak error does its own local 1/f referencing, so it takes the *raw* measured CSV
+    # (ps_data_path points at the already-flattened one after preprocess_targets)
+    err_ps, ps_sim, ps_target = model.compute_error_prestim_peaks(
+        ps_data_path_raw, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
     model.plot_prestim_spectrum_comparison(ps_data_path_raw, sim_dip, target_dip=target_dip)  # saves to PRESTIM_SPECTRUM_DIR
 
     # also persist the comparison maps/traces for this best run
