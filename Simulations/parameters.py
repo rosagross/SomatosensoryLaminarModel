@@ -180,6 +180,45 @@ class Parameter():
             [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0],
             [0.25, 1.0, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 1.0, 1.0, 0.25, 2.0, 1.0]]
         
+        # Jiang et al. 2024 values. 
+        #
+        # Jiang et al. give a single amplitude per synapse sign for intracortical
+        # connections: EPSP 0.5 mV and IPSP -2 mV (+- 2 mV). The amplitude therefore
+        # depends only on whether the *source* is excitatory or inhibitory, so every row
+        # is identical and the column pattern carries the information: columns 0, 4, 7
+        # and 10 are the excitatory sources E1-E4 (0.5), every other column is an
+        # interneuron (2.0). 
+        psp_S1 = np.array([
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+            [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0]])
+
+        psp_S2 = np.array([
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0],
+                    [0.5, 2.0, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0, 0.5, 2.0, 2.0]])
+
+
         # to S1
         psp_S2toS1 = np.zeros((13,13))
         psp_toS1 = np.hstack((psp_S1, psp_S2toS1))
@@ -214,7 +253,7 @@ class Parameter():
 
         return C 
 
-    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount):
+    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount):
         """Put together the connevtivity matrix (not yet scaled by coupling strength and EI-balance parameter)
 
         Args:
@@ -224,6 +263,8 @@ class Parameter():
             thalE_cellcount: number of thalamic excitatory (VPM) neurons connecting to the somatosensory area
             thalI_cellcount: number of thalamic inhibitory (reticular nucleus) neurons
             pom_cellcount: number of POm neurons
+            mI_cellcount: number of modulatory input neurons (from frontal areas), which
+                          project onto the VIP populations only
 
         Returns: 
             W0 (2D numpy array): connectivity matrix of only cortical populations (no thalamus)! 
@@ -231,6 +272,7 @@ class Parameter():
             W_from_thal (2D numpy array):
             Wb (1D numpy array): background input array
             Wext (1D numpy array): external input array
+            Wm (1D numpy array): modulatory input array (nonzero on the VIP rows only)
         """
 
         S = self.get_connectStrength()
@@ -299,32 +341,40 @@ class Parameter():
 
         # connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
-        W_S2A3b[0,0] = 30 * g_intercortical # to E in layer 2/3 from E in A3b
-        W_S2A3b[4,0] = 60 * g_intercortical # to E in layer 4 from E in A3b
-        W_S2A3b[7,0] = 30 * g_intercortical # to E in layer 5 from E in A3b
+        W_S2A3b[0,0] = 60 * g_intercortical # to E in layer 2/3 from E in A3b
+        W_S2A3b[4,0] = 120 * g_intercortical # to E in layer 4 from E in A3b
+        W_S2A3b[7,0] = 60 * g_intercortical # to E in layer 5 from E in A3b
+        # feedback to A3b (interneuron ratios from Nasker 2021)
         W_A3bS2 = np.zeros(W_A3bS1.shape) 
-        W_A3bS2[0,0] = 50 * g_intercortical # to E from E in layer 2/3 in S2
-        W_A3bS2[0,7] = 30 * g_intercortical # to E from E in layer 5 in S2
+        W_A3bS2[0,0] = 100 * g_intercortical # to E3b from E in layer 2/3 in S2
+        W_A3bS2[1,0] = 244 * g_intercortical # to PV3b from E in layer 2/3 in S2
+        W_A3bS2[2,0] = 21 * g_intercortical # to PV3b from E in layer 2/3 in S2
+        W_A3bS2[0,7] = 70 * g_intercortical # to E3b from E in layer 5 in S2
         #print("A3b to S1", W_S1A3b[0,0], W_S1A3b[7,0])
         #print("A3b to S2", W_S2A3b[0,0], W_S2A3b[7,0])
 
         #print('g_intercortical', W_S2A3b[0,0], g_intercortical)
         #print('A3b to A3b', W_A3bA3b)
 
-
-        # feedforward
-        W0[idx_S1_E[0]+13,idx_S1_E[0]] = 20 * g_intercortical # S1 layer 2/3 E to S2 layer 2/3 E
-        W0[idx_S1_E[0]+13,idx_S1_E[2]] = 10 * g_intercortical # S1 layer 5 E to S2 layer 2/3 E
-        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 30 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
-        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 30 * g_intercortical # S1 layer 5 E to S2 layer 5 E
-        W0[idx_S1_E[2]+13,idx_S1_E[0]] = 20 * g_intercortical # S1 layer 2/3 E to S2 layer 5 E
-        W0[idx_S1_E[2]+13,idx_S1_E[2]] = 10 * g_intercortical # S1 layer 5 E to S2 layer 5 E
+        # feedforward S1 to S2
+        W0[idx_S1_E[0]+13,idx_S1_E[0]] = 40 * g_intercortical # S1 layer 2/3 E to S2 layer 2/3 E
+        W0[idx_S1_E[0]+13,idx_S1_E[2]] = 20 * g_intercortical # S1 layer 5 E to S2 layer 2/3 E
+        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 60 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
+        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 60 * g_intercortical # S1 layer 5 E to S2 layer 5 E
+        W0[idx_S1_E[2]+13,idx_S1_E[0]] = 40 * g_intercortical # S1 layer 2/3 E to S2 layer 5 E
+        W0[idx_S1_E[2]+13,idx_S1_E[2]] = 20 * g_intercortical # S1 layer 5 E to S2 layer 5 E
         
-        # feedback
-        W0[idx_S1_E[0],idx_S1_E[0]+13] = 30 * g_intercortical # S2 layer 2 E to S1 layer 2/3 E
-        W0[idx_S1_E[0],idx_S1_E[2]+13] = 150 * g_intercortical # S2 layer 5 E to S1 layer 2/3 E
-        W0[idx_S1_E[2],idx_S1_E[0]+13] = 30 * g_intercortical # S2 layer 2 E to S1 layer 5 E
-        W0[idx_S1_E[2],idx_S1_E[2]+13] = 1.50 * g_intercortical # S2 layer 5 E to S1 layer 5 E
+        # feedback S2 to S1 (interneuron ratios from Nasker 2021)
+        W0[idx_S1_E[0],idx_S1_E[0]+13] = 20 * g_intercortical # S2 layer 2 E to S1 layer 2/3 E
+        W0[idx_S1_E[0]+1,idx_S1_E[0]+13] = 48 * g_intercortical # S2 layer 2 E to S1 layer 2/3 PV
+        W0[idx_S1_E[0]+2,idx_S1_E[0]+13] = 4 * g_intercortical # S2 layer 2 E to S1 layer 2/3 SST
+        W0[idx_S1_E[0],idx_S1_E[2]+13] = 100 * g_intercortical # S2 layer 5 E to S1 layer 2/3 E
+        W0[idx_S1_E[0]+1,idx_S1_E[2]+13] = 244 * g_intercortical # S2 layer 5 E to S1 layer 2/3 PV
+        W0[idx_S1_E[0]+2,idx_S1_E[2]+13] = 21 * g_intercortical # S2 layer 5 E to S1 layer 2/3 SST
+
+
+        W0[idx_S1_E[2],idx_S1_E[0]+13] = 20 * g_intercortical # S2 layer 2 E to S1 layer 5 E
+        W0[idx_S1_E[2],idx_S1_E[2]+13] = 100 * g_intercortical # S2 layer 5 E to S1 layer 5 E
 
         # stack the matrices together 
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))
@@ -350,13 +400,13 @@ class Parameter():
 
         S_A3bto_thal = np.array([[0.1, 0, 0, 0], # thal E
                                  [0.1, 0, 0, 0], # thal I
-                                 [0.1, 0, 0, 0]]) # POm
+                                 [0.2, 0, 0, 0]]) # POm
         S_A1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], # to thal E 
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], # to thal I (reticular nucleus)
-                                [0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0.2, 0, 0]]) # S1 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
+                                [0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0.2, 0, 0]]) # S1 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
         S_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], 
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], 
-                                [0, 0, 0, 0, 0, 0, 0, 0.2, 0, 0, 0.2, 0, 0]]) # S2 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
+                                [0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0.2, 0, 0]]) # S2 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
         S_to_thal = np.hstack((S_A3bto_thal, S_A1to_thal, S_S2to_thal))
 
         # connection probabilities
@@ -377,7 +427,7 @@ class Parameter():
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         P_A3bto_thal = np.array([[10, 0, 0, 0], # thal E
                                  [10, 0, 0, 0], # thal I
-                                 [5, 0, 0, 0]])*1e-2 # POm
+                                 [10, 0, 0, 0]])*1e-2 # POm
         P_A1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0], # S1 to Thal E (some projections from L6 to VPM)
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0],
                                 [0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 5, 0, 0]])*1e-2 # S1 to POm (L5b driver)
@@ -430,10 +480,19 @@ class Parameter():
         Wb = np.zeros((W_from_thal.shape[1],1))
         Wb[:-3] = 1 * bI_cellcount # cellcount from background input (exclude the 3 thalamic populations)
 
-        return W0, W_to_thal, W_from_thal, Wb, Wext
+        # modulatory external background input (from frontal areas) targeting only VIP neurons.
+        # Row order is A3b (4) | S1 (13) | S2 (13) | thalamus (3), so the VIP rows are the
+        # 4th of A3b and the 4th of each 13-population block - see get_population_labels().
+        Wm = np.zeros((W_from_thal.shape[1],1))
+        Wm[3] = 1 * mI_cellcount        # VIP3b
+        Wm[3+4] = 1 * mI_cellcount      # VIP1   (S1)
+        Wm[3+4+13] = 1 * mI_cellcount   # VIP1S2 (S2)
 
 
-    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, area='all'):
+        return W0, W_to_thal, W_from_thal, Wb, Wext, Wm
+
+
+    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount, area='all'):
         """Apply coupling strength parameter and compute the final connectivity matrix.
 
         Args:
@@ -447,15 +506,19 @@ class Parameter():
             thalE_cellcount (int): number of thalamic excitatory (VPM) neurons connecting to the somatosensory area
             thalI_cellcount (int): number of thalamic inhibitory (reticular nucleus) neurons
             pom_cellcount (int): number of POm neurons
+            mI_cellcount (int): number of modulatory input neurons (from frontal areas),
+                                targeting the VIP populations only
             area (string): area to chose if you want to look at an isolated area (sets all other connections to zero).
                            Options: 'ThalA3b', 'S1', 'A3b', 'S1','ThalS1', 'A1', 'ThalA1', 'ThalA1S2', 'S2', 'A1S2'
         
         Returns:
-            2D numpy array: complete connectivity matrix (32x34)
+            2D numpy array: complete connectivity matrix (nPop x nPop+3, i.e. 33x36):
+                            the nPop population columns followed by the background,
+                            external and modulatory input columns.
         """
         
 
-        W0, W_to_thal, W_from_thal, Wb, Wext = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount)
+        W0, W_to_thal, W_from_thal, Wb, Wext, Wm = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount)
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])
@@ -484,17 +547,18 @@ class Parameter():
         # append the thalamus population(s) values to the matrix
         W0 = np.append(W0, W_to_thal, axis=0)
         W0 = np.append(W0, W_from_thal.T, axis=1)
-        W = np.concatenate((W0, Wb, Wext), axis=1)
+        W = np.concatenate((W0, Wb, Wext, Wm), axis=1)
 
         
         # if we don't want to use the entire model, just use one area
         # based on what area was chosen, set the respective connectivity values to 0
         #
         # Block boundaries of W. The rows are the nPop populations, the columns are
-        # those same populations plus the background (i_input) and external
-        # (i_input+1) input synapses:
+        # those same populations plus the background (i_input), external (i_input+1)
+        # and modulatory (i_input+2) input synapses:
         #   [0:i_S1) A3b | [i_S1:i_S2) S1 | [i_S2:i_thal) S2 |
-        #   [i_thal:i_input) ThalE, ThalI, ThalPOm | i_input background | +1 external
+        #   [i_thal:i_input) ThalE, ThalI, ThalPOm |
+        #   i_input background | +1 external | +2 modulatory
         # Address the thalamic block through i_thal/i_input rather than with negative
         # indices: it grew from two to three columns when POm was added, which shifted
         # every hard-coded negative column index by one and left POm connected in the
