@@ -37,7 +37,7 @@ PRESTIM_SPECTRUM_DIR = os.path.join(SIMDIR, "prestim_spectrum_comparison")
 # real-data t = +RECEPTOR_THALAMUS_DELAY_S (≈ the cortical N20 latency). The
 # simulated error window is shifted earlier by this amount so the model response
 # aligns with the measured response instead of leading it.
-RECEPTOR_THALAMUS_DELAY_S = 0.020  # 20 ms
+RECEPTOR_THALAMUS_DELAY_S = 0.015  # 15 ms
 
 # ── pre-stimulus peak fitting (compute_error_prestim_peaks) ────────────────────
 # The bands the pre-stimulus fit is scored on, each with the flanking windows that define its
@@ -93,7 +93,7 @@ REQUIRED_PARAMS = (
     # timing
     'simulation_dur', 'step_size', 'resolution_tstep', 'input_onset',
     # input
-    'input_type', 'Iext_strength', 'Iext_duration', 'Ib_strength',
+    'input_type', 'Iext_strength', 'Iext_duration', 'Ib_strength', 'Im_strength',
     'Ib_noise_std', 'Ib_noise_tau', 'Ib_noise_seed',
     # gains
     'coupling_strength', 'strength_I', 'g_thal', 'sI_thal', 'g_thalPOm', 'g_intercortical',
@@ -102,7 +102,7 @@ REQUIRED_PARAMS = (
     'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE',
     # structure
     'area', 'thal_connect', 'extI_cellcounts', 'bI_cellcounts',
-    'thalE_cellcounts', 'thalI_cellcounts', 'pom_cellcounts',
+    'thalE_cellcounts', 'thalI_cellcounts', 'pom_cellcounts', 'mI_cellcounts',
     # misc
     'resistance_factor',
 )
@@ -268,6 +268,7 @@ class SomatoModel():
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
                            p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE)
         self.tau = self.p.tau
+        self.tau_external = 0.003 # fixed, was always 3 ms but I took it from the thalamus time constant, this is cleaner
         self.nPop = self.p.nPop
         # sigmoid function (16 x 3) --> 3 stands for parameters: r, v_thr, m_max
         self.sigm = self.p.sigmoid_params
@@ -275,6 +276,7 @@ class SomatoModel():
         # create input array
         Iext = self.create_Iext()
         Ib = self.create_Ibackground()
+        Im = self.create_Imodulatory()
         self.gE = self.coupling_strength
         self.gI = self.coupling_strength * self.strength_I
         self.gEthal = self.g_thal
@@ -282,7 +284,7 @@ class SomatoModel():
         self.gPOmthal = self.g_thalPOm
 
         # Synaptic kernel
-        self.H = np.ones((self.nPop, self.nPop+1))
+        self.H = np.ones((self.nPop, self.nPop+3))
 
         # define time steps 
         self.steps = np.arange(self.step_size, self.simulation_dur+self.step_size, self.step_size)
@@ -291,26 +293,37 @@ class SomatoModel():
         self.Iext = np.tile(Iext, (self.nPop,1))
         self.Ib = np.tile(Ib, (self.nPop,1))
         self.Ib = self.add_background_noise(self.Ib)
+        self.Im = np.tile(Im, (self.nPop,1))
 
-        self.filename = (
-            f"gthal{self.g_thal}_gthalPOm{self.g_thalPOm}_sIthal{self.sI_thal}_g{self.coupling_strength}_sI{self.strength_I}_Ib{self.Ib_strength}_Ibnoise{self.Ib_noise_std}_Iextd{self.Iext_duration}_"
-            f"{self.input_type}Iexts{self.Iext_strength}_Ionset{self.input_onset}_thalcells{self.thalE_cellcounts}_"
-            f"Ibcells{self.bI_cellcounts}_Iextcells{self.extI_cellcounts}_gInter{self.g_intercortical}"
+        # Built by helper_functions.run_stem so that this name and the one
+        # load_simulation_data / load_derivative reconstruct can never drift apart.
+        # Float parameters are rounded there: load_optimized_params hands over
+        # full-precision optimizer values, which pushed this past the 255-byte
+        # filesystem limit on a path component.
+        self.filename = hf.run_stem(
+            g_thal=self.g_thal, g_thalPOm=self.g_thalPOm, sI_thal=self.sI_thal,
+            g=self.coupling_strength, sI=self.strength_I, Ib=self.Ib_strength,
+            Ib_noise_std=self.Ib_noise_std, Iext_dur=self.Iext_duration,
+            input_type=self.input_type, Iext_str=self.Iext_strength,
+            input_onset=self.input_onset, thal_cellcounts=self.thalE_cellcounts,
+            Im_strength=self.Im_strength, mI_cellcounts=self.mI_cellcounts,
+            bI_cellcounts=self.bI_cellcounts, extI_cellcounts=self.extI_cellcounts,
+            g_intercortical=self.g_intercortical,
         )
 
         # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
         self.rate = np.zeros((self.nPop, len(self.steps)))
-        self.potential = np.zeros((self.nPop, self.nPop+2, len(self.steps))) 
+        self.potential = np.zeros((self.nPop, self.nPop+3, len(self.steps))) 
 
         # Simulation loop
         # Initialize first values for the potential, rate and first order derivative with 0 or randomly
-        self.v_current = np.zeros((self.nPop, self.nPop+2)) # +2 because 1 for background input and one for external input 
+        self.v_current = np.zeros((self.nPop, self.nPop+3)) # +3 for the background, external and modulatory input synapses
         self.rate_current = np.zeros(self.nPop)
-        self.u_t = np.zeros((self.nPop, self.nPop+2)) # the initial first-order derivative: v'(t) = u(t)
+        self.u_t = np.zeros((self.nPop, self.nPop+3)) # the initial first-order derivative: v'(t) = u(t)
         self.t = 0.0
 
         # Weight matrix [to x from]
-        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area)
+        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, area=self.area)
 
         # per-subject dipole projection vectors (forward model + labels + geometry), invariant
         # across simulation runs → built once per subjects list and reused (see compute_dipoles).
@@ -321,12 +334,12 @@ class SomatoModel():
         """
         Reset the dynamic state for interactive simulations.
         """
-        self.v_current = np.zeros((self.nPop, self.nPop + 2))
+        self.v_current = np.zeros((self.nPop, self.nPop + 3))
         self.rate_current = np.zeros(self.nPop)
-        self.u_t = np.zeros((self.nPop, self.nPop + 2))
+        self.u_t = np.zeros((self.nPop, self.nPop + 3))
         self.t = 0.0
         self.rate = np.zeros((self.nPop, len(self.steps)))
-        self.potential = np.zeros((self.nPop, self.nPop + 2, len(self.steps)))
+        self.potential = np.zeros((self.nPop, self.nPop + 3, len(self.steps)))
 
 
     def apply_params(self, params: dict):
@@ -354,9 +367,11 @@ class SomatoModel():
         # recompute inputs and gains
         Iext = self.create_Iext()
         Ib = self.create_Ibackground()
+        Im = self.create_Imodulatory()
         self.Iext = np.tile(Iext, (self.nPop, 1))
         self.Ib = np.tile(Ib, (self.nPop, 1))
         self.Ib = self.add_background_noise(self.Ib)
+        self.Im = np.tile(Im, (self.nPop, 1))
 
         self.gE = self.coupling_strength
         self.gI = self.coupling_strength * self.strength_I
@@ -378,6 +393,7 @@ class SomatoModel():
             self.thalE_cellcounts,
             self.thalI_cellcounts,
             self.pom_cellcounts,
+            self.mI_cellcounts,
             area=self.area
         )
 
@@ -397,12 +413,17 @@ class SomatoModel():
 
         return Iext
 
-
     def create_Ibackground(self):
         """Create Background Input"""
         Ib = np.zeros(int(self.simulation_dur / self.step_size))
         Ib[:] = self.Ib_strength
         return Ib
+
+    def create_Imodulatory(self):
+        """Create modulatory Input"""
+        Im = np.zeros(int(self.simulation_dur / self.step_size))
+        Im[:] = self.Im_strength
+        return Im
 
 
     def add_background_noise(self, Ib_matrix):
@@ -438,7 +459,7 @@ class SomatoModel():
         S = self.p.get_connectStrength()
         P = self.p.get_connectProb()
         C = self.p.get_cellcounts()
-        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts)
+        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts)
 
         # Convert numpy arrays to lists
         parameters = {
@@ -467,9 +488,9 @@ class SomatoModel():
                 is only drawn, not saved.
         """
         pop_names = self.get_population_labels()
-        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, area=self.area)
+        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, area=self.area)
         # drop the background (B) and external (Ext) input columns so the matrix is square
-        W_df = pd.DataFrame(W[:, :-2], index=pop_names, columns=pop_names)
+        W_df = pd.DataFrame(W[:, :-3], index=pop_names, columns=pop_names)
 
         fig, ax = plt.subplots(figsize=(14, 12))
         sns.heatmap(W_df, annot=False, cmap='coolwarm', center=0, xticklabels=pop_names, yticklabels=pop_names, ax=ax)
@@ -519,7 +540,10 @@ class SomatoModel():
     def compute_potentials(self, timestep):
         """
         Compute the potentials of all populations.
-        Also take into account the background input and external input.
+        Also take into account the background, external and modulatory input.
+
+        The last three synapse columns of W / v_current / u_t are the input synapses:
+        -3 background (Wb), -2 external (Wext), -1 modulatory (Wm).
         """
 
         pop_slice = slice(0, self.nPop)
@@ -546,10 +570,11 @@ class SomatoModel():
         )
 
         self.u_t[:, pop_slice] += u_dot * self.step_size
-
-
+        
+        
         # -----------------------------
-        # EXTERNAL INPUT
+        # MODULATORY INPUT
+        # targeting only VIP 
         # -----------------------------
 
         # update potentials
@@ -557,13 +582,32 @@ class SomatoModel():
         self.v_current[:, -1] += v_dot * self.step_size
 
         u_dot = (
-            (self.H[:, -1] / self.tau[:, -1])
-            * (self.W[:, -1] * self.Iext[:, timestep])
-            - 2 * self.u_t[:, -1] / self.tau[:, -1]
-            - v_prev[:, -1] / (self.tau[:, -1] ** 2)
+            (self.H[:, -1] / self.tau_external)
+            * (self.W[:, -1] * self.Im[:, timestep])
+            - 2 * self.u_t[:, -1] / self.tau_external
+            - v_prev[:, -1] / (self.tau_external ** 2)
         )
 
         self.u_t[:, -1] += u_dot * self.step_size
+
+
+        # -----------------------------
+        # EXTERNAL INPUT
+        # From thalamus (VPM)
+        # -----------------------------
+
+        # update potentials
+        v_dot = self.u_t[:, -2]
+        self.v_current[:, -2] += v_dot * self.step_size
+
+        u_dot = (
+            (self.H[:, -2] / self.tau_external)
+            * (self.W[:, -2] * self.Iext[:, timestep])
+            - 2 * self.u_t[:, -2] / self.tau_external
+            - v_prev[:, -2] / (self.tau_external ** 2)
+        )
+
+        self.u_t[:, -2] += u_dot * self.step_size
 
 
         # -----------------------------
@@ -572,17 +616,19 @@ class SomatoModel():
         # -----------------------------
 
         # update potentials
-        v_dot = self.u_t[:, -2]
-        self.v_current[:, -2] += v_dot * self.step_size
+        v_dot = self.u_t[:, -3]
+        self.v_current[:, -3] += v_dot * self.step_size
 
         u_dot = (
-            (self.H[:, -2] / self.tau[:, -2])
-            * (self.W[:, -2] * self.Ib[:, timestep])
-            - 2 * self.u_t[:, -2] / self.tau[:, -2]
-            - v_prev[:, -2] / (self.tau[:, -2] ** 2)
+            (self.H[:, -3] / self.tau_external)
+            * (self.W[:, -3] * self.Ib[:, timestep])
+            - 2 * self.u_t[:, -3] / self.tau_external
+            - v_prev[:, -3] / (self.tau_external ** 2)
         )
 
-        self.u_t[:, -2] += u_dot * self.step_size
+        self.u_t[:, -3] += u_dot * self.step_size
+
+
 
         return self.v_current.copy()
 
@@ -670,6 +716,14 @@ class SomatoModel():
 
     def prepare_run_dir(self, base_dir):
         """Create base_dir/<self.filename>/ for this run, dump params.json, return the path."""
+        # Fail with something readable rather than a bare "OSError: [Errno 36] File name
+        # too long" if a newly added parameter token ever pushes the stem over the limit.
+        n_bytes = len(self.filename.encode())
+        if n_bytes > hf.RUN_STEM_MAX_BYTES:
+            raise ValueError(
+                f"run folder name is {n_bytes} bytes, over the {hf.RUN_STEM_MAX_BYTES}-byte "
+                f"filesystem limit: {self.filename!r}. Shorten or drop a token in "
+                "helper_functions.run_stem (and mirror it in its readers).")
         run_dir = os.path.join(base_dir, self.filename)
         os.makedirs(run_dir, exist_ok=True)
         def _to_jsonable(o):
@@ -1157,9 +1211,11 @@ class SomatoModel():
             dipoles_ES2_layers = proj["S2"]
 
             # convolve the precomputed dipole models with the simulated data
-            potentialsEA3b = self.potential[exc_pops[0], :-2]
-            potentialsEA1 = self.potential[exc_pops[1:5], :-2]
-            potentialsES2 = self.potential[exc_pops[-4:], :-2]
+            # :-3 drops the background, external and modulatory input synapse columns,
+            # leaving only the population-to-population PSPs the forward model projects
+            potentialsEA3b = self.potential[exc_pops[0], :-3]
+            potentialsEA1 = self.potential[exc_pops[1:5], :-3]
+            potentialsES2 = self.potential[exc_pops[-4:], :-3]
 
             # for each time point, compute the simulated dipole
             nE = 9
@@ -2091,11 +2147,13 @@ class SomatoModel():
                                          seg_dur=0.4, overlap=0.5, settle_s=0.5, show=False):
         """Plot simulated vs measured pre-stim spectra per ROI, as the "ps" fit sees them.
 
-        Layout 3x3: columns are the ROIs (A3b, A1, S2) on the shared 2.5 Hz grid, rows are
-        three views of the same comparison —
-          - top: the raw spectra on log-log axes, each scaled to its own maximum, so the
-            aperiodic slope and any peak are visible whatever the amplitude mismatch;
-          - middle / bottom: the log10 residual above the *local* 1/f reference of the alpha
+        Layout 4x3: columns are the ROIs (A3b, A1, S2) on the shared 2.5 Hz grid, rows are
+        four views of the same comparison —
+          - row 0: the raw spectra on ordinary linear axes, each scaled to its own maximum —
+            the plain view, where peak frequency and width read off directly;
+          - row 1: the same spectra on log-log axes, so the aperiodic slope and any peak are
+            visible whatever the amplitude mismatch;
+          - rows 2 / 3: the log10 residual above the *local* 1/f reference of the alpha
             and the beta band respectively — exactly the quantity compute_error_prestim_peaks
             scores, with the scored band shaded and the prominences annotated.
 
@@ -2130,7 +2188,7 @@ class SomatoModel():
         figuredir = PRESTIM_SPECTRUM_DIR
         os.makedirs(figuredir, exist_ok=True)
         n_seg = len(self._prestim_segments(**seg_kw)[0])
-        fig, axes = plt.subplots(3, 3, figsize=(13, 9.4), sharex=True)
+        fig, axes = plt.subplots(4, 3, figsize=(13, 12.4))
         fig.suptitle(
             f"Pre-stim spectrum - g={self.coupling_strength}, sI={self.strength_I}, "
             f"area={self.area} ({n_seg} x {int(seg_dur * 1000)} ms segments, "
@@ -2139,9 +2197,25 @@ class SomatoModel():
             fontsize=11,
         )
 
-        # --- row 0: raw power, log-log, each side on its own scale ---
+        # --- row 0: raw power on plain linear axes, each side on its own scale ---
         for col, roi in enumerate(rois):
             ax = axes[0][col]
+            for band in (PRESTIM_ALPHA_BAND, PRESTIM_BETA_BAND):
+                ax.axvspan(band[0], band[1], color="0.9", zorder=0)
+            for f, p, colour, lbl in ((f_sim, spec_sim[roi], "C1", "Simulated"),
+                                      (f_tgt, spec_tgt[roi], "black", "Measured")):
+                p = np.asarray(p, dtype=float)
+                if np.nanmax(p) > 0:
+                    ax.plot(f, p / np.nanmax(p), color=colour, lw=1.5, marker="o", ms=3, label=lbl)
+                else:
+                    ax.plot([], [], color=colour, label=f"{lbl} (no power)")
+            ax.set_title(roi)
+            ax.legend(frameon=False, fontsize=8)
+        axes[0][0].set_ylabel("Power (each / own max)")
+
+        # --- row 1: the same raw power, log-log ---
+        for col, roi in enumerate(rois):
+            ax = axes[1][col]
             for f, p, colour, lbl in ((f_sim, spec_sim[roi], "C1", "Simulated"),
                                       (f_tgt, spec_tgt[roi], "black", "Measured")):
                 p = np.asarray(p, dtype=float)
@@ -2149,13 +2223,12 @@ class SomatoModel():
                     ax.loglog(f, p / np.nanmax(p), color=colour, lw=1.5, marker="o", ms=3, label=lbl)
                 else:
                     ax.plot([], [], color=colour, label=f"{lbl} (no power)")
-            ax.set_title(roi)
             ax.legend(frameon=False, fontsize=8)
-        axes[0][0].set_ylabel("Raw power (each / own max)")
+        axes[1][0].set_ylabel("Raw power (each / own max)")
 
-        # --- rows 1-2: the log residual the peak error scores, one row per band ---
-        band_rows = ((1, "alpha", PRESTIM_ALPHA_BAND, PRESTIM_ALPHA_FLANKS),
-                     (2, "beta",  PRESTIM_BETA_BAND,  PRESTIM_BETA_FLANKS))
+        # --- rows 2-3: the log residual the peak error scores, one row per band ---
+        band_rows = ((2, "alpha", PRESTIM_ALPHA_BAND, PRESTIM_ALPHA_FLANKS),
+                     (3, "beta",  PRESTIM_BETA_BAND,  PRESTIM_BETA_FLANKS))
         for row, name, band, flanks in band_rows:
             for col, roi in enumerate(rois):
                 ax = axes[row][col]
@@ -2176,7 +2249,7 @@ class SomatoModel():
                     else:
                         notes.append(f"{lbl[:3].lower()} n/a")
                 ax.set_title(f"{roi} - {name}: " + " | ".join(notes), fontsize=9)
-                if row == 2:
+                if row == 3:
                     ax.set_xlabel("Frequency (Hz)")
                 ax.legend(frameon=False, fontsize=8)
             axes[row][0].set_ylabel(f"log10 residual ({name} reference)")
@@ -2185,6 +2258,15 @@ class SomatoModel():
             hi = max(a.get_ylim()[1] for a in axes[row])
             for a in axes[row]:
                 a.set_ylim(lo, hi)
+
+        # sharex is off (row 0 is the linear view), so the log frequency axis of the
+        # transformed rows and the common range of all of them are set here by hand
+        for row_axes in axes[1:]:
+            for a in row_axes:
+                a.set_xscale("log")
+        for row_axes in axes:
+            for a in row_axes:
+                a.set_xlim(fmin, fmax)
 
         fig.tight_layout(rect=[0, 0, 1, 0.97])
         fname = (

@@ -27,7 +27,17 @@ Description: Overview figures of the model's parameter space: where it oscillate
     Per Latin-hypercube screen:
       *_screen_alpha_prom / *_screen_peak_freq   marginals against every parameter
       *_screen_summary                           regime and band composition
+      *_paramInfluence                           every parameter ranked by |Spearman|
+                                                 against frequency and alpha prominence
+      *_freqVs_<param>                           peak frequency against one parameter,
+                                                 bands shaded, unreliable points hollow
       top_alpha_<signal>.csv                     the strongest alpha parameter sets
+
+    A screen scored on a single noise realisation cannot be trusted for anything
+    spectral: with ~11 Welch segments the location of the peak is set as much by the
+    noise draw as by the parameters. Run the sweep with --seeds > 1 (the spectra are
+    then averaged over realisations before scoring) and read `band_agreement` /
+    `peak_freq_sd` to see which points are actually reliable.
 
 Usage:
     python Analysis/step003_plot_parameter_space.py                # every sweep found
@@ -138,8 +148,19 @@ def plot_line_sweep(sweep_dir, figure_dir, name, focus="roi_A1"):
 
 def plot_screen_sweep(sweep_dir, figure_dir, name):
     """Every figure of the Latin-hypercube screen, plus the ranked parameter sets."""
-    df, _ = pps.load_sweep(sweep_dir)
+    df, cfg = pps.load_sweep(sweep_dir)
     made = [pps.plot_screen_summary(df, figure_dir, name)]
+
+    # which parameters move the oscillation at all, ranked
+    made.append(pps.plot_param_influence(df, figure_dir, name))
+    # frequency against each swept parameter; e1_tau is the one usually asked for, but
+    # every parameter the screen actually varied gets its own figure
+    swept = [c for c in df.columns if c in pps.PARAM_LABELS and df[c].nunique() > 1]
+    for param in swept:
+        made.append(pps.plot_param_vs_frequency(df, param, figure_dir, name))
+    if "n_seeds" in df.columns and int(df["n_seeds"].iloc[0]) == 1:
+        print("  NOTE: this screen was scored on a single noise realisation, so its"
+              " peak frequencies and bands are not reliable - re-run with --seeds > 1.")
     for signal in pps.DEFAULT_SIGNALS:
         made.append(pps.plot_screen_marginals(df, "alpha_prom", figure_dir, name,
                                               signal=signal,

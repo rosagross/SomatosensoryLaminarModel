@@ -413,18 +413,24 @@ def set_sim_info(df, potentials_df, g, sI, d, s, bI,
         Written as extra columns when given. Needed whenever a batch varies them,
         otherwise the runs cannot be told apart from the processed.csv alone.
     """
+    # Rounded to the same precision fmt_param uses for the run-folder name. simulation_main
+    # stores some loop variables straight off np.arange, so params.json carries values like
+    # 1.2000000000000004 while the folder is named g1.2 - and a cell that filters
+    # `globalCoupling == 1.2` (the grid value it also used to build the stem) then silently
+    # gets an empty frame. Rounding here keeps the column and the folder name equal.
+    _r = lambda v: round(float(v), 6) if isinstance(v, (float, np.floating)) else v
     df['population'] = potentials_df.columns
-    df['globalCoupling'] = g
-    df['strength_I'] = sI
-    df['InputDuration'] = d
-    df['InputStrength'] = s
-    df['BckgndInputStrength'] = bI
+    df['globalCoupling'] = _r(g)
+    df['strength_I'] = _r(sI)
+    df['InputDuration'] = _r(d)
+    df['InputStrength'] = _r(s)
+    df['BckgndInputStrength'] = _r(bI)
     if g_thalPOm is not None:
-        df['gthalPOm'] = g_thalPOm
+        df['gthalPOm'] = _r(g_thalPOm)
     if g_intercortical is not None:
-        df['gIntercortical'] = g_intercortical
+        df['gIntercortical'] = _r(g_intercortical)
     if Ib_noise_std is not None:
-        df['IbNoiseStd'] = Ib_noise_std
+        df['IbNoiseStd'] = _r(Ib_noise_std)
 
 
 def load_trajectory(rates_df, potentials_df, g, sI, d, s, bI, step_size):
@@ -468,13 +474,107 @@ def load_parameters(WDDIR):
         params = json.load(json_file)
     return params
 
-def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False, suffix='', g_thalPOm=1, Ib_noise_std=None):
+# ext4 allows at most 255 bytes per path component. A run folder is named by its
+# parameter stem, so the stem itself has to stay under this.
+RUN_STEM_MAX_BYTES = 255
+
+
+def fmt_param(value, nd=6):
+    """Format one parameter for a run-folder name.
+
+    Floats are rounded to nd decimals; ints and strings are passed through untouched.
+    Rounding exists because load_optimized_params feeds full-precision optimizer values
+    (g1.3067678725124934) into the name, which pushed the stem past RUN_STEM_MAX_BYTES.
+    Six decimals is enough that values which were already short are unchanged
+    (11.25 -> '11.25'), so run folders written before the rounding keep their names.
+    """
+    if isinstance(value, (bool, np.bool_)):
+        return f"{value}"
+    if isinstance(value, (float, np.floating)):
+        return f"{round(float(value), nd)}"
+    return f"{value}"
+
+
+def run_stem(*, g_thal, g_thalPOm, sI_thal, g, sI, Ib, Ib_noise_std, Iext_dur,
+             input_type, Iext_str, input_onset, thal_cellcounts, Im_strength,
+             mI_cellcounts, bI_cellcounts, extI_cellcounts, g_intercortical,
+             include_gthalPOm=True, include_Im=True, round_floats=True, suffix=''):
+    """Canonical name of a run folder.
+
+    Single source of truth for the stem: SomatoModel.filename builds the folder with
+    this, and load_simulation_data / load_derivative find it again with this. Keeping
+    one builder is deliberate - the writer and the two readers previously each had
+    their own copy of the f-string, which is how the Im tokens ended up on the writing
+    side only.
+
+    Keyword-only on purpose: seventeen same-typed parameters are far too easy to
+    transpose positionally, and a transposition silently yields a wrong path rather
+    than an error.
+
+    The flags select the older layouts that existing folders on disk still use:
+        include_gthalPOm=False  runs saved before g_thalPOm entered the name
+        include_Im=False        runs saved before the modulatory input existed
+        Ib_noise_std=None       runs saved before the background-noise parameter
+        round_floats=False      runs saved before the rounding above
+    """
+    fmt = fmt_param if round_floats else (lambda v: f"{v}")
+    gthalPOm_token = f"_gthalPOm{fmt(g_thalPOm)}" if include_gthalPOm else ""
+    noise_token = "" if Ib_noise_std is None else f"_Ibnoise{fmt(Ib_noise_std)}"
+    im_token = f"_Im{fmt(Im_strength)}_Imcells{fmt(mI_cellcounts)}" if include_Im else ""
+    return (
+        f"gthal{fmt(g_thal)}{gthalPOm_token}_sIthal{fmt(sI_thal)}_"
+        f"g{fmt(g)}_sI{fmt(sI)}_Ib{fmt(Ib)}{noise_token}_Iextd{fmt(Iext_dur)}_"
+        f"{input_type}Iexts{fmt(Iext_str)}_Ionset{fmt(input_onset)}_"
+        f"thalcells{fmt(thal_cellcounts)}{im_token}_"
+        f"Ibcells{fmt(bI_cellcounts)}_Iextcells{fmt(extI_cellcounts)}_"
+        f"gInter{fmt(g_intercortical)}{suffix}"
+    )
+
+
+def _stem_candidates(*, data_dir, inner, suffix='', **kw):
+    """Run-folder stems to try, newest layout first; returns (stem, path) pairs.
+
+    `inner` is the file expected inside the folder (processed.csv), or several names to
+    try in order - which is how the results file is addressed, since runs saved after
+    the noise-seed loop entered simulation_main hold one results{seed}.hdf5 per noise
+    realisation where older runs hold a single results.hdf5.
+
+    Older folders on disk predate the Im tokens, the float rounding and the gthalPOm
+    token, so each of those layouts gets a candidate.
+    """
+    inners = (inner,) if isinstance(inner, str) else tuple(inner)
+    variants = [
+        dict(),                                                    # current layout
+        dict(include_Im=False),                                    # before the modulatory input
+        dict(include_Im=False, round_floats=False),                # before the float rounding
+        dict(include_Im=False, round_floats=False,
+             include_gthalPOm=False, Ib_noise_std=None),           # before gthalPOm / Ibnoise
+    ]
+    out = []
+    for extra in variants:
+        stem = run_stem(**{**kw, **extra}, suffix=suffix)
+        for name in inners:
+            out.append((stem, os.path.join(data_dir, stem, name)))
+    return out
+
+
+def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, data_dir, pyrates=False, suffix='', g_thalPOm=1, Ib_noise_std=None, Im_strength=0, mI_cellcounts=2000, g_thal=2, sI_thal=0.5, seed=0):
     """ Read simulation data
 
     Ib_noise_std : optional
         Runs saved after the background-noise parameter was added carry an
         Ibnoise{std} token in the folder name (see SomatoModel.filename); pass the
         run's Ib_noise_std to address those. None keeps the older stem.
+    Im_strength, mI_cellcounts : optional
+        Modulatory (VIP) input tokens, present in runs saved after that input was
+        added. Folders written before it are still found via _stem_candidates.
+    g_thal, sI_thal : optional
+        Defaults reproduce the gthal2_ / sIthal0.5_ values this stem used to hardcode.
+    seed : optional
+        Which noise realisation to read. simulation_main runs several seeds per
+        parameter set when Ib_noise_std > 0 and saves each as results{seed}.hdf5;
+        this picks one of them. Runs saved before that loop hold a single
+        results.hdf5 and ignore this argument.
     """
     # read in firing rates in data matrix (datapoints x populations)
     if pyrates:
@@ -482,20 +582,21 @@ def load_simulation_data(g, g_intercortical, sI, bI, d, s, input_onset, thal_cel
         filepath = os.path.join(data_dir, filename)
     else:
         # each run now lives in its own folder named by the parameter stem; the
-        # rates/potentials are stored in results.hdf5 inside that folder
+        # rates/potentials are stored in results{seed}.hdf5 inside that folder - or in a
+        # single results.hdf5 for runs saved before the noise-seed loop
         # (alongside params.json and optional tf/tc comparison files).
-        noise_token = '' if Ib_noise_std is None else f"_Ibnoise{Ib_noise_std}"
-        stem = f"gthal2_gthalPOm{g_thalPOm}_sIthal0.5_g{g}_sI{sI}_Ib{bI}{noise_token}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}"
+        candidates = _stem_candidates(
+            data_dir=data_dir, inner=(f"results{seed}.hdf5", "results.hdf5"),
+            g_thal=g_thal, g_thalPOm=g_thalPOm, sI_thal=sI_thal, g=g, sI=sI, Ib=bI,
+            Ib_noise_std=Ib_noise_std, Iext_dur=d, input_type=input_type, Iext_str=s,
+            input_onset=input_onset, thal_cellcounts=thal_cellcounts,
+            Im_strength=Im_strength, mI_cellcounts=mI_cellcounts,
+            bI_cellcounts=bI_cellcounts, extI_cellcounts=extI_cellcounts,
+            g_intercortical=g_intercortical)
+        # first layout that actually exists on disk wins; fall back to the newest one
+        # so a genuinely missing run still reports the current name in its error.
+        stem, filepath = next((c for c in candidates if os.path.exists(c[1])), candidates[0])
         filename = stem + ".hdf5"
-        filepath = os.path.join(data_dir, stem, "results.hdf5")
-        # backward-compat: runs saved before g_thalPOm was added to the filename
-        # have no gthalPOm token; fall back to that older stem if the new one is absent.
-        if not os.path.exists(filepath):
-            stem_old = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_intercortical}"
-            old_path = os.path.join(data_dir, stem_old, "results.hdf5")
-            if os.path.exists(old_path):
-                stem, filename, filepath = stem_old, stem_old + ".hdf5", old_path
-        #print(filepath)
 
     rates_df = pd.read_hdf(filepath, key='rates')
 
@@ -514,23 +615,23 @@ def load_hdf_safe(fname):
     potentials_safe = pd.DataFrame(values, columns=cols, index=idx)
     return potentials_safe
 
-def load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix='', g_thalPOm=1, Ib_noise_std=None):
+def load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, deriv_dir, suffix='', g_thalPOm=1, Ib_noise_std=None, Im_strength=0, mI_cellcounts=2000, g_thal=2, sI_thal=0.5):
     """ load the characteristics/processed data of one simulation
 
-    Ib_noise_std : optional
-        Same Ibnoise{std} folder-name token as in load_simulation_data.
+    Ib_noise_std, Im_strength, mI_cellcounts, g_thal, sI_thal : optional
+        Same folder-name tokens as in load_simulation_data.
     """
     # the processed characteristics now live inside the per-run folder (named by
     # the parameter stem) as processed.csv, next to results.hdf5 / params.json
-    noise_token = '' if Ib_noise_std is None else f"_Ibnoise{Ib_noise_std}"
-    stem = f"gthal2_gthalPOm{g_thalPOm}_sIthal0.5_g{g}_sI{sI}_Ib{bI}{noise_token}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}{suffix}"
-    filepath = os.path.join(deriv_dir, stem, "processed.csv")
-    # backward-compat: runs saved before g_thalPOm was in the filename lack the gthalPOm token
-    if not os.path.exists(filepath):
-        stem_old = f"gthal2_sIthal0.5_g{g}_sI{sI}_Ib{bI}_Iextd{d}_{input_type}Iexts{s}_Ionset{input_onset}_thalcells{thal_cellcounts}_Ibcells{bI_cellcounts}_Iextcells{extI_cellcounts}_gInter{g_inter}{suffix}"
-        old_path = os.path.join(deriv_dir, stem_old, "processed.csv")
-        if os.path.exists(old_path):
-            filepath = old_path
+    candidates = _stem_candidates(
+        data_dir=deriv_dir, inner="processed.csv", suffix=suffix,
+        g_thal=g_thal, g_thalPOm=g_thalPOm, sI_thal=sI_thal, g=g, sI=sI, Ib=bI,
+        Ib_noise_std=Ib_noise_std, Iext_dur=d, input_type=input_type, Iext_str=s,
+        input_onset=input_onset, thal_cellcounts=thal_cellcounts,
+        Im_strength=Im_strength, mI_cellcounts=mI_cellcounts,
+        bI_cellcounts=bI_cellcounts, extI_cellcounts=extI_cellcounts,
+        g_intercortical=g_inter)
+    _, filepath = next((c for c in candidates if os.path.exists(c[1])), candidates[0])
     deriv_df = pd.read_csv(filepath)
     return deriv_df
 
@@ -540,9 +641,9 @@ def check_list(sim_param):
 
     return sim_param
 
-def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix='', g_thalPOm=1, Ib_noise_std=None):
+def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix='', g_thalPOm=1, Ib_noise_std=None, Im_strengths=0, g_thal=2, sI_thal=0.5, mI_cellcounts=2000):
     """ load all selected combinations of processed simulation (with their characteristics) into one dataframe
-    All parameters can be either lists of single values. If they are single values, 
+    All parameters can be either lists of single values. If they are single values,
     convert them into lists with one entry.
 
     Parameters:
@@ -553,6 +654,13 @@ def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_on
     g_inter : float or list of intercortical coupling values
     sI : float or list of E/I balance values
     Ib_str : float or list of background input strengths
+    Im_strengths : float or list of modulatory (VIP) input strengths
+        Swept like the others, so a batch that varies Im is addressable here. Note the
+        Im value is *not* recoverable from processed.csv (set_sim_info does not write
+        it), so a caller that sweeps Im has to keep track of it itself.
+    g_thal, sI_thal, mI_cellcounts : optional
+        Fixed folder-name tokens, forwarded to load_derivative. The g_thal default of 2
+        does not match every batch - pass params['g_thal'] rather than relying on it.
     """
 
     # check if parameters are lists, if not convert to list
@@ -561,6 +669,7 @@ def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_on
     gs = check_list(gs)
     sIs = check_list(sIs)
     Ib_str = check_list(Ib_str)
+    Im_strengths = check_list(Im_strengths)
 
     data_df = pd.DataFrame()
     for d in Iext_dur:
@@ -569,7 +678,8 @@ def load_all_derivatives(Iext_dur, Iext_str, gs, g_inters, sIs, Ib_str, input_on
                     for g_inter in g_inters:
                         for sI in sIs:
                             for bI in Ib_str:
-                                data_single_df = load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
-                                data_df = pd.concat([data_df, data_single_df], ignore_index=True)
+                                for Im in Im_strengths:
+                                    data_single_df = load_derivative(g, g_inter, sI, bI, d, s, input_onset, thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type, processed_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std, Im_strength=Im, mI_cellcounts=mI_cellcounts, g_thal=g_thal, sI_thal=sI_thal)
+                                    data_df = pd.concat([data_df, data_single_df], ignore_index=True)
 
     return data_df

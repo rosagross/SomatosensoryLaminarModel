@@ -21,7 +21,7 @@ from helper_functions import *
 
 # Define paths
 SIMDIR = "/data/pt_02989"
-sim_dir = "/data/pt_02989/output_test"
+sim_dir = os.path.join(SIMDIR, "output_grossmannr")
 WDDIR = os.getenv("WDDIR")
 figure_dir = os.path.join(SIMDIR, "Figures", "global_dynamics")
 if not os.path.exists(figure_dir):
@@ -139,3 +139,5 @@ print(f"done: {n_done} processed, {len(failed)} failed")
 for name, err in failed:
     print(f"  {name}: {err}")
 
+
+# %%

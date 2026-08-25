@@ -54,6 +54,11 @@ BAND_COLORS = {
 }
 BAND_ORDER = ["none", "theta", "alpha", "beta", "gamma"]
 
+# Frequency extent of each band, for shading the frequency axis (matches BANDS in
+# Simulations/model/oscillation_metrics.py).
+_BAND_SPANS = {"theta": (4.0, 7.0), "alpha": (8.0, 13.0),
+               "beta": (17.5, 30.0), "gamma": (31.0, 50.0)}
+
 # The signals plotted by default: the three dipole ROIs, which are what the measured
 # EEG is compared against, plus the excitatory population of each S1 layer.
 DEFAULT_SIGNALS = ["roi_A3b", "roi_A1", "roi_S2"]
@@ -619,3 +624,354 @@ def plot_gain_waterfall(spec, param, figure_dir, name, signal="roi_A1", fmax=45.
     ax.set_title(f"Network gain spectrum - {signal_label(signal)}", fontweight="bold")
     fig.tight_layout()
     return save_figure(fig, figure_dir, f"{name}_gainspectra_{param}_{signal}")
+
+
+# ── parameter-influence figures (seed-averaged screens) ────────────────────────
+def plot_param_vs_frequency(df, param, figure_dir, name, signals=None, suffix='',
+                            agreement_min=0.5, n_bins=12, min_per_bin=4):
+    """Peak frequency against one parameter, one panel per ROI.
+
+    The figure the `e1_tau` question needs: it puts the swept parameter on x, the
+    dominant peak frequency on y, and shades the four frequency bands across the panel
+    so a point's band can be read off its height. Colour repeats the band, so the
+    scatter and the shading agree by construction.
+
+    Points whose `band_agreement` is below `agreement_min` - i.e. the individual noise
+    realisations disagreed with the seed-averaged spectrum about where the peak sits -
+    are drawn hollow. That distinction is the whole reason this sweep exists: an earlier
+    single-realisation screen reported alpha at points where the peak frequency in fact
+    scattered from 4 to 41 Hz across seeds, and a solid-looking trend line through such
+    points is worse than no plot at all.
+
+    Parameters
+    ----------
+    df : DataFrame
+        A screen's sweep_features.csv, with the consistency columns.
+    param : str
+        Parameter for the x axis, e.g. 'e1_tau'.
+    signals : sequence of str
+        ROIs to show, one panel each (default the three dipole ROIs).
+    agreement_min : float
+        band_agreement below which a point is drawn hollow.
+    """
+    signals = signals or DEFAULT_SIGNALS
+    fig, axes = plt.subplots(1, len(signals), figsize=(4.0 * len(signals) + 1.6, 3.6),
+                             sharey=True, squeeze=False)
+    axes = axes[0]
+    has_agreement = 'band_agreement' in df.columns
+
+    for i, (ax, sig) in enumerate(zip(axes, signals)):
+        sub = df[(df['signal'] == sig) & (df['regime'] == 'oscillation')].copy()
+        # band shading first, so the points sit on top of it
+        for bname, (lo, hi) in _BAND_SPANS.items():
+            ax.axhspan(lo, hi, color=BAND_COLORS[bname], alpha=0.16, linewidth=0,
+                       zorder=0)
+            if i == 0:
+                ax.text(0.012, (lo + hi) / 2, bname, transform=ax.get_yaxis_transform(),
+                        va='center', ha='left', fontsize=7, color='0.35', zorder=1)
+        if sub.empty:
+            ax.text(0.5, 0.5, f'{signal_label(sig)}\n(nothing oscillating)',
+                    ha='center', va='center', transform=ax.transAxes, fontsize=8)
+            continue
+
+        firm = (sub['band_agreement'] >= agreement_min) if has_agreement \
+            else np.ones(len(sub), dtype=bool)
+        for bname in BAND_ORDER:
+            m = sub['band'] == bname
+            if not m.any():
+                continue
+            ax.scatter(sub.loc[m & firm, param], sub.loc[m & firm, 'peak_freq'],
+                       s=9, color=BAND_COLORS[bname], linewidths=0, zorder=3,
+                       label=bname if i == len(signals) - 1 else None)
+            ax.scatter(sub.loc[m & ~firm, param], sub.loc[m & ~firm, 'peak_freq'],
+                       s=9, facecolors='none', edgecolors=BAND_COLORS[bname],
+                       linewidths=0.5, zorder=2)
+
+        # binned median and interquartile ribbon over the reliable points only
+        rel = sub[firm]
+        if len(rel) >= min_per_bin:
+            edges = np.linspace(sub[param].min(), sub[param].max(), n_bins + 1)
+            centres, med, q1, q3 = [], [], [], []
+            for lo, hi in zip(edges[:-1], edges[1:]):
+                v = rel.loc[rel[param].between(lo, hi), 'peak_freq'].dropna()
+                if len(v) >= min_per_bin:
+                    centres.append(0.5 * (lo + hi))
+                    med.append(v.median()); q1.append(v.quantile(.25))
+                    q3.append(v.quantile(.75))
+            if centres:
+                ax.fill_between(centres, q1, q3, color='0.35', alpha=0.18, linewidth=0,
+                                zorder=4)
+                ax.plot(centres, med, color='0.15', linewidth=1.8, zorder=5)
+        ax.set_xlabel(param_label(param))
+        ax.set_title(signal_label(sig))
+        if i == 0:
+            ax.set_ylabel('peak frequency (Hz)')
+
+    handles, labs = axes[-1].get_legend_handles_labels()
+    if handles:
+        axes[-1].legend(handles, labs, title='dominant band', frameon=False, fontsize=7,
+                        title_fontsize=8, loc='center left', bbox_to_anchor=(1.02, 0.5))
+    note = (f'hollow = band_agreement < {agreement_min:g} (the noise realisations '
+            f'disagreed); line = median, band = IQR')
+    fig.suptitle(f'Influence of {param_label(param)} on the oscillation frequency',
+                 fontweight='bold')
+    fig.text(0.5, -0.04, note, ha='center', fontsize=7.5, color='0.35')
+    sns.despine(fig=fig, trim=True)
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    return save_figure(fig, figure_dir, f'{name}_freqVs_{param}{suffix}')
+
+
+def plot_param_influence(df, figure_dir, name, signals=None, suffix='',
+                         values=(('peak_freq', 'peak frequency'),
+                                 ('alpha_prom', 'alpha prominence'))):
+    """Rank every swept parameter by how strongly it moves each measure.
+
+    Spearman rho (monotone, so it does not assume the relationship is linear) between
+    each parameter and each measure, over the oscillating points, one bar per ROI. The
+    bars are sorted by the largest |rho| across ROIs, so the parameters that matter come
+    out on top; the sign is kept on the bar so the direction is not lost.
+    """
+    from scipy.stats import spearmanr
+    signals = signals or DEFAULT_SIGNALS
+    params = [c for c in df.columns if c in PARAM_LABELS and df[c].nunique() > 1]
+
+    fig, axes = plt.subplots(1, len(values), figsize=(5.2 * len(values), 
+                                                      0.34 * len(params) + 2.0),
+                             sharey=True, squeeze=False)
+    axes = axes[0]
+    colors = sns.color_palette('colorblind', len(signals))
+
+    rho = {}
+    for value, _ in values:
+        for sig in signals:
+            sub = df[(df['signal'] == sig) & (df['regime'] == 'oscillation')]
+            for p in params:
+                v = sub[[p, value]].dropna()
+                rho[(value, sig, p)] = (spearmanr(v[p], v[value])[0]
+                                        if len(v) > 10 else np.nan)
+    order = sorted(params, key=lambda p: max(
+        abs(rho.get((v, s, p), 0)) if np.isfinite(rho.get((v, s, p), np.nan)) else 0
+        for v, _ in values for s in signals))
+    y = np.arange(len(order))
+    h = 0.8 / len(signals)
+
+    for ax, (value, label) in zip(axes, values):
+        for k, (sig, col) in enumerate(zip(signals, colors)):
+            vals = [rho.get((value, sig, p), np.nan) for p in order]
+            ax.barh(y + (k - (len(signals) - 1) / 2) * h, vals, height=h, color=col,
+                    label=signal_label(sig) if ax is axes[0] else None)
+        ax.axvline(0, color='0.5', linewidth=0.8)
+        ax.set_yticks(y)
+        ax.set_yticklabels([param_label(p) for p in order])
+        ax.set_xlabel(r'Spearman $\rho$')
+        ax.set_title(label)
+    handles, labs = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labs, frameon=False, fontsize=8, loc='lower center',
+               ncol=len(signals), bbox_to_anchor=(0.5, -0.02))
+    fig.suptitle('Which parameters move the oscillation, ranked', fontweight='bold')
+    sns.despine(fig=fig, trim=True)
+    fig.tight_layout(rect=[0, 0.02, 1, 0.95])
+    return save_figure(fig, figure_dir, f'{name}_paramInfluence{suffix}')
+
+
+# ── synaptic time-constant figures ─────────────────────────────────────────────
+# Distinct qualitative colours (Paul Tol's bright set): the three curves have to be
+# told apart at a glance, which a sequential colormap does not do.
+TAU_COLORS = {"e1_tau": "#4477AA", "e3b_tau": "#EE6677", "e2_tau": "#228833"}
+
+
+def _tau_line(df, param, signal):
+    """The rows of a `line` sweep for one swept parameter and one signal, sorted by x.
+
+    Sorting matters twice over: the x axis has to be monotone, and `sim_id` is what
+    indexes the spectra arrays, so the two must be put in the same order or the ridge
+    ends up scrambled against its own peak markers.
+    """
+    sub = df[(df["varied_param"] == param) & (df["signal"] == signal)]
+    return sub.sort_values("varied_value")
+
+
+def plot_tau_ridge_grid(df, spec, params, figure_dir, name, signals=None, fmax=45.0,
+                        agreement_min=0.5, suffix=""):
+    """Where the oscillation sits in frequency as each time constant is swept.
+
+    One panel per (time constant x ROI). The image is the seed-averaged network gain
+    spectrum - the run divided by the same parameter set with its loop gains scaled to
+    1e-3 - so a resonance is a bright horizontal ridge and the question "does the
+    frequency move with tau?" is answered by whether that ridge *bends*.
+
+    Each column of the image (one tau value) has its own median over frequency
+    subtracted, so what is coloured is the spectrum's *shape* and not its level. Without
+    that the figure is unreadable: the ROI dipoles carry a roughly constant 1e6 gain
+    over the loop-free control - the control's dipole is tiny - so the panel spans 5.9
+    to 7.0 in log10 and a scale wide enough to hold it flattens the ~0.5 decades of
+    actual spectral structure to one colour. The overall level is what the companion
+    amplitude figure reports; this one is about where in frequency the power sits.
+
+    Drawn on top is the scored `peak_freq`, and the two are deliberately different
+    measurements. The image's brightest row is the raw argmax, which at low loop gain
+    sits on the 1/f corner at 1-4 Hz and says nothing; `peak_freq` is the flank-
+    referenced band prominence, which is the number worth quoting (it reports 27 Hz at
+    points where the raw argmax reports 1 Hz). The image shows the shape, the markers
+    make the claim.
+
+    Seed disagreement is drawn rather than hidden: the error bar is `peak_freq_sd`, the
+    spread of the per-seed peak, and a marker is hollow where `band_agreement` falls
+    below `agreement_min`, i.e. where the individual noise realisations did not agree
+    with the averaged spectrum about which band dominates. Points that are not in the
+    `oscillation` regime are left out entirely.
+    """
+    signals = signals or DEFAULT_SIGNALS
+    gain = gain_spectra(spec)
+    freqs = spec["freqs"]
+    fmask = freqs <= fmax
+    has_agreement = "band_agreement" in df.columns
+    has_sd = "peak_freq_sd" in df.columns
+
+    # One colour scale for the whole figure, so panels are comparable by eye. A
+    # percentile rather than the extremes: a single hot corner would otherwise flatten
+    # every other panel to the midpoint.
+    imgs = {}
+    for p in params:
+        for sg in signals:
+            sub = _tau_line(df, p, sg)
+            if sub.empty or sg not in spec["signals"]:
+                continue
+            ids = sub["sim_id"].to_numpy()
+            with np.errstate(divide="ignore", invalid="ignore"):
+                img = np.log10(gain[ids, spec["signals"].index(sg), :][:, fmask])
+            img = img - np.nanmedian(img, axis=1, keepdims=True)
+            imgs[(p, sg)] = (sub["varied_value"].to_numpy(), img, sub)
+    finite = np.concatenate([np.abs(v[1][np.isfinite(v[1])].ravel())
+                             for v in imgs.values()]) if imgs else np.array([1.0])
+    lim = float(np.nanpercentile(finite, 98)) if finite.size else 1.0
+    lim = lim if np.isfinite(lim) and lim > 0 else 1.0
+
+    # constrained layout: every row carries its own x label (each sweeps a different
+    # parameter), and without it those labels collide with the titles of the row below
+    fig, axes = plt.subplots(len(params), len(signals),
+                             figsize=(3.5 * len(signals) + 1.4, 2.9 * len(params) + 1.1),
+                             sharex="row", sharey=True, squeeze=False,
+                             layout="constrained")
+    mesh = None
+    for r, p in enumerate(params):
+        for c, sg in enumerate(signals):
+            ax = axes[r][c]
+            entry = imgs.get((p, sg))
+            if entry is None:
+                ax.text(0.5, 0.5, "no data", ha="center", va="center",
+                        transform=ax.transAxes, fontsize=8)
+                continue
+            values, img, sub = entry
+            mesh = ax.pcolormesh(values, freqs[fmask], img.T, cmap="RdBu_r",
+                                 vmin=-lim, vmax=lim, shading="nearest")
+            for lo, hi in _BAND_SPANS.values():
+                for edge in (lo, hi):
+                    if edge <= fmax:
+                        ax.axhline(edge, color="0.25", linewidth=0.4, alpha=0.35,
+                                   zorder=2)
+
+            osc = sub[sub["regime"] == "oscillation"]
+            if not osc.empty:
+                firm = (osc["band_agreement"] >= agreement_min) if has_agreement \
+                    else np.ones(len(osc), dtype=bool)
+                err = osc["peak_freq_sd"].to_numpy() if has_sd else None
+                if err is not None:
+                    ax.errorbar(osc["varied_value"], osc["peak_freq"], yerr=err,
+                                fmt="none", ecolor="0.15", elinewidth=0.5, alpha=0.32,
+                                capsize=1.2, zorder=3)
+                ax.scatter(osc.loc[firm, "varied_value"], osc.loc[firm, "peak_freq"],
+                           s=16, color="k", linewidths=0, zorder=5)
+                ax.scatter(osc.loc[~firm, "varied_value"], osc.loc[~firm, "peak_freq"],
+                           s=16, facecolors="none", edgecolors="k", linewidths=0.7,
+                           zorder=4)
+            # the error bars run past the plotted band, and sharey would otherwise let
+            # one of them stretch every panel down to negative frequencies
+            ax.set_ylim(float(freqs[fmask].min()), float(freqs[fmask].max()))
+            # every row sweeps a different parameter, so the x label belongs on all of
+            # them, not only the bottom one
+            ax.set_xlabel(param_label(p))
+            if r == 0:
+                ax.set_title(signal_label(sg))
+            if c == 0:
+                ax.set_ylabel("frequency (Hz)")
+    if mesh is not None:
+        cbar = fig.colorbar(mesh, ax=axes.ravel().tolist(), fraction=0.02, pad=0.015)
+        cbar.set_label("log10 gain, re. the median over frequency")
+    fig.suptitle("Influence of the excitatory time constants on the oscillation "
+                 "frequency", fontweight="bold")
+    note = ("image = seed-averaged network gain spectrum, level removed per tau value; "
+            "markers = flank-referenced peak +/- across-seed SD; "
+            f"hollow = band_agreement < {agreement_min:g}")
+    fig.supxlabel(note, fontsize=7.5, color="0.35")
+    return save_figure(fig, figure_dir, f"{name}_tauRidgePeak{suffix}")
+
+
+def plot_tau_amplitude(df, params, figure_dir, name, signals=None, value="amplitude",
+                       reference=None, suffix=""):
+    """Oscillation amplitude against each excitatory time constant, one panel per ROI.
+
+    Amplitude is the settled signal's standard deviation, averaged over noise
+    realisations; the ribbon is its across-seed SD (`<value>_sd`, written by
+    run_parameter_sweep when --seeds > 1). Unlike the peak frequency this measure does
+    not depend on picking a peak out of a noisy spectrum, so it is usually the cleaner
+    read on what a time constant does - but a rise here is a rise in *fluctuation*,
+    which is only an oscillation amplitude where the regime is oscillatory, hence the
+    open markers on non-oscillating points.
+
+    `reference` (a {param: value} dict) marks where the model itself sits on each curve.
+
+    The y axis is logarithmic. A state transition - e3b_tau crossing ~9 ms flips A3b from
+    a low-rate beta regime to a near-saturated alpha one - throws a single point an order
+    of magnitude above the rest, and on a linear axis that one point flattens every other
+    curve to the baseline. Such a point is also bistable across seeds (its SD exceeds its
+    mean), so the ribbon is clipped to stay positive rather than being dropped.
+    """
+    signals = signals or DEFAULT_SIGNALS
+    sd_col = f"{value}_sd"
+    has_sd = sd_col in df.columns
+
+    fig, axes = plt.subplots(1, len(signals),
+                             figsize=(3.6 * len(signals) + 0.8, 3.2),
+                             sharey=True, squeeze=False)
+    axes = axes[0]
+    for i, (ax, sg) in enumerate(zip(axes, signals)):
+        for p in params:
+            sub = _tau_line(df, p, sg)
+            if sub.empty:
+                continue
+            col = TAU_COLORS.get(p, "0.4")
+            x = sub["varied_value"].to_numpy()
+            y = sub[value].to_numpy()
+            if has_sd:
+                sd = np.nan_to_num(sub[sd_col].to_numpy())
+                floor = np.nanmin(y[y > 0]) * 0.5 if np.any(y > 0) else 1e-12
+                ax.fill_between(x, np.maximum(y - sd, floor), y + sd, color=col,
+                                alpha=0.18, linewidth=0, zorder=1)
+            ax.plot(x, y, color=col, linewidth=1.4, zorder=3,
+                    label=param_label(p) if i == 0 else None)
+            osc = sub["regime"] == "oscillation"
+            ax.scatter(x[osc.to_numpy()], y[osc.to_numpy()], s=10, color=col,
+                       linewidths=0, zorder=4)
+            ax.scatter(x[~osc.to_numpy()], y[~osc.to_numpy()], s=10, facecolors="none",
+                       edgecolors=col, linewidths=0.6, zorder=4)
+            if reference and p in reference:
+                ax.axvline(float(reference[p]), color=col, linewidth=0.7, alpha=0.45,
+                           linestyle=(0, (3, 2)), zorder=0)
+        ax.set_yscale("log")
+        ax.set_xlabel("synaptic time constant (ms)")
+        ax.set_title(signal_label(sg))
+        if i == 0:
+            ax.set_ylabel("oscillation amplitude")
+    handles, labs = axes[0].get_legend_handles_labels()
+    if handles:
+        axes[0].legend(handles, labs, frameon=False, fontsize=8, loc="best")
+    fig.suptitle("Influence of the excitatory time constants on the oscillation "
+                 "amplitude", fontweight="bold")
+    note = ("log y; ribbon = across-seed SD, clipped positive; open markers = not "
+            "classified as oscillating; dashed line = the reference value of that "
+            "time constant")
+    fig.text(0.5, -0.05, note, ha="center", fontsize=7.5, color="0.35")
+    sns.despine(fig=fig, trim=True)
+    fig.tight_layout(rect=[0, 0, 1, 0.92])
+    return save_figure(fig, figure_dir, f"{name}_tauAmplitude{suffix}")

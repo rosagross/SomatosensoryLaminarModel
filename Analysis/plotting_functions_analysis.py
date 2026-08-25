@@ -6,7 +6,7 @@ import numpy as np
 import matplotlib.cm as cm 
 from matplotlib.colors import ListedColormap, Normalize, BoundaryNorm
 from plotting_style import figure_style
-from helper_functions import load_simulation_data, compute_freq_spectrum
+from helper_functions import load_simulation_data, compute_freq_spectrum, compute_baseline
 
 def sImulti_fingerprint_IextDurVsStr(data_df, gs, sIs, Ib_str, population, thalamus_source, figure_dir):
     '''
@@ -574,7 +574,7 @@ def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_s
                                   Iext_dur, Iext_str, input_onset, step_size, sample_dur,
                                   offset, thal_cellcounts, bI_cellcounts, extI_cellcounts,
                                   input_type, raw_dir, figure_dir, suffix='', fmax=80.0,
-                                  g_thalPOm=1.0, Ib_noise_std=None):
+                                  g_thalPOm=1.0, Ib_noise_std=None, g_thal=2, sI_thal=0.5):
     """
     Grid of baseline power spectra (summed potential), one subplot per excitatory
     population, one curve per swept coupling value (colour = value).
@@ -617,7 +617,8 @@ def baseline_spectrum_by_coupling(sweep_name, sweep_values, g, g_inter, sI, Ib_s
             _, potentials_df, _ = load_simulation_data(
                 g_k, g_inter_k, sI, Ib_str, Iext_dur, Iext_str, input_onset,
                 thal_cellcounts, bI_cellcounts, extI_cellcounts, input_type,
-                raw_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std)
+                raw_dir, suffix=suffix, g_thalPOm=g_thalPOm, Ib_noise_std=Ib_noise_std,
+                g_thal=g_thal, sI_thal=sI_thal)
         except (FileNotFoundError, OSError):
             print(f'Missing run: {sweep_name}={val} (g={g_k}, g_inter={g_inter_k}) - skipping')
             continue
@@ -1096,7 +1097,8 @@ def plot_response_type_examples(examples, fixed_params, population, raw_dir, fig
             g, fp['g_inter'], sI, fp['Ib_str'], Iext_dur, fp['Iext_str'], input_onset,
             fp['thal_cellcounts'], fp['bI_cellcounts'], fp['extI_cellcounts'],
             fp['input_type'], raw_dir, suffix=suffix,
-            g_thalPOm=fp.get('g_thalPOm', 1.0), Ib_noise_std=fp.get('Ib_noise_std'))
+            g_thalPOm=fp.get('g_thalPOm', 1.0), Ib_noise_std=fp.get('Ib_noise_std'),
+            g_thal=fp.get('g_thal', 2), sI_thal=fp.get('sI_thal', 0.5))
 
         rate = rates_df[population].values
         # time re-zeroed to stimulus onset
@@ -1193,7 +1195,8 @@ def plot_gthalPOm_potential_sweep(g_thalPOms, fixed_params, populations, raw_dir
                 fp['g'], fp['g_inter'], fp['sI'], fp['Ib_str'], fp['Iext_dur'], fp['Iext_str'],
                 input_onset, fp['thal_cellcounts'], fp['bI_cellcounts'], fp['extI_cellcounts'],
                 fp['input_type'], raw_dir, suffix=suffix, g_thalPOm=np.round(gp, 3),
-                Ib_noise_std=fp.get('Ib_noise_std'))
+                Ib_noise_std=fp.get('Ib_noise_std'),
+                g_thal=fp.get('g_thal', 2), sI_thal=fp.get('sI_thal', 0.5))
         except (FileNotFoundError, OSError, KeyError):
             print(f'Missing run for g_thalPOm={gp} - skipping')
             continue
@@ -1345,3 +1348,446 @@ def plot_gthalPOm_dipole_sweep(g_thalPOms, sim_overrides, figure_dir, subjects=(
     plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
     plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
     plt.show()
+
+
+# ── modulatory (VIP) input sweeps ──────────────────────────────────────────────
+# Im_strength is a tonic drive that Parameter.get_raw_connectivity routes to the three
+# VIP populations only (VIP3b, VIP1, VIP1S2), weighted by mI_cellcounts. Both functions
+# below re-simulate every value rather than reading saved runs: the dipole needs the
+# source-resolved potential that results.hdf5 does not store, and re-simulating keeps the
+# two figures on exactly the same operating point without a step001 pass in between.
+
+# populations of the VIP -> SST -> E chain in each area that receives the drive
+IM_CHAIN = [('A3b', ['VIP3b', 'SST3b', 'E3b']),
+            ('S1', ['VIP1', 'SST1', 'E1']),
+            ('S2', ['VIP1S2', 'SST1S2', 'E1S2'])]
+
+# distinct, colourblind-friendly qualitative palette, as in the g_thalPOm sweeps
+IM_BASE_COLORS = ['#4477AA', '#EE6677', '#228833', '#AA3377', '#CCBB44',
+                  '#66CCEE', '#EE7733', '#000000']
+
+
+def _im_model(sim_overrides):
+    """One SomatoModel at the sweep's operating point, plus its labels and timing.
+
+    Lazy import so the analysis module is not coupled to the model (and its env vars) at
+    import time - same reason as plot_gthalPOm_dipole_sweep.
+    """
+    import sys
+    _wd = os.getenv('WDDIR')
+    for _p in [os.path.join(_wd, 'Simulations'), os.path.join(_wd, 'Simulations', 'model')]:
+        if _p not in sys.path:
+            sys.path.insert(0, _p)
+    from somato_model import SomatoModel, read_simulation_params
+
+    base_params = read_simulation_params()
+    base_params.update(sim_overrides)
+    model = SomatoModel(base_params)
+    return model, list(model.get_population_labels())
+
+
+def _im_colors(Im_strengths):
+    return (IM_BASE_COLORS * (len(Im_strengths) // len(IM_BASE_COLORS) + 1))[:len(Im_strengths)]
+
+
+def _im_fixed_param_box(ax, sim_overrides):
+    """The 'Fixed parameters' annotation used by the g_thalPOm sweeps, same key subset."""
+    _box = [
+        ('coupling_strength', 'Global coupling', 'g', ''),
+        ('strength_I', 'E/I balance', 's_I', ''),
+        ('Ib_strength', 'Background input', 'I_b', ''),
+        ('g_intercortical', 'Inter-areal gain', r'g_{\mathrm{inter}}', ''),
+        ('g_thalPOm', 'POm gain', r'g_{\mathrm{thalPOm}}', ''),
+        ('Iext_strength', 'Input strength', 'I_{ext}', ''),
+        ('Iext_duration', 'Input duration', r'\Delta t', 'ms'),
+    ]
+    lines = ['Fixed parameters']
+    for key, desc, sym, unit in _box:
+        if key not in sim_overrides:
+            continue
+        val = sim_overrides[key]
+        lines.append(f'{desc}  ${sym} = {val * 1e3:g}$ ms' if unit == 'ms'
+                     else f'{desc}  ${sym} = {val:g}$')
+    ax.text(1.02, 0.62, '\n'.join(lines), transform=ax.transAxes, va='top', ha='left',
+            fontsize=7.5,
+            bbox=dict(boxstyle='round', facecolor='0.96', edgecolor='0.7', linewidth=0.6))
+
+
+def plot_Im_dipole_sweep(Im_strengths, sim_overrides, figure_dir, subjects=(15,),
+                         area='S2', suffix='', plot_window=(-0.1, 0.25)):
+    """
+    Summed computed dipole of one area for each modulatory-input strength.
+
+    Companion to plot_Im_population_sweep: this is the EEG-facing view of the same
+    sweep. The dipole is a source-resolved weighting of the full 3-D potential
+    (SomatoModel.compute_dipoles), which results.hdf5 does not store, so each value is
+    re-simulated and projected through a subject forward model.
+
+    Parameters
+    ----------
+    Im_strengths : list of float
+        The Im_strength values to overlay (kept small so each colour stays distinct).
+    sim_overrides : dict
+        SomatoModel parameter overrides defining the operating point (model parameter
+        names). Should fix Ib_noise_seed: with background noise on and a null seed every
+        apply_params call draws a new realisation, and the curves would then differ by
+        noise draw as much as by Im_strength.
+    figure_dir : str
+        Where to save the figure.
+    subjects : sequence of int
+        Subject IDs whose forward models project the dipole (averaged); default (15,).
+    area : str
+        'A3b', 'A1' or 'S2' - which area's summed dipole to plot.
+    plot_window : (float, float)
+        Time window (s) relative to stimulus onset to display.
+    """
+    figure_style()
+
+    # dipole-row layout of compute_dipoles: 0=A3b, 1-4=A1 L{2/3,4,5,6}, 5-8=S2 L{2/3,4,5,6}
+    area_rows = {'A3b': [0], 'A1': [1, 2, 3, 4], 'S2': [5, 6, 7, 8]}
+    if area not in area_rows:
+        raise ValueError(f"area must be one of {list(area_rows)}, got {area!r}")
+    rows = area_rows[area]
+
+    # one model reused across values, so the forward model is read only once
+    model, _ = _im_model(sim_overrides)
+    step_size, input_onset = model.step_size, model.input_onset
+    Iext_dur = model.Iext_duration
+
+    fig, ax = plt.subplots(figsize=(7.4, 3.6))
+    ax.axvspan(0, Iext_dur, color='0.85', linewidth=0, zorder=0)
+
+    for Im, col in zip(Im_strengths, _im_colors(Im_strengths)):
+        model.apply_params({**sim_overrides, 'Im_strength': float(Im)})
+        model.initialize_state()
+        model.simulate()
+        dip = model.compute_dipoles(list(subjects))[rows].sum(axis=0)
+
+        t = np.arange(len(dip)) * step_size - input_onset
+        mask = (t >= plot_window[0]) & (t <= plot_window[1])
+        ax.plot(t[mask], dip[mask], color=col, linewidth=1.3, label=f'{Im:g}', zorder=2)
+
+    ax.set_xlabel('Time from stimulus onset (s)')
+    ax.set_ylabel(f'{area} summed dipole (a.u.)')
+    ax.set_title(f'{area} dipole vs. modulatory (VIP) input strength')
+    ax.legend(title=r'$I_m$', frameon=False, fontsize=8, title_fontsize=9,
+              loc='upper left', bbox_to_anchor=(1.02, 1.0))
+    _im_fixed_param_box(ax, sim_overrides)
+
+    sns.despine(trim=True)
+    plt.tight_layout()
+
+    figure_name = f'ImSweep_dipole_{area}{suffix}'
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
+    plt.show()
+
+
+def plot_Im_population_sweep(Im_strengths, sim_overrides, figure_dir, suffix='',
+                             plot_window=(-0.1, 0.25), signal='rate'):
+    """
+    The mechanism behind plot_Im_dipole_sweep: the VIP -> SST -> E chain of each area
+    that receives the modulatory drive, one curve per Im_strength.
+
+    Columns are the three areas whose VIP population the drive targets (A3b, S1, S2 -
+    see Parameter.get_raw_connectivity), rows are VIP, SST and E of that area, so the
+    causal chain reads top to bottom: the drive raises VIP, VIP suppresses SST, and the
+    net effect on E is whatever the direct VIP->E inhibition and the SST disinhibition
+    add up to.
+
+    Parameters
+    ----------
+    Im_strengths, sim_overrides, figure_dir, suffix, plot_window
+        As in plot_Im_dipole_sweep.
+    signal : {'rate', 'potential'}
+        Firing rate (Hz) or summed membrane potential. The rate is where the drive shows
+        most clearly, since it is what saturates against the sigmoid.
+    """
+    figure_style()
+    if signal not in ('rate', 'potential'):
+        raise ValueError(f"signal must be 'rate' or 'potential', got {signal!r}")
+
+    model, labels = _im_model(sim_overrides)
+    step_size, input_onset = model.step_size, model.input_onset
+    Iext_dur = model.Iext_duration
+
+    nrows, ncols = 3, len(IM_CHAIN)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.8 * ncols, 2.6 * nrows),
+                             sharex=True, squeeze=False)
+
+    for Im, col in zip(Im_strengths, _im_colors(Im_strengths)):
+        model.apply_params({**sim_overrides, 'Im_strength': float(Im)})
+        model.initialize_state()
+        model.simulate()
+        traces = model.rate if signal == 'rate' else np.sum(model.potential, axis=1)
+
+        t = np.arange(traces.shape[1]) * step_size - input_onset
+        mask = (t >= plot_window[0]) & (t <= plot_window[1])
+        for c, (area, pops) in enumerate(IM_CHAIN):
+            for r, pop in enumerate(pops):
+                axes[r][c].plot(t[mask], traces[labels.index(pop)][mask],
+                                color=col, linewidth=1.2,
+                                label=f'{Im:g}' if (r == 0 and c == 0) else None)
+
+    ylabel = 'Firing rate (Hz)' if signal == 'rate' else 'Potential (mV)'
+    for c, (area, pops) in enumerate(IM_CHAIN):
+        for r, pop in enumerate(pops):
+            ax = axes[r][c]
+            ax.axvspan(0, Iext_dur, color='0.85', linewidth=0, zorder=0)
+            ax.set_title(pop, fontsize=9)
+            if r == 0:
+                ax.text(0.5, 1.28, area, transform=ax.transAxes, ha='center',
+                        va='bottom', fontweight='bold')
+            if c == 0:
+                ax.set_ylabel(ylabel)
+            if r == nrows - 1:
+                ax.set_xlabel('Time from stimulus onset (s)')
+
+    handles, lab = axes[0][0].get_legend_handles_labels()
+    fig.legend(handles, lab, title=r'$I_m$', frameon=False, fontsize=8, title_fontsize=9,
+               loc='center left', bbox_to_anchor=(1.0, 0.5))
+    fig.suptitle('Modulatory (VIP) input: the VIP → SST → E chain it drives',
+                 fontweight='bold')
+
+    sns.despine(fig=fig, trim=True)
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+
+    figure_name = f'ImSweep_populations_{signal}{suffix}'
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
+    plt.show()
+
+
+def _im_baseline_window(sample_dur=None, offset=None):
+    """The baseline window (length, gap to input onset) in seconds.
+
+    Defaults to the sampling block of analysis_parameter.json, i.e. exactly the window
+    step001_process_simulations samples, so a baseline rate measured here is comparable
+    with rate_baseline in a processed.csv.
+    """
+    if sample_dur is not None and offset is not None:
+        return sample_dur, offset
+    from somato_model import read_analysis_params
+    sampling = read_analysis_params()['sampling']
+    return (sampling['sample_dur'] if sample_dur is None else sample_dur,
+            sampling['offset'] if offset is None else offset)
+
+
+def _im_baseline_rates(model, overrides, sample_dur, offset):
+    """Simulate one parameter set and return its per-population baseline firing rate.
+
+    compute_baseline is helper_functions', the same one step001 uses - the point of
+    going through it rather than slicing the frame here is that the two stay identical.
+    """
+    model.apply_params(overrides)
+    model.initialize_state()
+    model.simulate()
+    rates_df, potentials_df = model.prepare_dataframes()
+    df = pd.DataFrame()
+    compute_baseline(df, rates_df, potentials_df, model.input_onset,
+                     model.resolution_tstep, sample_dur, offset)
+    return df['rate_baseline']
+
+
+def plot_Im_baseline_rates(Im_strengths, sim_overrides, figure_dir, suffix='',
+                           sample_dur=None, offset=None):
+    """
+    Baseline (pre-stimulus) firing rate of each population against the modulatory drive.
+
+    The third view of the sweep that plot_Im_population_sweep and plot_Im_dipole_sweep
+    show over time: instead of a trace per Im value, one point per Im value, so the dose
+    -> response relation is read off directly. Columns are the three areas whose VIP
+    population the drive targets, and within each the VIP -> SST -> E chain is one line
+    each, so the mechanism reads across the panel: the drive raises VIP, VIP suppresses
+    SST, and E follows whatever the direct VIP->E inhibition and the SST disinhibition
+    add up to.
+
+    The baseline number is computed with helper_functions.compute_baseline - the same
+    function step001_process_simulations uses - so a value here means exactly what
+    rate_baseline means in a processed.csv.
+
+    Parameters
+    ----------
+    Im_strengths, sim_overrides, figure_dir, suffix
+        As in plot_Im_population_sweep.
+    sample_dur, offset : float, optional
+        Baseline window length and its gap to input onset, in seconds. Default to the
+        sampling block of analysis_parameter.json, i.e. the same window step001 samples.
+    """
+    figure_style()
+
+    model, labels = _im_model(sim_overrides)
+    sample_dur, offset = _im_baseline_window(sample_dur, offset)
+
+    # rate_baseline per population, one row per Im value
+    baselines = {float(Im): _im_baseline_rates(model, {**sim_overrides, 'Im_strength': float(Im)},
+                                               sample_dur, offset)
+                 for Im in Im_strengths}
+    baseline_df = pd.DataFrame(baselines).T          # index = Im, columns = population
+    baseline_df.index.name = 'Im_strength'
+
+    # One row per role rather than one panel per area: VIP saturates around 38 Hz while SST
+    # and E live below 2 Hz, so on a shared axis the suppression that is the whole point of
+    # the figure collapses onto the baseline. Rows share a y-axis so the three areas stay
+    # comparable within a role.
+    nrows, ncols = 3, len(IM_CHAIN)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.2 * ncols, 2.4 * nrows),
+                             sharex=True, sharey='row', squeeze=False)
+    chain_colors = dict(zip(['VIP', 'SST', 'E'], IM_BASE_COLORS))
+
+    for c, (area, pops) in enumerate(IM_CHAIN):
+        for r, pop in enumerate(pops):
+            role = 'VIP' if pop.startswith('VIP') else 'SST' if pop.startswith('SST') else 'E'
+            ax = axes[r][c]
+            ax.plot(baseline_df.index, baseline_df[pop], marker='o', markersize=4,
+                    linewidth=1.4, color=chain_colors[role])
+            ax.set_title(pop, fontsize=9)
+            if r == 0:
+                ax.text(0.5, 1.30, area, transform=ax.transAxes, ha='center',
+                        va='bottom', fontweight='bold')
+            if c == 0:
+                ax.set_ylabel(f'{role} baseline\nrate (Hz)')
+            if r == nrows - 1:
+                ax.set_xlabel(r'Modulatory input $I_m$')
+
+    _im_fixed_param_box(axes[1][-1], sim_overrides)
+    fig.suptitle('Modulatory (VIP) input: effect on baseline firing rate', fontweight='bold')
+
+    sns.despine(fig=fig, trim=True)
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
+
+    figure_name = f'ImSweep_baselineRate{suffix}'
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
+    plt.show()
+
+    return baseline_df
+
+
+def plot_Im_effect_vs_parameter(param, param_values, Im_strengths, sim_overrides,
+                                figure_dir, seeds=(0, 1, 2), suffix='', param_label=None):
+    """
+    Does the modulatory drive raise or lower the excitatory baseline rate - and what does
+    that depend on?
+
+    plot_Im_baseline_rates answers this at one operating point. The answer turns out not
+    to be a property of the drive: the net effect on E is the sum of the direct VIP->E
+    inhibition and the SST disinhibition, and which one wins depends on where the network
+    is sitting. This sweeps one parameter to show that, and in particular to locate the
+    value at which the sign flips.
+
+    Two rows, three area columns (the areas the drive reaches, from IM_CHAIN), E
+    population only:
+      row 1  E baseline rate against Im, one line per swept value
+      row 2  the signed effect dE = E(max Im) - E(Im=0) against the swept value, with a
+             zero line, so 'raises' vs 'lowers' reads off the sign directly
+
+    Every point is averaged over `seeds` noise realisations and row 2 carries a +/-SD
+    ribbon. Note this is a time-domain mean over a 300 ms window, not a spectral peak, so
+    the spread is small (~1% of the effect) - do not read a thin ribbon here as a sign
+    that the seeds were ignored. Contrast plot_tau_ridge_grid, where the scored frequency
+    is genuinely seed-unstable and the spread has to be drawn to be honest.
+
+    Parameters
+    ----------
+    param : str
+        Model parameter to sweep, e.g. 'Ib_strength' or 'strength_I'.
+    param_values : sequence of float
+        Values to sweep. Sample finely wherever the sign flips - the transition can be
+        narrow (for Ib_strength it happens between 70 and 90).
+    Im_strengths : sequence of float
+        Modulatory drive values. Must include 0 and be ascending; the effect is measured
+        between the first and the last.
+    sim_overrides, figure_dir, suffix
+        As in plot_Im_population_sweep.
+    seeds : sequence of int
+        Ib_noise_seed values to average over.
+    param_label : str, optional
+        Axis label for the swept parameter. Defaults to `param`.
+
+    Returns
+    -------
+    DataFrame indexed by the swept value, with one column per E population holding dE,
+    plus '<pop>_sd' columns for the across-seed spread.
+    """
+    figure_style()
+    Im_strengths = [float(v) for v in Im_strengths]
+    if 0.0 not in Im_strengths:
+        raise ValueError("Im_strengths must include 0 - the effect is measured against it")
+    Im_lo, Im_hi = Im_strengths[0], Im_strengths[-1]
+
+    model, _ = _im_model(sim_overrides)
+    sample_dur, offset = _im_baseline_window()
+    Epops = [pops[2] for _, pops in IM_CHAIN]        # the E population of each area
+
+    # rates[value][Im] -> (n_seeds, n_pop) baseline rates
+    rates = {}
+    for value in param_values:
+        rates[value] = {}
+        for Im in Im_strengths:
+            per_seed = [_im_baseline_rates(
+                            model,
+                            {**sim_overrides, param: value, 'Im_strength': Im,
+                             'Ib_noise_seed': int(sd)},
+                            sample_dur, offset)
+                        for sd in seeds]
+            rates[value][Im] = pd.concat(per_seed, axis=1)   # populations x seeds
+
+    nrows, ncols = 2, len(IM_CHAIN)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 2.8 * nrows),
+                             squeeze=False)
+    # sequential palette: the swept parameter is an ordered axis, not a set of categories
+    cmap = plt.get_cmap('viridis')
+    norm = Normalize(vmin=min(param_values), vmax=max(param_values))
+
+    out = {}
+    for c, (area, pops) in enumerate(IM_CHAIN):
+        pop = pops[2]
+        ax_curve, ax_delta = axes[0][c], axes[1][c]
+
+        for value in param_values:
+            ax_curve.plot(Im_strengths,
+                          [rates[value][Im].loc[pop].mean() for Im in Im_strengths],
+                          color=cmap(norm(value)), linewidth=1.2)
+
+        delta = np.array([(rates[v][Im_hi].loc[pop] - rates[v][Im_lo].loc[pop]).values
+                          for v in param_values])          # (n_values, n_seeds)
+        mean, sd = delta.mean(axis=1), delta.std(axis=1)
+        out[pop], out[f'{pop}_sd'] = mean, sd
+
+        ax_delta.axhline(0, color='0.4', linewidth=0.8, zorder=1)
+        ax_delta.fill_between(param_values, mean - sd, mean + sd,
+                              color='0.7', alpha=0.5, linewidth=0, zorder=2)
+        ax_delta.plot(param_values, mean, color='#AA3377', marker='o', markersize=3,
+                      linewidth=1.4, zorder=3)
+
+        ax_curve.set_title(pop, fontsize=9)
+        ax_curve.text(0.5, 1.28, area, transform=ax_curve.transAxes, ha='center',
+                      va='bottom', fontweight='bold')
+        ax_curve.set_xlabel(r'Modulatory input $I_m$')
+        ax_delta.set_xlabel(param_label or param)
+        if c == 0:
+            ax_curve.set_ylabel('E baseline rate (Hz)')
+            ax_delta.set_ylabel(f'$\\Delta$E baseline rate (Hz)\n'
+                                f'$I_m$ {Im_lo:g} $\\to$ {Im_hi:g}')
+
+    # the swept parameter is on an axis now, so drop it from the fixed-parameter box
+    _im_fixed_param_box(axes[1][-1], {k: v for k, v in sim_overrides.items() if k != param})
+
+    fig.suptitle(f'Modulatory (VIP) input: effect on baseline E rate vs '
+                 f'{param_label or param}', fontweight='bold')
+    sns.despine(fig=fig, trim=True)
+    # lay out before attaching the colorbar: a colorbar axes is not tight_layout
+    # compatible, and adding it first makes matplotlib warn and mis-place the panels
+    fig.tight_layout(rect=[0, 0, 1, 0.95])
+    sm = cm.ScalarMappable(cmap=cmap, norm=norm)
+    cbar = fig.colorbar(sm, ax=axes[0].tolist(), fraction=0.025, pad=0.01)
+    cbar.set_label(param_label or param)
+
+    figure_name = f'ImEffect_vs_{param}{suffix}'
+    plt.savefig(os.path.join(figure_dir, figure_name + '.pdf'), bbox_inches='tight')
+    plt.savefig(os.path.join(figure_dir, figure_name + '.png'), bbox_inches='tight', dpi=300)
+    plt.show()
+
+    effect_df = pd.DataFrame(out, index=pd.Index(param_values, name=param))
+    return effect_df
