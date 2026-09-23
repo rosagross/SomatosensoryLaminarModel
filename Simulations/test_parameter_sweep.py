@@ -200,12 +200,17 @@ def test_center_moves_the_reference_point(model_and_reference, tmp_path):
 
 def test_every_swept_parameter_reaches_the_model(model_and_reference):
     """Each parameter in PARAM_RANGES must change the connectivity, the time constants,
-    or the background input - otherwise its sweep axis is silently inert."""
+    or one of the two inputs - otherwise its sweep axis is silently inert.
+
+    model.Im is in that list because Im_strength is the one swept parameter that reaches
+    none of the other three: apply_params rebuilds the modulatory input from it and
+    leaves W, tau and Ib alone. Checking only those three declared it inert."""
     from run_parameter_sweep import PARAM_RANGES, expand_theta
     model, ref, base = model_and_reference
 
     model.apply_params(expand_theta(ref, base))
-    W0, tau0, Ib0 = model.W.copy(), model.tau.copy(), model.Ib.copy()
+    W0, tau0 = model.W.copy(), model.tau.copy()
+    Ib0, Im0 = model.Ib.copy(), model.Im.copy()
 
     inert = []
     for name, (lo, hi) in PARAM_RANGES.items():
@@ -215,18 +220,98 @@ def test_every_swept_parameter_reaches_the_model(model_and_reference):
         model.apply_params(expand_theta(theta, base))
         changed = (not np.array_equal(model.W, W0)
                    or not np.array_equal(model.tau, tau0)
-                   or not np.array_equal(model.Ib, Ib0))
+                   or not np.array_equal(model.Ib, Ib0)
+                   or not np.array_equal(model.Im, Im0))
         if not changed:
             inert.append(name)
         model.apply_params(expand_theta(ref, base))
     assert not inert, f"parameters that never reach the model: {inert}"
 
 
+def test_features_from_spectra_matches_the_single_signal_path():
+    """The refactor must not change what oscillation_features computes.
+
+    features_from_spectra was split out so the seed-averaging path scores averaged
+    spectra with the same code; if the two ever diverge, a sweep and a one-off
+    measurement of the same signal would disagree.
+    """
+    from oscillation_metrics import (features_from_spectra, relative_fluctuation,
+                                     amplitude_ratio, welch_spectrum, _settled)
+    sig = _signal([(10.0, 1.0)], noise=0.4, seed=11, offset=3.0)
+    control = _signal([], noise=0.4, seed=12, offset=3.0)
+    _, psd_null, _ = welch_spectrum(control, DT)
+    direct = oscillation_features(sig, DT, rate_drive=1e-2, psd_null=psd_null)
+
+    freqs, psd, seg = welch_spectrum(sig, DT)
+    settled = _settled(sig, DT, 2.0)
+    tf = {"amplitude": float(settled.std()), "mean_level": float(settled.mean()),
+          "fluctuation": relative_fluctuation(sig, DT, 2.0),
+          "amp_ratio": amplitude_ratio(seg)}
+    viaspec = features_from_spectra(freqs, psd, psd_null, tf, 1e-2)
+    for k, v in direct.items():
+        w = viaspec[k]
+        if isinstance(v, str):
+            assert v == w, k
+        else:
+            assert (np.isnan(v) and np.isnan(w)) or v == pytest.approx(w), k
+
+
+def test_seed_averaging_of_one_seed_equals_the_plain_path(model_and_reference):
+    """n_seeds=1 must be bit-for-bit the old behaviour, so the flag is safe to default."""
+    from run_parameter_sweep import expand_theta, run_point
+    model, ref, base = model_and_reference
+    feat = dict(seg_dur=1.0, overlap=0.5, settle_s=0.5, fmin=1.0, fmax=60.0)
+    rows1, psd1, f1, names1, null1 = run_point(0, ref, base, None, feat, None, 1)
+    rows2, psd2, f2, names2, null2 = run_point(0, ref, base, None, feat, None, 1)
+    assert names1 == names2
+    assert np.array_equal(psd1, psd2) and np.array_equal(f1, f2)
+    for a_, b_ in zip(rows1, rows2):
+        assert a_["band"] == b_["band"] and a_["regime"] == b_["regime"]
+        # Only one realisation is ever scored now, so there is no across-seed spread to
+        # report and the consistency columns are NaN by construction.
+        assert a_["n_seeds"] == 1
+        assert np.isnan(a_["band_agreement"]) and np.isnan(a_["peak_freq_sd"])
+
+
+def test_seeds_are_averaged_on_the_time_course_not_on_the_measures(model_and_reference):
+    """Averaging must happen on the traces, with every measure taken once afterwards.
+
+    Averaging the measures instead would give a different - and for an ongoing signal,
+    wrong - answer: the point of averaging here is that the noise-driven component is
+    uncorrelated across seeds and cancels, leaving what is reproducible from the shared
+    initial condition. Averaging per-seed amplitudes would preserve exactly the component
+    that is supposed to cancel.
+    """
+    from run_parameter_sweep import _averaged_traces, run_point
+
+    model, ref, base = model_and_reference
+    feat = dict(seg_dur=1.0, overlap=0.5, settle_s=0.5, fmin=1.0, fmax=60.0)
+    seeds = [0, 1, 2]
+
+    labels = list(model.get_population_labels())
+    signals, _ = _averaged_traces(model, ref, base, None, labels, seeds)
+    rows3 = run_point(0, ref, base, None, feat, None, len(seeds))[0]
+    rows1 = run_point(0, ref, base, None, feat, None, 1)[0]
+
+    settle_i = int(round(feat["settle_s"] / model.step_size))
+    by_name3 = {r["signal"]: r for r in rows3}
+    by_name1 = {r["signal"]: r for r in rows1}
+    for pop in ("E1", "E3b", "E1S2"):
+        settled = signals[labels.index(pop)][settle_i:]
+        row = by_name3[pop]
+        assert row["n_seeds"] == len(seeds)
+        assert row["amplitude"] == pytest.approx(float(settled.std()), rel=1e-9)
+        assert row["mean_level"] == pytest.approx(float(settled.mean()), rel=1e-9)
+        # ~1/sqrt(N) suppression of the noise-driven part; a value that did not move at
+        # all would mean the seeds never actually differed
+        assert row["amplitude"] < 0.9 * by_name1[pop]["amplitude"]
+
+
 def test_the_loop_free_control_keeps_every_signal_alive(model_and_reference):
     """The control run must leave a usable reference for every signal.
 
     Zeroing the gains outright does not: the ROI dipoles project
-    self.potential[:, :-2] and so exclude the background column, leaving them
+    self.potential[:, :-3] and so exclude the background column, leaving them
     identically zero, and the thalamus receives no background input at all. Scaling the
     gains down instead keeps the one-relay feedforward path, and with it a reference.
     """

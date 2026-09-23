@@ -8,45 +8,102 @@
     "jax_mode": false,
     "connect_reverse_factor": 1,
     "coupling_strengths": [
-        0, 1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, 16,
-       17, 18, 19
+        0.8,
+        0.82,
+        0.84,
+        0.86,
+        0.88,
+        0.9,
+        0.92,
+        0.94,
+        0.96,
+        0.98,
+        1.0,
+        1.02,
+        1.04,
+        1.06,
+        1.08,
+        1.1,
+        1.12,
+        1.14,
+        1.16,
+        1.18,
+        1.2,
+        1.22,
+        1.24,
+        1.26,
+        1.28,
+        1.3,
+        1.32,
+        1.34,
+        1.36,
+        1.38,
+        1.4,
+        1.42,
+        1.44,
+        1.46,
+        1.48,
+        1.5,
+        1.52,
+        1.54,
+        1.56,
+        1.58
     ],
     "strength_I": [
-        0.4 , 0.42, 0.44, 0.46, 0.48, 0.5 , 0.52, 0.54, 0.56, 0.58, 0.6 ,
-       0.62, 0.64, 0.66, 0.68, 0.7 , 0.72, 0.74, 0.76, 0.78
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        1.1
     ],
-    "g_thal": 2,
+    "g_thalPOms": [
+        0.76
+    ],
+    "g_thal": 1,
     "sI_thal": 0.5,
     "step_size": 0.001,
-    "area": "ThalA3b",
-    "filedir": "/data/p_02989/Modelling/output_grossmannr/",
+    "area": "all",
+    "filedir": "/data/pt_02989/output_grossmannr",
     "input_type": "step",
-    "input_onset": 1.001,
-    "simulation_dur": 2,
+    "input_onset": 2.001,
+    "simulation_dur": 3,
     "sampling": {
         "step_size": 0.001,
         "sample_delay_immediate": 0.3,
-        "sample_delay_late": 0.7,
+        "sample_delay_late": 0.6,
         "sample_dur": 0.3,
         "response_window": 0.02,
         "offset": 0.1,
         "rate_osc_threshold": 0.1,
         "potential_osc_threshold": 0.1
     },
-    "input_durations": [0.016
+    "input_durations": [
+        0.005
     ],
-    "input_strengths": [0, 10, 20, 30, 40
+    "input_strengths": [
+        0,
+        50
     ],
     "backgrndI_strengths": [
-        4, 5, 6, 7, 8],
+        40
+    ],
+    "Ib_noise_std": 0.5,
     "thal_connect": [
         0,
         10,
         0,
-        0
+        0,
+        5
     ],
-    "g_inter":1.0,
+    "g_inter": 0.4,
     "extI_cellcounts": 1000,
     "bI_cellcounts": 100,
-    "thal_cellcounts": 500
+    "thal_cellcounts": 500,
+    "Im_strengths": [
+        0,
+        5,
+        10
+    ],
+    "mI_cellcounts": 2000
 }

@@ -27,6 +27,15 @@ SOURCE_AREA_BLOCKS = [('A3b', range(0, 4)), ('S1', range(4, 17)),
 # source cell type -> line style; thalamic sources reuse E/PV/SST styles in
 # array order (ThalE, ThalI, ThalPOm)
 CELLTYPE_LINESTYLES = {'E': '-', 'PV': '--', 'SST': '-.', 'VIP': ':'}
+# style of the input synapse columns of W / the 3D potential array, keyed by distance
+# from the end: -3 background, -2 external, -1 modulatory. The modulatory input gets a
+# colour rather than another grey so it stands out against the two established inputs;
+# Dark2 0-3 are already taken by the S1/S2/A3b/Thalamus area colours.
+INPUT_SOURCE_STYLES = {
+    3: ([0.55, 0.55, 0.55], '-', 'Background input'),
+    2: ('black', '-', 'External input'),
+    1: (sns.color_palette('Dark2')[4], '-', 'Modulatory input'),
+}
 
 
 def plot_minmax(rates, coupling_strengths_Es):
@@ -95,21 +104,20 @@ def _build_source_styles(pop_labels, n_sources, area_colors):
     """
     Line style per synapse column of the 3D potential array.
 
-    Colour encodes the source area, line style the source cell type. The last two
-    columns are the background (-2) and external (-1) input synapses.
+    Colour encodes the source area, line style the source cell type. The last three
+    columns are the input synapses: -3 background, -2 external, -1 modulatory (the
+    frontal drive onto VIP). Keyed on the distance from the end rather than on an
+    absolute index so it stays correct if a further input is appended.
 
     Returns a list of (colour, linestyle, group), one entry per source column, where
-    group is the source area name (or 'Background input' / 'External input') and is
-    used to build the shared colour legend.
+    group is the source area name (or the input name) and is used to build the shared
+    colour legend.
     """
     n_pop = len(pop_labels)
     styles = []
     for src in range(n_sources):
         if src >= n_pop:
-            if src == n_sources - 1:
-                styles.append(('black', '-', 'External input'))
-            else:
-                styles.append(([0.55, 0.55, 0.55], '-', 'Background input'))
+            styles.append(INPUT_SOURCE_STYLES[n_sources - src])
             continue
 
         area, offset = None, 0
@@ -244,10 +252,10 @@ def plot_all_potentials(all_potentials, Iext, Ib, step_size, simulation_time, st
 
     Parameters:
     all_potentials : np.ndarray
-        3D potential array of shape (nPop, nPop+2, n_timesteps) =
+        3D potential array of shape (nPop, nPop+3, n_timesteps) =
         (target population, source synapse, time). Source columns 0..nPop-1 are the
-        PSPs from each presynaptic population, column -2 is the background input and
-        column -1 the external input.
+        PSPs from each presynaptic population, column -3 is the background input,
+        column -2 the external input and column -1 the modulatory input.
     Iext : np.ndarray
         external input array (used to shade the stimulus window)
     Ib : np.ndarray
@@ -369,7 +377,7 @@ def _source_block_bounds(source_styles):
 
 def _plot_connectivity_grid(columns, weights, row_labels, source_styles, xtick_labels,
                             suptitle, savepath, xlabel='Source population',
-                            legend_title='Source area'):
+                            legend_title='Source area', ylabels=None, col_width=4.6):
     """
     Plot one figure of per-population connection weights.
 
@@ -387,14 +395,21 @@ def _plot_connectivity_grid(columns, weights, row_labels, source_styles, xtick_l
     xtick_labels : sequence of str
         Name per entry of the weight vector.
     suptitle : str
-    savepath : str
-        Full path of the PNG to write.
+    savepath : str or None
+        Full path of the PNG to write; None only builds the figure.
     xlabel : str
     legend_title : str
+    ylabels : sequence of str, optional
+        Y-axis label per figure row. Defaults to 'weight' in every row.
+    col_width : float
+        Width of one figure column in inches. Widen it for figures with few columns so
+        the source names still fit under the panels.
+
+    Returns the figure, for callers that want to save it in a second format.
     """
     ncols = len(columns)
     nrows = max(len(pop_idxs) for _, _, pop_idxs in columns)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(4.6*ncols, 2.4*nrows),
+    fig, axes = plt.subplots(nrows, ncols, figsize=(col_width*ncols, 2.4*nrows),
                              sharex=True, sharey='row', squeeze=False)
 
     bar_colors = [color for color, _, _ in source_styles]
@@ -416,7 +431,7 @@ def _plot_connectivity_grid(columns, weights, row_labels, source_styles, xtick_l
 
             ax.set_title(titles[r], fontweight='bold')
             if c == 0:
-                ax.set_ylabel('weight')
+                ax.set_ylabel('weight' if ylabels is None else ylabels[r])
                 ax.text(-0.18, 0.5, row_labels[r], transform=ax.transAxes, rotation=90,
                         va='center', ha='center', fontweight='bold')
 
@@ -448,8 +463,10 @@ def _plot_connectivity_grid(columns, weights, row_labels, source_styles, xtick_l
     fig.suptitle(suptitle)
     sns.despine(trim=False)
     plt.tight_layout()
-    plt.savefig(savepath, bbox_inches='tight', dpi=300)
+    if savepath is not None:
+        plt.savefig(savepath, bbox_inches='tight', dpi=300)
     plt.show()
+    return fig
 
 
 def plot_connectivity(W, figdir, pop_labels=None, area='all', direction='in', suffix=''):
@@ -467,10 +484,10 @@ def plot_connectivity(W, figdir, pop_labels=None, area='all', direction='in', su
 
     Parameters:
     W : np.ndarray
-        Connectivity matrix of shape (nPop, nPop+2) as returned by
+        Connectivity matrix of shape (nPop, nPop+3) as returned by
         parameters.get_connectivity() / SomatoModel.W. Columns 0..nPop-1 are the
-        presynaptic populations, column -2 the background and column -1 the external
-        input.
+        presynaptic populations, column -3 the background, column -2 the external and
+        column -1 the modulatory input.
     figdir : str
         Directory the PNGs are written to (created if missing).
     pop_labels : sequence of str, optional
@@ -507,9 +524,10 @@ def plot_connectivity(W, figdir, pop_labels=None, area='all', direction='in', su
                    'Thalamus': colors.get('Thal', dark2[3])}
 
     if direction == 'in':
-        # full row of W: all presynaptic populations plus background and external input
+        # full row of W: all presynaptic populations plus the background, external
+        # and modulatory input synapses
         n_entries = W.shape[1]
-        xtick_labels = pop_labels + ['Background', 'External']
+        xtick_labels = pop_labels + ['Background', 'External', 'Modulatory']
         weights = lambda idx: W[idx, :]
         xlabel = 'Source population'
         legend_title = 'Source area'

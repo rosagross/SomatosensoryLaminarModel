@@ -498,7 +498,9 @@ def fmt_param(value, nd=6):
 def run_stem(*, g_thal, g_thalPOm, sI_thal, g, sI, Ib, Ib_noise_std, Iext_dur,
              input_type, Iext_str, input_onset, thal_cellcounts, Im_strength,
              mI_cellcounts, bI_cellcounts, extI_cellcounts, g_intercortical,
-             include_gthalPOm=True, include_Im=True, round_floats=True, suffix=''):
+             Ib_ratio_PV=1.0, Ib_ratio_SST=1.0, Ib_ratio_VIP=1.0,
+             include_gthalPOm=True, include_Im=True, include_Ibratio=True,
+             round_floats=True, suffix=''):
     """Canonical name of a run folder.
 
     Single source of truth for the stem: SomatoModel.filename builds the folder with
@@ -514,16 +516,24 @@ def run_stem(*, g_thal, g_thalPOm, sI_thal, g, sI, Ib, Ib_noise_std, Iext_dur,
     The flags select the older layouts that existing folders on disk still use:
         include_gthalPOm=False  runs saved before g_thalPOm entered the name
         include_Im=False        runs saved before the modulatory input existed
+        include_Ibratio=False   runs saved before the background input was split per
+                                cell class, i.e. when every class had ratio 1.0
         Ib_noise_std=None       runs saved before the background-noise parameter
         round_floats=False      runs saved before the rounding above
+
+    Ib_ratio_PV / _SST / _VIP are the per-class background strengths relative to E.
+    Ib_ratio_E is not in the name: it is the reference the others are defined against,
+    so it carries no information the Ib token does not already have.
     """
     fmt = fmt_param if round_floats else (lambda v: f"{v}")
     gthalPOm_token = f"_gthalPOm{fmt(g_thalPOm)}" if include_gthalPOm else ""
     noise_token = "" if Ib_noise_std is None else f"_Ibnoise{fmt(Ib_noise_std)}"
     im_token = f"_Im{fmt(Im_strength)}_Imcells{fmt(mI_cellcounts)}" if include_Im else ""
+    ibr_token = (f"_Ibr{fmt(Ib_ratio_PV)}-{fmt(Ib_ratio_SST)}-{fmt(Ib_ratio_VIP)}"
+                 if include_Ibratio else "")
     return (
         f"gthal{fmt(g_thal)}{gthalPOm_token}_sIthal{fmt(sI_thal)}_"
-        f"g{fmt(g)}_sI{fmt(sI)}_Ib{fmt(Ib)}{noise_token}_Iextd{fmt(Iext_dur)}_"
+        f"g{fmt(g)}_sI{fmt(sI)}_Ib{fmt(Ib)}{ibr_token}{noise_token}_Iextd{fmt(Iext_dur)}_"
         f"{input_type}Iexts{fmt(Iext_str)}_Ionset{fmt(input_onset)}_"
         f"thalcells{fmt(thal_cellcounts)}{im_token}_"
         f"Ibcells{fmt(bI_cellcounts)}_Iextcells{fmt(extI_cellcounts)}_"
@@ -545,9 +555,11 @@ def _stem_candidates(*, data_dir, inner, suffix='', **kw):
     inners = (inner,) if isinstance(inner, str) else tuple(inner)
     variants = [
         dict(),                                                    # current layout
-        dict(include_Im=False),                                    # before the modulatory input
-        dict(include_Im=False, round_floats=False),                # before the float rounding
-        dict(include_Im=False, round_floats=False,
+        dict(include_Ibratio=False),                               # before the per-class background
+        dict(include_Ibratio=False, include_Im=False),             # before the modulatory input
+        dict(include_Ibratio=False, include_Im=False,
+             round_floats=False),                                  # before the float rounding
+        dict(include_Ibratio=False, include_Im=False, round_floats=False,
              include_gthalPOm=False, Ib_noise_std=None),           # before gthalPOm / Ibnoise
     ]
     out = []

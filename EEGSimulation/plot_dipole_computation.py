@@ -9,7 +9,7 @@ Description:
 
       Figure 1 - dipole parameters per cell:
           the geometric dipole model (signed length x orientation) assigned to
-          every population, one panel per area. Reuses plot_dipole_parameters().
+          every population, one panel per area (plot_dipole_parameters_clean).
 
       Figures 2-4 - dipole computation example, one per area (S2, S1/A1, A3b):
           the full pipeline for that area - the excitatory membrane potential
@@ -28,6 +28,16 @@ Description:
           style = source cell type, as in plot_all_potentials), plus a summary row
           with the cell-type sums adding up to that layer's dipole. A3b is
           unlaminated, so its figure has a single column.
+
+      Figures 8-10 - dipole parameters per source->target connection, one per area:
+          the dipole length and orientation the parameter file assigns to every one of
+          the 33 source populations, for each target layer of the area
+          (plot_dipole_parameters_per_connection). Figure 1 summarises these as one
+          length per layer and one orientation per cell type, which is a
+          simplification: the orientation varies by source beyond its cell type (for
+          the target A1 L5, S1 L2/3 E is -1 but S1 L4 E is +1, and S2 L4 E is 0).
+          These three figures come from the parameter file alone - no simulation and
+          no forward model is involved.
 
     Run with the project env (WDDIR/SIMDIR/DATADIR/SUBJECTS_DIR must be exported):
         python EEGSimulation/plot_dipole_computation.py
@@ -49,45 +59,20 @@ for _p in [_eeg_dir,
         sys.path.insert(0, _p)
 
 from somato_model import (SomatoModel, read_simulation_params, load_optimized_params,
-                          read_dipole_params)
-from plot_dipole_parameters import plot_dipole_parameters
+                          read_dipole_params, DIPOLE_SOURCE_PATHS)
 from plotting_style import figure_style
 # same source grammar as Simulations/plotting_functions.plot_all_potentials:
 # colour = source area, line style = source cell type
-from plotting_functions import SOURCE_AREA_BLOCKS, CELLTYPE_LINESTYLES
+from plotting_functions import (SOURCE_AREA_BLOCKS, CELLTYPE_LINESTYLES,
+                                _build_source_styles, _plot_connectivity_grid)
 
-colors, _ = figure_style()
-
-# output directory
-SIMDIR = os.getenv("SIMDIR")
-figure_dir = os.path.join(SIMDIR, "Figures", "dipole_computation")
-os.makedirs(figure_dir, exist_ok=True)
-
-# subject forward model(s) used to project the dipoles (as in simulation_main.py)
-subjects = [15]
-
-
-# %%
-# ---------------------------------------------------------------------------
-# 1) Run one stimulated simulation
-# ---------------------------------------------------------------------------
-
-# read the parameters from an optimization run. Same configuration as
-# Simulations/simulation_main.py: the simulation_parameter.json base params
-# updated with the run's best_params, background noise switched off.
-# Keep opt_run in sync with simulation_main.py's - the two are set independently.
-opt_run = "opt_20260806_141628_tc_roi-S2" #"opt_20260729_093613_tc_roi-S2" #"opt_20260729_114525_tc_roi-A1"
-#"opt_20260729_093613_tc_roi-S2"
-params = load_optimized_params(opt_run, overrides={'Ib_noise_std': 0})
-
-model = SomatoModel(params)
-model.simulate()
-
-# ---------------------------------------------------------------------------
-# 2) Compute the dipole from the simulated potentials
-#    simDipoles shape (9, ntimes): 0 = A3b, 1-4 = A1 L{1,4,5,6}_E, 5-8 = S2 L{1,4,5,6}_E
-# ---------------------------------------------------------------------------
-simDipoles = model.compute_dipoles(subjects)
+try:
+    colors, _ = figure_style()
+except Exception:
+    # figure_style() opens a tkinter window to query the screen size, which fails on
+    # headless nodes - the module must stay importable there (only _SOURCE_AREA_COLORS
+    # reads `colors`, and it falls back on an empty dict)
+    colors = {}
 
 
 # %%
@@ -98,7 +83,7 @@ simDipoles = model.compute_dipoles(subjects)
 _CELL_COLORS = {'E': '#4477AA', 'PV': '#EE6677', 'SST': '#228833', 'VIP': '#CCBB44'}
 
 
-def plot_dipole_parameters_clean(json_path, figure_dir):
+def plot_dipole_parameters_clean(json_path, figure_dir=None):
     """
     Publication/poster-ready view of the dipole model parameters.
 
@@ -164,15 +149,146 @@ def plot_dipole_parameters_clean(json_path, figure_dir):
     sns.despine(fig=fig, trim=True)
     fig.tight_layout(rect=[0, 0, 1, 0.95])
 
-    name = os.path.join(figure_dir, 'dipoleParameters_perCell')
-    fig.savefig(name + '.pdf', bbox_inches='tight')
-    fig.savefig(name + '.png', dpi=300, bbox_inches='tight')
-    print(f'Figure 1 saved to {name}.pdf/.png')
+    if figure_dir is not None:
+        name = os.path.join(figure_dir, 'dipoleParameters_perCell')
+        fig.savefig(name + '.pdf', bbox_inches='tight')
+        fig.savefig(name + '.png', dpi=300, bbox_inches='tight')
+        print(f'Figure 1 saved to {name}.pdf/.png')
     return fig
 
 
-fig1 = plot_dipole_parameters_clean(
-    os.path.join(_eeg_dir, 'dipole_parameters_flippedPVSST.json'), figure_dir)
+# %%
+# ---------------------------------------------------------------------------
+# Figures 8-10: dipole length and orientation of every source->target connection
+# ---------------------------------------------------------------------------
+# Rows of these figures, as (row label, y-axis label): the signed dipole - the two
+# parameters combined, which is what prepDipoles_normal multiplies the potential by -
+# and the two factors it is made of.
+_PER_CONNECTION_ROWS = [
+    ('Signed dipole', 'length x orientation (mm)'),
+    ('Length', 'Length (mm)'),
+    ('Orientation', ''),   # the tick labels below already name the two directions
+]
+
+
+def _default_source_labels():
+    """Source names from the parameter-file key paths ('S1 L4 PV', 'Thalamus ThalPOm').
+
+    Used when no population labels are supplied, so the figure can be built without a
+    SomatoModel. Only the *position* in this list matters to _build_source_styles (it
+    picks the source area block), and DIPOLE_SOURCE_PATHS shares that order with
+    get_population_labels() by construction.
+    """
+    return [' '.join(path) for path in DIPOLE_SOURCE_PATHS]
+
+
+def plot_dipole_parameters_per_connection(json_path, area, figure_dir=None,
+                                          pop_labels=None):
+    """
+    Dipole length and orientation of every source -> target connection of one area.
+
+    The dipole model is defined per (target, source) pair: a target layer's dipole
+    weights the synaptic potential arriving from each of the 33 source populations by
+    that pair's length and orientation. This figure shows those parameters directly,
+    laid out like Simulations/plotting_functions.plot_connectivity - one column per
+    target layer, the 33 sources along x, bar colour = source area, dashed lines
+    between the source blocks - with one row per quantity: the signed dipole
+    (length x orientation), the length in mm and the orientation (-1 / 0 / +1).
+
+    Only the excitatory population of a layer is a dipole target, so here the columns
+    are the target layers and the rows carry the quantity, where plot_connectivity has
+    one panel per target population and rows of cell types. A3b is unlaminated, so its
+    figure has a single column. The dipole has no background / external / modulatory
+    sources - compute_dipoles drops those synapse columns - so the x axis is the 33
+    populations only.
+
+    Parameters
+    ----------
+    json_path : str
+        Dipole parameter file, e.g. EEGSimulation/dipole_parameters_flippedPVSST.json
+        (the one SomatoModel.load_dipole_params reads).
+    area : str
+        Key of _AREA_SPECS: 'A3b', 'A1' (= S1) or 'S2'.
+    figure_dir : str, optional
+        Where to save the figure. None (the default) only builds and returns it.
+    pop_labels : sequence of str, optional
+        Source population names in array order, e.g.
+        SomatoModel.get_population_labels(). Falls back to the parameter file's key
+        paths, so no model is needed.
+    """
+    spec = _AREA_SPECS[area]
+    display = spec['display']
+    layer_labels = spec['labels']
+
+    dp = read_dipole_params(json_path)
+    # A3b is stored as a single source vector, A1/S2 as one per target layer
+    lengths = np.atleast_2d(np.asarray(dp['dipole_lengths'][area], dtype=float))
+    orientations = np.atleast_2d(np.asarray(dp['dipole_orientation'][area], dtype=float))
+    if lengths.shape[0] != len(layer_labels):
+        raise ValueError(f'{area}: parameter file has {lengths.shape[0]} target layers, '
+                         f'expected {len(layer_labels)}')
+
+    if pop_labels is None:
+        pop_labels = _default_source_labels()
+    pop_labels = [str(label) for label in pop_labels]
+    n_sources = lengths.shape[1]
+
+    try:
+        style_colors, _ = figure_style()
+    except Exception:
+        # figure_style() opens a tkinter window to query the screen size, which fails
+        # on headless nodes - the figure should still be produced there
+        style_colors = {}
+    dark2 = sns.color_palette('Dark2')
+    area_colors = {'A3b': dark2[2], 'S1': dark2[0], 'S2': dark2[1],
+                   'Thalamus': style_colors.get('Thal', dark2[3])}
+    source_styles = _build_source_styles(pop_labels, n_sources, area_colors)
+
+    # one vector per (column, row) panel; the grid plotter only hands these keys back
+    # to `weights`, so they can be anything hashable
+    values = {}
+    for c in range(len(layer_labels)):
+        values[(c, 0)] = lengths[c] * orientations[c]
+        values[(c, 1)] = lengths[c]
+        values[(c, 2)] = orientations[c]
+
+    nrow = len(_PER_CONNECTION_ROWS)
+    # the target of a column is named once, in the title of its top panel; the rows are
+    # named by the shared left-hand labels. A3b is unlaminated - its single column is
+    # the area itself, so repeating the layer label there would read 'A3b A3b E'.
+    targets = ([f'{display} {lab} E' for lab in layer_labels] if len(layer_labels) > 1
+               else [f'{display} E'])
+    columns = [(lab, [f'{target} (target)'] + [''] * (nrow - 1),
+                [(c, r) for r in range(nrow)])
+               for c, (lab, target) in enumerate(zip(layer_labels, targets))]
+
+    savepath = None
+    if figure_dir is not None:
+        os.makedirs(figure_dir, exist_ok=True)
+        savepath = os.path.join(figure_dir,
+                                f'dipoleParameters_perConnection_{area}.png')
+
+    fig = _plot_connectivity_grid(
+        columns, values.__getitem__, [row for row, _ in _PER_CONNECTION_ROWS],
+        source_styles, pop_labels,
+        f'Dipole model per source -> target connection - {display}', savepath,
+        xlabel='Source population', legend_title='Source area',
+        ylabels=[ylabel for _, ylabel in _PER_CONNECTION_ROWS],
+        col_width=4.6 if len(layer_labels) > 1 else 7.0)
+
+    # the orientation is a sign, not a continuous value - label it as one. Only
+    # possible once the axes exist, so the figure is written again below.
+    ncol = len(layer_labels)
+    for ax in fig.axes[(nrow - 1) * ncol:nrow * ncol]:
+        ax.set_yticks([-1, 0, 1])
+        ax.set_yticklabels(['inward\n(-1)', 'none\n(0)', 'outward\n(+1)'], fontsize=8)
+
+    if figure_dir is not None:
+        name = os.path.splitext(savepath)[0]
+        fig.savefig(name + '.png', dpi=300, bbox_inches='tight')
+        fig.savefig(name + '.pdf', bbox_inches='tight')
+        print(f'{display} per-connection dipole parameters saved to {name}.pdf/.png')
+    return fig
 
 
 # %%
@@ -195,7 +311,7 @@ _AREA_SPECS = {
 _LAYER_COLORS = ['#4477AA', '#EE6677', '#228833', '#AA3377']  # blue, red, green, purple
 
 
-def plot_dipole_computation_area(model, simDipoles, area, figure_dir):
+def plot_dipole_computation_area(model, simDipoles, area, figure_dir=None):
     """
     Demonstrate the dipole computation for one area ('A3b', 'A1' or 'S2').
 
@@ -213,8 +329,9 @@ def plot_dipole_computation_area(model, simDipoles, area, figure_dir):
         Output of model.compute_dipoles(...).
     area : str
         Key of _AREA_SPECS: 'A3b', 'A1' (= S1) or 'S2'.
-    figure_dir : str
-        Where to save the figure.
+    figure_dir : str, optional
+        Where to save the figure. None (the default) only builds and returns it, for
+        callers that just want to look at the current run (see simulation_main.py).
     """
     spec = _AREA_SPECS[area]
     display = spec['display']
@@ -272,15 +389,12 @@ def plot_dipole_computation_area(model, simDipoles, area, figure_dir):
     sns.despine(fig=fig, trim=True)
     fig.tight_layout()
 
-    name = os.path.join(figure_dir, f'dipoleComputation_{area}_example')
-    fig.savefig(name + '.pdf', bbox_inches='tight')
-    fig.savefig(name + '.png', dpi=300, bbox_inches='tight')
-    print(f'{display} dipole computation figure saved to {name}.pdf/.png')
+    if figure_dir is not None:
+        name = os.path.join(figure_dir, f'dipoleComputation_{area}_example')
+        fig.savefig(name + '.pdf', bbox_inches='tight')
+        fig.savefig(name + '.png', dpi=300, bbox_inches='tight')
+        print(f'{display} dipole computation figure saved to {name}.pdf/.png')
     return fig
-
-
-figs = {area: plot_dipole_computation_area(model, simDipoles, area, figure_dir)
-        for area in ('S2', 'A1', 'A3b')}
 
 
 # %%
@@ -353,12 +467,28 @@ _SOURCE_AREA_COLORS = {'A3b': _dark2[2], 'S1': _dark2[0], 'S2': _dark2[1],
 _LAYER_SHADES = [0.55, 0.40, 0.22, 0.0]
 
 
-def _source_color(area, layer_index):
-    """Area colour, lightened according to the source layer (None = unlaminated source)."""
+# Sources that must be darkened to stay distinguishable. The lightness of a trace
+# normally encodes the source layer, but the thalamus is unlaminated, so ThalE (VPM) and
+# ThalPOm both fall back to the plain Thalamus colour - and both are excitatory, so they
+# share the E row and its legend. Darkening POm keeps the same hue while separating the
+# two. Fraction blended towards black.
+_SOURCE_DARKEN = {'ThalPOm': 0.45}
+
+
+def _source_color(area, layer_index, label=None):
+    """Area colour, lightened according to the source layer (None = unlaminated source).
+
+    `label` is the source population's name; sources listed in _SOURCE_DARKEN are
+    additionally darkened so that two unlaminated sources of the same area and cell type
+    do not end up with an identical colour.
+    """
     base = np.array(_SOURCE_AREA_COLORS[area], dtype=float)
-    if layer_index is None:
-        return tuple(base)
-    return tuple(base + (1.0 - base) * _LAYER_SHADES[layer_index])
+    if layer_index is not None:
+        base = base + (1.0 - base) * _LAYER_SHADES[layer_index]
+    darken = _SOURCE_DARKEN.get(label, 0.0)
+    if darken:
+        base = base * (1.0 - darken)
+    return tuple(base)
 
 
 def _celltype_orientations(model, area, sources):
@@ -390,7 +520,8 @@ def _layer_weight(cache, area, layer_index):
                     for s in cache['per_subject']], axis=0)
 
 
-def plot_layer_interneuron_contributions(model, simDipoles, area, subjects, figure_dir):
+def plot_layer_interneuron_contributions(model, simDipoles, area, subjects,
+                                         figure_dir=None):
     """
     Show how every source population contributes to each layer's dipole.
 
@@ -424,8 +555,8 @@ def plot_layer_interneuron_contributions(model, simDipoles, area, subjects, figu
     subjects : list of int
         The subject list passed to compute_dipoles, used to look up the cached
         dipole projection vectors.
-    figure_dir : str
-        Where to save the figure.
+    figure_dir : str, optional
+        Where to save the figure. None (the default) only builds and returns it.
     """
     spec = _AREA_SPECS[area]
     display = spec['display']
@@ -474,9 +605,13 @@ def plot_layer_interneuron_contributions(model, simDipoles, area, subjects, figu
     for c, (lab, e_idx, li, dipole_row) in enumerate(columns):
         w = _layer_weight(cache, area, li)
         # synaptic potentials arriving at this layer's E population, one row per
-        # source. The [:-2] slice drops the background and external-input columns
-        # exactly as compute_dipoles does, so the contributions sum to the dipole.
-        pot = model.potential[e_idx, :-2]
+        # source. Only the first nPop columns are population-to-population synapses;
+        # the remaining ones are the external drives (background, external and, since
+        # the mechanical input was added, a third), which compute_dipoles excludes from
+        # the dipole. Indexing by nPop rather than counting input columns from the end
+        # keeps this correct however many drives the model grows - a hard-coded [:-2]
+        # silently became wrong when the third one appeared.
+        pot = model.potential[e_idx, :model.nPop]
         contrib = w[:, None] * pot               # (33, ntimes) signed contributions
 
         groups = {}
@@ -487,7 +622,11 @@ def plot_layer_interneuron_contributions(model, simDipoles, area, subjects, figu
         # it has dipole length 0, so the four plotted classes are complete. The
         # total sums over every class regardless, so the assertion stays exact.
         total = sum(groups.values())
-        assert np.allclose(total, simDipoles[dipole_row], atol=1e-8), \
+        # relative tolerance, not a fixed 1e-8: the dipole amplitude depends entirely on
+        # the parameter set (order 1 for the optimized run, order 100 for some of the
+        # high-gain sets simulation_main.py explores), and summing 33 float contributions
+        # cannot hold an absolute bound that tight at the top of that range.
+        assert np.allclose(total, simDipoles[dipole_row]), \
             f'cell-type decomposition does not reproduce the {area} {lab} dipole'
 
         # --- one row per source cell type: the individual source contributions ---
@@ -505,7 +644,7 @@ def plot_layer_interneuron_contributions(model, simDipoles, area, subjects, figu
             for j, (label, src_area, layer_index, _) in members:
                 if not keep_zero and np.allclose(contrib[j], 0):
                     continue
-                color = _source_color(src_area, layer_index)
+                color = _source_color(src_area, layer_index, label)
                 ax.plot(t[mask], contrib[j][mask], color=color,
                         linestyle=CELLTYPE_LINESTYLES[ctype], linewidth=1.1)
                 row_legend[ctype].setdefault(label, color)
@@ -568,15 +707,65 @@ def plot_layer_interneuron_contributions(model, simDipoles, area, subjects, figu
     sns.despine(fig=fig, trim=True)
     fig.tight_layout(rect=[0, 0, 1, 0.97])
 
-    name = os.path.join(figure_dir, f'dipoleComputation_layerInterneurons_{area}_example')
-    fig.savefig(name + '.pdf', bbox_inches='tight')
-    fig.savefig(name + '.png', dpi=300, bbox_inches='tight')
-    print(f'{display} layer interneuron figure saved to {name}.pdf/.png')
+    if figure_dir is not None:
+        name = os.path.join(figure_dir,
+                            f'dipoleComputation_layerInterneurons_{area}_example')
+        fig.savefig(name + '.pdf', bbox_inches='tight')
+        fig.savefig(name + '.png', dpi=300, bbox_inches='tight')
+        print(f'{display} layer interneuron figure saved to {name}.pdf/.png')
     return fig
 
 
-figs_IN = {area: plot_layer_interneuron_contributions(
-               model, simDipoles, area, subjects, figure_dir)
-           for area in ('S2', 'A1', 'A3b')}
+# %%
+# ---------------------------------------------------------------------------
+# Standalone demo: run one simulation of its own and build all seven figures.
+#
+# Guarded so the functions above can be imported and applied to someone else's
+# model - Simulations/simulation_main.py plots the dipole computation of the run it
+# has just simulated this way. Without the guard, importing this module would run
+# the extra simulation below and write its figures as a side effect.
+# ---------------------------------------------------------------------------
+if __name__ == '__main__':
+    # output directory
+    SIMDIR = os.getenv("SIMDIR")
+    figure_dir = os.path.join(SIMDIR, "Figures", "dipole_computation")
+    os.makedirs(figure_dir, exist_ok=True)
 
-plt.show()
+    # subject forward model(s) used to project the dipoles (as in simulation_main.py)
+    subjects = [15]
+
+    # 1) Run one stimulated simulation.
+    # Read the parameters from an optimization run. Same configuration as
+    # Simulations/simulation_main.py: the simulation_parameter.json base params
+    # updated with the run's best_params, background noise switched off.
+    # Keep opt_run in sync with simulation_main.py's - the two are set independently.
+    opt_run = "opt_20260806_141628_tc_roi-S2" #"opt_20260729_093613_tc_roi-S2" #"opt_20260729_114525_tc_roi-A1"
+    params = load_optimized_params(opt_run, overrides={'Ib_noise_std': 0})
+
+    model = SomatoModel(params)
+    model.simulate()
+
+    # 2) Compute the dipole from the simulated potentials.
+    #    simDipoles shape (9, ntimes): 0 = A3b, 1-4 = A1 L{1,4,5,6}_E, 5-8 = S2 L{1,4,5,6}_E
+    simDipoles = model.compute_dipoles(subjects)
+
+    # Figure 1: dipole parameters per cell
+    fig1 = plot_dipole_parameters_clean(
+        os.path.join(_eeg_dir, 'dipole_parameters_flippedPVSST.json'), figure_dir)
+
+    # Figures 2-4: dipole computation example per area
+    figs = {area: plot_dipole_computation_area(model, simDipoles, area, figure_dir)
+            for area in ('S2', 'A1', 'A3b')}
+
+    # Figures 5-7: source contributions per layer
+    figs_IN = {area: plot_layer_interneuron_contributions(
+                   model, simDipoles, area, subjects, figure_dir)
+               for area in ('S2', 'A1', 'A3b')}
+
+    # Figures 8-10: dipole parameters per source->target connection
+    figs_conn = {area: plot_dipole_parameters_per_connection(
+                     os.path.join(_eeg_dir, 'dipole_parameters_flippedPVSST.json'),
+                     area, figure_dir, model.get_population_labels())
+                 for area in ('S2', 'A1', 'A3b')}
+
+    plt.show()

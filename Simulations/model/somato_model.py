@@ -9,6 +9,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
 import mne
+import parameters
 from parameters import Parameter
 
 location = "mpi"
@@ -95,6 +96,8 @@ REQUIRED_PARAMS = (
     # input
     'input_type', 'Iext_strength', 'Iext_duration', 'Ib_strength', 'Im_strength',
     'Ib_noise_std', 'Ib_noise_tau', 'Ib_noise_seed',
+    # background-input strength per cell class, as a ratio against the drive onto E
+    'Ib_ratio_E', 'Ib_ratio_PV', 'Ib_ratio_SST', 'Ib_ratio_VIP',
     # gains
     'coupling_strength', 'strength_I', 'g_thal', 'sI_thal', 'g_thalPOm', 'g_intercortical',
     # delays / time constants / connection probabilities (passed to Parameter)
@@ -243,6 +246,16 @@ def read_analysis_params():
 
 class SomatoModel():
 
+    # The 9 rows of the computed area dipole, in the order compute_dipoles fills them:
+    # A3b (one excitatory population) followed by the four layers of A1 and of S2.
+    # Single definition, used for the plot legends and for the saved 'dipole' table.
+    DIPOLE_AREA_LAYERS = {"A3b": ["E"],
+                          "A1":  ["L1_E", "L4_E", "L5_E", "L6_E"],
+                          "S2":  ["L1_E", "L4_E", "L5_E", "L6_E"]}
+    DIPOLE_LABELS = [f"{area}_{layer}"
+                     for area, layers in DIPOLE_AREA_LAYERS.items()
+                     for layer in layers]
+
     def __init__(self, params={}, WDDIR=None):
 
         # All defaults come from Simulations/simulation_parameter.json - the single
@@ -309,6 +322,8 @@ class SomatoModel():
             Im_strength=self.Im_strength, mI_cellcounts=self.mI_cellcounts,
             bI_cellcounts=self.bI_cellcounts, extI_cellcounts=self.extI_cellcounts,
             g_intercortical=self.g_intercortical,
+            Ib_ratio_PV=self.Ib_ratio_PV, Ib_ratio_SST=self.Ib_ratio_SST,
+            Ib_ratio_VIP=self.Ib_ratio_VIP,
         )
 
         # Output matrices to store computed values for rates & potentials (E, IIN , EIN) 
@@ -323,7 +338,7 @@ class SomatoModel():
         self.t = 0.0
 
         # Weight matrix [to x from]
-        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, area=self.area)
+        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios())
 
         # per-subject dipole projection vectors (forward model + labels + geometry), invariant
         # across simulation runs → built once per subjects list and reused (see compute_dipoles).
@@ -394,7 +409,8 @@ class SomatoModel():
             self.thalI_cellcounts,
             self.pom_cellcounts,
             self.mI_cellcounts,
-            area=self.area
+            area=self.area,
+            bI_ratios=self.bI_ratios(),
         )
 
 
@@ -459,7 +475,7 @@ class SomatoModel():
         S = self.p.get_connectStrength()
         P = self.p.get_connectProb()
         C = self.p.get_cellcounts()
-        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts)
+        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, bI_ratios=self.bI_ratios())
 
         # Convert numpy arrays to lists
         parameters = {
@@ -488,7 +504,7 @@ class SomatoModel():
                 is only drawn, not saved.
         """
         pop_names = self.get_population_labels()
-        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, area=self.area)
+        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios())
         # drop the background (B) and external (Ext) input columns so the matrix is square
         W_df = pd.DataFrame(W[:, :-3], index=pop_names, columns=pop_names)
 
@@ -648,42 +664,24 @@ class SomatoModel():
     def compute_ecds():
         raise NotImplementedError
 
+    def bI_ratios(self):
+        """Background-input strength per cell class, as {class: ratio}.
+
+        E is the reference the others are defined against, so Ib_ratio_E is normally 1.0
+        and the drive onto E is set by Ib_strength alone. Collected here rather than at
+        each get_connectivity call site so the three of them cannot disagree.
+        """
+        return {'E': self.Ib_ratio_E, 'PV': self.Ib_ratio_PV,
+                'SST': self.Ib_ratio_SST, 'VIP': self.Ib_ratio_VIP}
+
     def get_population_labels(self):
-        return np.array([
-            "E3b",
-            "PV3b",
-            "SST3b",
-            "VIP3b",
-            "E1",
-            "PV1",
-            "SST1",
-            "VIP1",
-            "E2",
-            "PV2",
-            "SST2",
-            "E3",
-            "PV3",
-            "SST3",
-            "E4",
-            "PV4",
-            "SST4",
-            "E1S2",
-            "PV1S2",
-            "SST1S2",
-            "VIP1S2",
-            "E2S2",
-            "PV2S2",
-            "SST2S2",
-            "E3S2",
-            "PV3S2",
-            "SST3S2",
-            "E4S2",
-            "PV4S2",
-            "SST4S2",
-            "ThalE",
-            "ThalI",
-            "ThalPOm"
-        ])
+        """Population names in connectivity row order.
+
+        Defined in parameters.POPULATION_LABELS, next to the matrices that use the order,
+        so the names and the per-population class vector (parameters.population_classes)
+        cannot drift apart.
+        """
+        return parameters.POPULATION_LABELS
 
     def get_population_spectrum_groups(self):
         return [
@@ -737,9 +735,14 @@ class SomatoModel():
         self.run_dir = run_dir
         return run_dir
 
-    def save_results_csv(self, filedir, filename, full=False, save_params=False):
+    def save_results_csv(self, filedir, filename, full=False, save_params=False, dipole=None):
         """
         Safe the simulated data in a csv file
+
+        Keys written to <filename>.hdf5: 'rates', 'summed_potential' and - when a
+        `dipole` (9, n_times) array is passed - 'dipole', the area dipole with time as
+        rows and DIPOLE_LABELS as columns. simulation_main.py passes the seed-averaged
+        dipole there so the saved run carries the trace the errors were scored on.
         """
         rates_df, potential_df = self.prepare_dataframes()
         #print('saving rates', len(rates_df))
@@ -753,6 +756,13 @@ class SomatoModel():
         potential_df.to_hdf(
             os.path.join(filedir, filename), index=False, key="summed_potential", mode="a"
         )
+
+        if dipole is not None:
+            # time as rows, to match rates_df / potential_df
+            dipole_df = pd.DataFrame(np.asarray(dipole).T, columns=self.DIPOLE_LABELS)
+            dipole_df.to_hdf(
+                os.path.join(filedir, filename), index=False, key="dipole", mode="a"
+            )
 
         if full:
             # save all potentials additionally
@@ -1242,11 +1252,7 @@ class SomatoModel():
             "A1": [1, 2, 3, 4],
             "S2": [5, 6, 7, 8],
         }
-        labels = {
-            "A3b": ["E"],
-            "A1": ["L1_E", "L4_E", "L5_E", "L6_E"],
-            "S2": ["L1_E", "L4_E", "L5_E", "L6_E"],
-        }
+        labels = self.DIPOLE_AREA_LAYERS
 
         fig, axes = plt.subplots(3, 1, figsize=(12, 9), sharex=True)
         for ax, area in zip(axes, ["A3b", "A1", "S2"]):
@@ -1419,7 +1425,7 @@ class SomatoModel():
                 "S2":  np.sum(sim_dip[5:9], axis=0)}
 
 
-    def _prestim_segments(self, seg_dur=0.4, overlap=0.5, settle_s=0.5):
+    def _prestim_segments(self, seg_dur=1, overlap=0.5, settle_s=2, n_segments=4):
         """Start indices of the pre-stimulus segments used for the spectrum (Welch layout).
 
         Segments of `seg_dur` seconds (so the frequency grid stays 1/seg_dur = 2.5 Hz at the
@@ -1427,6 +1433,12 @@ class SomatoModel():
         pre-stimulus period, ending at stimulus onset, with `overlap` fractional overlap.
         The first `settle_s` seconds of the run are skipped so the initialisation transient
         never enters the estimate (500 ms by default — at 300 ms its tail is still visible).
+
+        `n_segments` caps how many segments are used, keeping the *last* ones, i.e. those
+        closest to stimulus onset. `n_segments=1` therefore asks for the single `seg_dur`
+        window ending at onset, whatever `settle_s` and `overlap` would otherwise allow —
+        the robust way to request one segment without hand-tuning `settle_s` against
+        `input_onset`. None (default) keeps every segment that fits.
 
         Returns:
             (list of start indices, segment length in samples). Always at least one segment
@@ -1445,11 +1457,14 @@ class SomatoModel():
             start -= hop
         if not starts:
             starts = [max(stim_idx - seg_len, 0)]
-        return sorted(starts), seg_len
+        starts = sorted(starts)
+        if n_segments is not None:
+            starts = starts[-int(n_segments):]
+        return starts, seg_len
 
 
     def compute_prestim_spectrum(self, sim_dip, fmin=1.0, fmax=40.0,
-                                 seg_dur=0.4, overlap=0.5, settle_s=0.5):
+                                 seg_dur=1, overlap=0.5, settle_s=2, n_segments=4):
         """Pre-stimulus power spectrum of the simulated ROI dipoles (Welch-averaged).
 
         Mirrors helper_functions.compute_freq_spectrum per segment (detrend + Hann +
@@ -1459,7 +1474,9 @@ class SomatoModel():
         the measured target is averaged over subjects and epochs — with one segment a random
         low-frequency bin can look like an oscillatory peak.
 
-        `seg_dur` sets the frequency resolution (400 ms -> 2.5 Hz, the measured grid).
+        `seg_dur` sets the frequency resolution (400 ms -> 2.5 Hz, the measured grid), and
+        `n_segments` caps how many segments are averaged (see _prestim_segments); with
+        `n_segments=1` this is a single periodogram of the window ending at stimulus onset.
 
         Note the pre-stimulus spectrum is only meaningful with background noise enabled
         (`Ib_noise_std > 0`); without it the pre-stimulus signal is the settled fixed point
@@ -1469,7 +1486,7 @@ class SomatoModel():
             (freqs, dict roi -> power) restricted to [fmin, fmax] Hz.
         """
         rois = self._roi_dipoles(sim_dip)
-        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
+        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s, n_segments)
         win = np.hanning(seg_len)
         freqs = np.fft.rfftfreq(seg_len, d=self.step_size)
         fmask = (freqs >= fmin) & (freqs <= fmax)
@@ -1482,7 +1499,7 @@ class SomatoModel():
                 psd += ((np.abs(np.fft.rfft(x)) ** 2) / seg_len**2)[fmask]
             spectra[roi] = psd / len(starts)
 
-        fluct = self._prestim_fluctuation(sim_dip, seg_dur, overlap, settle_s)
+        fluct = self._prestim_fluctuation(sim_dip, seg_dur, overlap, settle_s, n_segments=n_segments)
         if fluct <= 1e-6:
             print(f"[compute_prestim_spectrum] WARNING: the pre-stimulus signal of at least one "
                   f"ROI is flat (fluctuation {fluct:.2e} of its own level) — the network has "
@@ -1490,7 +1507,8 @@ class SomatoModel():
         return freqs[fmask], spectra
 
 
-    def _prestim_fluctuation(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, rois=None):
+    def _prestim_fluctuation(self, sim_dip, seg_dur=1, overlap=0.5, settle_s=2, rois=None,
+                             n_segments=4):
         """Size of the pre-stimulus fluctuation relative to the signal's own level, in [0, ~1].
 
         `std(pre-stimulus) / max|pre-stimulus|` over the worst of the `rois`. Measuring the
@@ -1507,7 +1525,7 @@ class SomatoModel():
         to losing stability — a nearly-unstable one keeps a much larger residual fluctuation
         than a deeply stable one, so following it uphill leads towards the Hopf boundary.
         """
-        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
+        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s, n_segments)
         signals = self._roi_dipoles(sim_dip)
         worst = np.inf
         for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
@@ -1517,8 +1535,8 @@ class SomatoModel():
         return worst
 
 
-    def _prestim_signal_ok(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, rel_tol=1e-6,
-                           rois=None):
+    def _prestim_signal_ok(self, sim_dip, seg_dur=1, overlap=0.5, settle_s=2, rel_tol=1e-6,
+                           rois=None, n_segments=4):
         """True if the pre-stimulus period carries meaningful fluctuations in every fitted ROI.
 
         `rois` selects which ROIs must carry activity (default: all three). This matters
@@ -1526,10 +1544,12 @@ class SomatoModel():
         activity while the S2 dipole itself was numerically dead — which is exactly what
         happened in opt_20260806_170111_ps_roi-S2.
         """
-        return self._prestim_fluctuation(sim_dip, seg_dur, overlap, settle_s, rois) > rel_tol
+        return self._prestim_fluctuation(sim_dip, seg_dur, overlap, settle_s, rois,
+                                         n_segments) > rel_tol
 
 
-    def _prestim_amplitude_ratio(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, rois=None):
+    def _prestim_amplitude_ratio(self, sim_dip, seg_dur=1, overlap=0.5, settle_s=2, rois=None,
+                                 n_segments=4):
         """How well the pre-stimulus amplitude holds up across the segments, in [0, 1].
 
         `min(segment std) / max(segment std)` over the pre-stimulus segments, taken over the
@@ -1541,7 +1561,7 @@ class SomatoModel():
         settles to a fixed point, and a hard reject leaves the GA no gradient towards the
         oscillatory region.
         """
-        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s)
+        starts, seg_len = self._prestim_segments(seg_dur, overlap, settle_s, n_segments)
         signals = self._roi_dipoles(sim_dip)
         worst = 1.0
         for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
@@ -1551,8 +1571,8 @@ class SomatoModel():
         return worst
 
 
-    def _prestim_stationary(self, sim_dip, seg_dur=0.4, overlap=0.5, settle_s=0.5, min_ratio=0.8,
-                            rois=None):
+    def _prestim_stationary(self, sim_dip, seg_dur=1, overlap=0.5, settle_s=2, min_ratio=0.8,
+                            rois=None, n_segments=4):
         """True if the pre-stimulus amplitude is sustained rather than decaying.
 
         Needed only with the background noise off, where a decaying transient is otherwise
@@ -1566,7 +1586,8 @@ class SomatoModel():
         merely halved is still a ring-down, not a rhythm. A limit cycle varies by no more than
         a few percent between overlapping 400 ms windows, so 0.8 leaves ample margin.
         """
-        return self._prestim_amplitude_ratio(sim_dip, seg_dur, overlap, settle_s, rois) >= min_ratio
+        return self._prestim_amplitude_ratio(sim_dip, seg_dur, overlap, settle_s, rois,
+                                             n_segments) >= min_ratio
 
 
     def load_target_prestim_spectrum(self, data_path):
@@ -1586,6 +1607,57 @@ class SomatoModel():
             spectra[dst] = roi_df["power"].to_numpy()
         return freqs, spectra
 
+    def compute_error_prestim_osc(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None,
+                                  rois=None, seg_dur=1, overlap=0.5, settle_s=2,
+                                  n_segments=5, verbose=False):
+        """Whole-shape error between the simulated and the measured pre-stimulus spectrum.
+
+        Both spectra are normalised to unit sum (relative power) over the frequency bins they
+        share, which removes the sim/data amplitude-scale mismatch, and compared by MSE,
+        averaged over `rois` (default: all three).
+
+        The defaults score a **single** `seg_dur` = 400 ms segment ending at stimulus onset
+        (`n_segments=1`). 400 ms is the measured epoch length, so the simulated spectrum lands
+        on the target's own 2.5 Hz grid; the bins are nevertheless intersected explicitly, so
+        changing `seg_dur` degrades to a subset comparison instead of a broadcast error.
+
+        If `target_dip` is given (a saved dipole trace), the target spectrum is computed from
+        it with the *same* segment layout instead of loading `data_path` — used for the
+        parameter-recovery tests, where sim and target then share an identical grid.
+
+        Returns:
+            (float mean MSE over `rois`, sim spectra dict, target spectra dict). The error is
+            NaN if a compared spectrum carries no power at all (a dead ROI), so the caller can
+            reject the parameter set rather than score numerical residue.
+        """
+        seg_kw = dict(seg_dur=seg_dur, overlap=overlap, settle_s=settle_s, n_segments=n_segments)
+        f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax, **seg_kw)
+        f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax, **seg_kw)
+                           if target_dip is not None else self.load_target_prestim_spectrum(data_path))
+
+        # the measured CSV spans the full 0-250 Hz grid, the simulated spectrum is already
+        # restricted to [fmin, fmax] -- so mask the target, then compare on the shared bins
+        tmask = (f_tgt >= fmin) & (f_tgt <= fmax)
+        common  = np.intersect1d(np.round(f_sim, 6), np.round(f_tgt[tmask], 6))
+        sim_sel = np.isin(np.round(f_sim, 6), common)
+        tgt_sel = np.isin(np.round(f_tgt, 6), common)
+
+        errors = []
+        for roi in (tuple(rois) if rois else ("A3b", "A1", "S2")):
+            s = spec_sim[roi][sim_sel]
+            t = spec_tgt[roi][tgt_sel]
+            # Guard the normalisation instead of adding an eps: a dead ROI would otherwise
+            # divide ~0 by eps and come out as an all-zero "spectrum" scoring like any other.
+            if s.sum() <= 0 or t.sum() <= 0:
+                errors.append(np.nan)
+                continue
+            errors.append(np.mean((s / s.sum() - t / t.sum()) ** 2))
+
+        err = float(np.mean(errors))
+        if verbose:
+            print('prestim error', err)
+
+        return err, spec_sim, spec_tgt
 
     def compute_error_prestim_spectrum(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None,
                                        flatten_sim=False, flatten_target=False, rois=None):
@@ -2144,7 +2216,8 @@ class SomatoModel():
 
 
     def plot_prestim_spectrum_comparison(self, data_path, sim_dip, fmin=1.0, fmax=40.0, target_dip=None,
-                                         seg_dur=0.4, overlap=0.5, settle_s=0.5, show=False):
+                                         seg_dur=1, overlap=0.5, settle_s=2, n_segments=10,
+                                         show=False):
         """Plot simulated vs measured pre-stim spectra per ROI, as the "ps" fit sees them.
 
         Layout 4x3: columns are the ROIs (A3b, A1, S2) on the shared 2.5 Hz grid, rows are
@@ -2174,7 +2247,7 @@ class SomatoModel():
         from signal_preprocessing import log_aperiodic_residual
 
         rois = ("A3b", "A1", "S2")
-        seg_kw = dict(seg_dur=seg_dur, overlap=overlap, settle_s=settle_s)
+        seg_kw = dict(seg_dur=seg_dur, overlap=overlap, settle_s=settle_s, n_segments=n_segments)
         f_sim, spec_sim = self.compute_prestim_spectrum(sim_dip, fmin, fmax, **seg_kw)
         f_tgt, spec_tgt = (self.compute_prestim_spectrum(target_dip, fmin, fmax, **seg_kw)
                            if target_dip is not None else self.load_target_prestim_spectrum(data_path))

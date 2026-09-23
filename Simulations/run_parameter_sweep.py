@@ -72,7 +72,10 @@ sys.path.append(os.path.join(WDDIR, "Simulations"))
 sys.path.append(os.path.join(WDDIR, "Simulations", "model"))
 
 from somato_model import SomatoModel, read_simulation_params  # noqa: E402
-from oscillation_metrics import oscillation_features, welch_spectrum  # noqa: E402
+from oscillation_metrics import (  # noqa: E402
+    ALPHA_AMP_BAND, BANDS, amplitude_ratio, band_amplitude, band_prominences,
+    dominant_peak, empty_features, features_from_spectra, network_gain_spectrum,
+    relative_fluctuation, welch_spectrum)
 
 
 # ── the searchable parameter space ─────────────────────────────────────────────
@@ -86,6 +89,23 @@ PARAM_RANGES = {
     "coupling_strength": (0.0, 20.0),      # gE
     "strength_I": (0.4, 0.9),              # gI = coupling_strength * strength_I
     "Ib_strength": (3.0, 20.0),            # tonic background drive
+    # Modulatory drive. Wm is nonzero on the VIP rows only (parameters.get_raw_connectivity),
+    # so this is the disinhibition knob: Im -> VIP -> SST -| E.
+    "Im_strength": (0.0, 20.0),
+    # background drive onto each cell class, relative to the drive onto E.
+    # Ib_ratio_E scales the background onto the excitatory rows only. Sweeping it at a
+    # fixed Ib_strength is how the E drive is varied with the SST and VIP drive held
+    # still - which Ib_strength itself cannot do, since it moves every class at once.
+    # The one thing not to do is sweep it *and* Ib_strength in the same grid: only their
+    # product reaches E, so that plane is degenerate along a diagonal.
+    "Ib_ratio_E": (0.2, 1.5),
+    "Ib_ratio_PV": (0.2, 1.5),
+    "Ib_ratio_SST": (0.2, 1.5),
+    "Ib_ratio_VIP": (0.1, 1.5),
+    # Background noise amplitude. Not zero at the low end: with the noise off the
+    # loop-free control has no ongoing drive either, and the scoring falls back to the
+    # raw spectrum (scored_vs='flat') instead of the network gain.
+    "Ib_noise_std": (0.05, 1.5),
     "g_intercortical": (0.0, 2.0),         # A3b <-> S1 <-> S2 long-range gain
     # thalamo-cortical loop
     "g_thal": (0.0, 5.0),                  # VPM output gain
@@ -233,7 +253,7 @@ _NULL_CACHE = {}
 #
 # Scaling rather than zeroing matters for two signals that would otherwise have no
 # reference at all:
-#   - the ROI dipoles, which are projections of self.potential[:, :-2] and therefore
+#   - the ROI dipoles, which are projections of self.potential[:, :-3] and therefore
 #     exclude the background column entirely: with the gains at zero the dipole is
 #     identically zero, not merely small.
 #   - the thalamic populations, which receive no background input at all and in a
@@ -241,6 +261,17 @@ _NULL_CACHE = {}
 # Scale-free prominence means the absolute size of the control signal is irrelevant, so
 # the attenuation costs nothing.
 NULL_GAIN_SCALE = 1e-3
+# Fraction of a population's sigmoid ceiling the loop-free control's alpha amplitude has
+# to reach before `alpha_gain` is worth forming. Below it the denominator is numerical
+# residue and the ratio is meaningless.
+#
+# The value is read off the split the model itself produces: measured over one grid, the
+# control's alpha amplitude sits at 3e-5 to 1.7e-3 of m_max for every cortical population
+# and at 2.4e-8 for the three thalamic ones, which receive no background input at all and
+# so have nothing left to be driven by once the loops are cut. Anything between those two
+# clusters works; 1e-6 sits in the gap. Without it the thalamic rows report gains of
+# 1500-19000 and take over every shared colour scale they appear on.
+ALPHA_GAIN_NULL_FLOOR = 1e-6
 NULL_GAIN_PARAMS = ("coupling_strength", "g_thal", "g_thalPOm", "g_intercortical") \
     + THAL_CONNECT_NAMES
 # strength_I and sI_thal are ratios (gI = coupling_strength * strength_I), so they are
@@ -261,9 +292,14 @@ def _get_model(base_params, subjects):
     return _MODEL
 
 
-def _simulate_signals(model, params, base_params, subjects, labels):
-    """Run the model once with `params` and return its recorded signals and rates."""
-    model.apply_params(expand_theta(params, base_params))
+def _simulate_signals(model, params, base_params, subjects, labels, seed=None):
+    """Run the model once with `params` and return its recorded signals and rates.
+
+    `seed` overrides Ib_noise_seed, which is how the seed-averaging path draws
+    independent noise realisations of the same parameter set.
+    """
+    extra = {} if seed is None else {"Ib_noise_seed": int(seed)}
+    model.apply_params({**expand_theta(params, base_params), **extra})
     model.initialize_state()
     model.simulate()
     potentials = np.sum(model.potential, axis=1)               # (33, n_steps)
@@ -276,40 +312,100 @@ def _simulate_signals(model, params, base_params, subjects, labels):
     return signals, model.rate.copy()
 
 
-def _null_spectra(model, theta, base_params, subjects, labels, feat_kwargs):
-    """Welch spectra of every signal in the loop-free control run of this parameter set.
+def _averaged_traces(model, theta, base_params, subjects, labels, seeds):
+    """Simulate one parameter set once per noise realisation and average the traces.
+
+    This is the *only* place seeds are combined: the per-population time courses are
+    averaged element-wise and every measure is then taken once, on the average. No
+    measure is ever averaged across seeds - see run_point.
+
+    Returns (signals, rates) as (n_signals, n_steps) and (n_pop, n_steps) arrays.
+    """
+    sig_stack, rate_stack = [], []
+    for seed in seeds:
+        signals, rates = _simulate_signals(model, theta, base_params, subjects, labels,
+                                           seed)
+        sig_stack.append(np.asarray(signals, dtype=float))
+        rate_stack.append(np.asarray(rates, dtype=float))
+    return (np.mean(sig_stack, axis=0), np.mean(rate_stack, axis=0))
+
+
+def _null_reference(model, theta, base_params, subjects, labels, feat_kwargs, seeds):
+    """Loop-free control of this parameter set, averaged over the same seeds.
+
+    Returns (spectra per signal, control rate alpha, control signal alpha,
+    control signal scale). The control is averaged exactly like the run it is the
+    denominator of, so numerator and denominator carry the same 1/sqrt(N) suppression
+    of the noise-driven component and their ratio stays comparable across N.
 
     The control depends on the gains too (they set which one-relay paths dominate the
     reference), so it is keyed on the whole parameter set and only repeats where a
     sweep genuinely revisits a point - as `line` mode does at the reference point.
+
+    The control's *firing-rate* and *signal* alpha amplitudes are returned alongside the
+    spectra because the control run has to happen anyway. They are the denominators of
+    `alpha_gain` / `sig_alpha_gain`, and without them a raw 8-12 Hz amplitude is not
+    interpretable: the background is Ornstein-Uhlenbeck noise with its corner at
+    1/(2*pi*Ib_noise_tau) ~ 9.9 Hz, i.e. inside the alpha band, so roughly half of every
+    population's fluctuation lands there whatever the network does. Measured on one grid,
+    raw alpha amplitude correlates r = 0.95 with the total rate std and its share of that
+    std is 0.48-0.55 regardless of which band the peak scoring calls dominant. This is
+    the time-domain form of the same trap `network_gain_spectrum` exists for.
     """
-    key = tuple(round(float(theta[p]), 12) for p in sorted(theta))
+    key = (tuple(round(float(theta[p]), 12) for p in sorted(theta)), tuple(seeds))
     if key not in _NULL_CACHE:
         null_theta = dict(theta)
         for name in NULL_GAIN_PARAMS:
             null_theta[name] = float(theta[name]) * NULL_GAIN_SCALE
-        signals, _ = _simulate_signals(model, null_theta, base_params, subjects, labels)
-        _NULL_CACHE[key] = [welch_spectrum(s, model.step_size,
-                                           seg_dur=feat_kwargs["seg_dur"],
-                                           overlap=feat_kwargs["overlap"],
-                                           settle_s=feat_kwargs["settle_s"],
-                                           fmin=feat_kwargs["fmin"],
-                                           fmax=feat_kwargs["fmax"])[1]
-                            for s in signals]
+        signals, rates = _averaged_traces(model, null_theta, base_params, subjects,
+                                          labels, seeds)
+        spectra = [welch_spectrum(s, model.step_size,
+                                  seg_dur=feat_kwargs["seg_dur"],
+                                  overlap=feat_kwargs["overlap"],
+                                  settle_s=feat_kwargs["settle_s"],
+                                  fmin=feat_kwargs["fmin"],
+                                  fmax=feat_kwargs["fmax"])[1]
+                   for s in signals]
+        null_rate_alpha = band_amplitude(rates, model.step_size, ALPHA_AMP_BAND,
+                                         settle_s=feat_kwargs["settle_s"])
+        null_sig_alpha = band_amplitude(signals, model.step_size, ALPHA_AMP_BAND,
+                                        settle_s=feat_kwargs["settle_s"])
+        settle_i = int(round(feat_kwargs["settle_s"] / model.step_size))
+        null_sig_scale = np.std(signals[:, settle_i:], axis=1)
+        _NULL_CACHE[key] = (spectra, null_rate_alpha, null_sig_alpha, null_sig_scale)
         # a sweep can visit thousands of parameter sets; keep the cache bounded
         if len(_NULL_CACHE) > 64:
             _NULL_CACHE.pop(next(iter(_NULL_CACHE)))
     return _NULL_CACHE[key]
 
 
-def run_point(sim_id, theta, base_params, subjects, feat_kwargs, extra_cols=None):
+def run_point(sim_id, theta, base_params, subjects, feat_kwargs, extra_cols=None,
+              n_seeds=1):
     """Simulate one parameter set and score every recorded signal.
+
+    With `n_seeds` > 1 the parameter set is simulated once per noise realisation and the
+    per-population **time courses** are averaged; every measure is then computed once, on
+    the averaged trace. Nothing else is averaged. Every run starts from the same
+    `initialize_state()`, so across seeds only the noise differs: whatever is reproducible
+    from that identical initial condition - a self-sustained limit cycle, which stays
+    phase aligned - survives the average, while the noise-driven component is uncorrelated
+    across seeds and is suppressed by ~1/sqrt(N). That is the point of averaging here: it
+    separates a rhythm of the network from noise passing through the alpha band. The
+    consequence is that `amplitude` / `alpha_amp` / `sig_alpha_amp` of a noise-driven
+    population scale with N, so N must be held fixed across any sweeps compared
+    numerically (it is recorded in sweep_config.json).
+
+    Because only one realisation is ever scored, the across-seed spread columns
+    (`peak_freq_sd`, `band_agreement`, `*_sd`) have nothing to measure and are emitted as
+    NaN. They are kept as columns so sweeps written before this change still load without
+    the readers having to branch.
 
     Returns:
         (rows, psd, freqs, signal_names, psd_null) where `rows` is a list of one dict
-        per signal and `psd`/`psd_null` are (n_signals, n_freqs). On a failure (blow-up,
-        singular matrix, ...) the rows are still returned, marked regime='diverged', so
-        a broken corner of the space appears in the map rather than aborting the sweep.
+        per signal and `psd`/`psd_null` are the (n_signals, n_freqs) spectra of the
+        averaged traces. On a failure (blow-up, singular matrix, ...) the rows are still
+        returned, marked regime='diverged', so a broken corner of the space appears in
+        the map rather than aborting the sweep.
     """
     model = _get_model(base_params, subjects)
     labels = list(model.get_population_labels())
@@ -323,10 +419,15 @@ def run_point(sim_id, theta, base_params, subjects, feat_kwargs, extra_cols=None
     common.update(extra_cols or {})
     common["sim_id"] = sim_id
 
+    # seed=None for a single pass keeps the exact previous behaviour (Ib_noise_seed comes
+    # from base_params); averaging one trace is that trace, so n_seeds=1 is unchanged.
+    seeds = [None] if n_seeds <= 1 else list(range(n_seeds))
+
     try:
-        # the loop-free reference for this parameter set first, then the real run
-        nulls = _null_spectra(model, theta, base_params, subjects, labels, feat_kwargs)
-        signals, rates = _simulate_signals(model, theta, base_params, subjects, labels)
+        nulls, null_rate_alpha, null_sig_alpha, null_sig_scale = _null_reference(
+            model, theta, base_params, subjects, labels, feat_kwargs, seeds)
+        signals, rates = _averaged_traces(model, theta, base_params, subjects, labels,
+                                          seeds)
     except Exception as err:                                   # noqa: BLE001
         rows = [{**common, "signal": s, "signal_kind": k, "regime": "diverged",
                  "band": "none", "error": repr(err)}
@@ -334,48 +435,97 @@ def run_point(sim_id, theta, base_params, subjects, feat_kwargs, extra_cols=None
         empty = np.zeros((len(signal_names), 0))
         return rows, empty, np.array([]), signal_names, empty
 
-    # Whether each population's firing rate still moves (rate_drive), and where on its
-    # sigmoid it sits (rate_level). A population whose rate is frozen - at the ceiling
-    # or silenced - has opened every loop through it, so it is reported as its own
-    # regime rather than scored as an oscillation.
     settle_i = int(round(feat_kwargs["settle_s"] / model.step_size))
     m_max = np.maximum(model.sigm[:, 2], np.finfo(float).tiny)
-    mean_rates = rates[:, settle_i:].mean(axis=1)
-    rate_level = mean_rates / m_max
-    rate_drive = rates[:, settle_i:].std(axis=1) / m_max
+    settled_rates = rates[:, settle_i:]
+    stats = {"mean_rate": settled_rates.mean(axis=1),
+             "max_rate": settled_rates.max(axis=1),
+             "min_rate": settled_rates.min(axis=1),
+             "rate_level": settled_rates.mean(axis=1) / m_max,
+             "rate_drive": settled_rates.std(axis=1) / m_max,
+             "peak_saturation": settled_rates.max(axis=1) / m_max,
+             # How strongly the firing rate itself swings in the alpha band, in Hz, so it
+             # can be read against mean_rate on the same axis. Note the *full* rates array
+             # goes in, not settled_rates: band_amplitude cuts the settle window after
+             # filtering, which puts the filter's start-up transient inside the part that
+             # was going to be discarded anyway.
+             "alpha_amp": band_amplitude(rates, model.step_size, ALPHA_AMP_BAND,
+                                         settle_s=feat_kwargs["settle_s"])}
+    # The same amplitude referred to the loop-free control, which is the number that
+    # actually says the network is doing something at alpha rather than passing its own
+    # background noise through - see _null_reference. NaN where the control barely moves:
+    # the thalamic populations receive no background input at all, so with the loops cut
+    # they have nothing to be driven by and the ratio would be noise over noise.
+    floor = ALPHA_GAIN_NULL_FLOOR * m_max
+    stats["alpha_gain"] = np.where(null_rate_alpha > floor,
+                                   stats["alpha_amp"] / np.where(null_rate_alpha > floor,
+                                                                 null_rate_alpha, 1.0),
+                                   np.nan)
+
+    # The same measure for the recorded signals themselves, so the ROI dipoles - which
+    # have no firing rate of their own - get an alpha envelope too. The gate here is the
+    # control's own fluctuation rather than a sigmoid ceiling, which potentials and
+    # dipoles do not have.
+    sig_alpha = band_amplitude(signals, model.step_size, ALPHA_AMP_BAND,
+                               settle_s=feat_kwargs["settle_s"])
+    sig_floor = ALPHA_GAIN_NULL_FLOOR * np.maximum(null_sig_scale, np.finfo(float).tiny)
+    sig_alpha_gain = np.where(null_sig_alpha > sig_floor,
+                              sig_alpha / np.where(null_sig_alpha > sig_floor,
+                                                   null_sig_alpha, 1.0),
+                              np.nan)
+
+    # An ROI is only pinned once every excitatory population feeding it is.
     roi_pops = {"roi_A3b": ("E3b",),
                 "roi_A1": ("E1", "E2", "E3", "E4"),
                 "roi_S2": ("E1S2", "E2S2", "E3S2", "E4S2")}
-    # an ROI is only pinned once every excitatory population feeding it is
-    roi_drive = {roi: rate_drive[[labels.index(p) for p in pops]].max()
+    roi_drive = {roi: stats["rate_drive"][[labels.index(p) for p in pops]].max()
                  for roi, pops in roi_pops.items()}
 
-    rows, psds, freqs = [], [], np.array([])
-    for name, kind, sig, psd_null in zip(signal_names, kinds, signals, nulls):
-        drive = (rate_drive[labels.index(name)] if kind == "potential"
+    freqs = np.array([])
+    rows, psds, nulls_out = [], [], []
+    for j, (name, kind) in enumerate(zip(signal_names, kinds)):
+        sig = signals[j]
+        f, psd, seg_stds = welch_spectrum(
+            sig, model.step_size, feat_kwargs["seg_dur"], feat_kwargs["overlap"],
+            feat_kwargs["settle_s"], feat_kwargs["fmin"], feat_kwargs["fmax"])
+        if len(f):
+            freqs = f
+        psd_null = nulls[j]
+        if psd_null is None or len(psd_null) != len(psd):
+            psd_null = None
+
+        settled = np.asarray(sig, dtype=float)[settle_i:]
+        time_feats = {
+            "amplitude": float(settled.std()),
+            "mean_level": float(settled.mean()),
+            "fluctuation": relative_fluctuation(sig, model.step_size,
+                                                feat_kwargs["settle_s"]),
+            "amp_ratio": amplitude_ratio(seg_stds)}
+        drive = (stats["rate_drive"][labels.index(name)] if kind == "potential"
                  else roi_drive[name])
-        feats, freqs, psd = oscillation_features(sig, model.step_size,
-                                                 rate_drive=float(drive),
-                                                 psd_null=psd_null,
-                                                 return_psd=True, **feat_kwargs)
+        feats = features_from_spectra(f, psd, psd_null, time_feats, float(drive))
+
+        # Only one realisation is scored, so there is no across-seed spread to report.
+        # Kept as NaN columns rather than dropped - see the docstring.
+        spread = {f"{k}_sd": np.nan for k in time_feats}
         row = {**common, "signal": name, "signal_kind": kind,
-               "rate_drive": float(drive), **feats}
+               "rate_drive": float(drive), "n_seeds": len(seeds),
+               "band_agreement": np.nan, "peak_freq_sd": np.nan,
+               "sig_alpha_amp": float(sig_alpha[j]),
+               "sig_alpha_gain": float(sig_alpha_gain[j]),
+               "sig_alpha_amp_sd": np.nan,
+               **spread, **feats}
         if kind == "potential":
             i = labels.index(name)
-            row["mean_rate"] = float(mean_rates[i])
-            # peak of the *settled* oscillation, not of the initialisation transient,
-            # which overshoots and would make every population look saturated
-            row["max_rate"] = float(rates[i, settle_i:].max())
-            row["min_rate"] = float(rates[i, settle_i:].min())
-            row["rate_level"] = float(rate_level[i])
-            # how much of the sigmoid's output range is left above the oscillation
-            # peak: 1.0 means the population tops out at its ceiling on every cycle and
-            # an external input can no longer raise its rate
-            row["peak_saturation"] = float(rates[i, settle_i:].max() / m_max[i])
+            for k in ("mean_rate", "max_rate", "min_rate", "rate_level",
+                      "peak_saturation", "alpha_amp", "alpha_gain"):
+                row[k] = float(stats[k][i])
+            row["alpha_amp_sd"] = np.nan
         rows.append(row)
         psds.append(psd)
+        nulls_out.append(psd_null if psd_null is not None else np.zeros_like(psd))
 
-    return rows, np.asarray(psds), freqs, signal_names, np.asarray(nulls)
+    return rows, np.asarray(psds), freqs, signal_names, np.asarray(nulls_out)
 
 
 # ── sweep construction ─────────────────────────────────────────────────────────
@@ -404,8 +554,14 @@ def line_points(params, ref, n):
     return points
 
 
-def screen_points(params, n_samples, seed):
-    """Latin-hypercube sample over all `params` jointly."""
+def screen_points(params, n_samples, seed, ref):
+    """Latin-hypercube sample over `params`, everything else held at `ref`.
+
+    Merging with `ref` is what makes --center work here. Without it the sampled
+    parameters were the only ones set and every other parameter silently fell back to
+    the simulation_parameter.json defaults, so a screen could not be centred on a
+    chosen operating point the way grid and line modes can.
+    """
     from scipy.stats import qmc
 
     sampler = qmc.LatinHypercube(d=len(params), seed=seed)
@@ -413,7 +569,7 @@ def screen_points(params, n_samples, seed):
     lo = np.array([PARAM_RANGES[p][0] for p in params])
     hi = np.array([PARAM_RANGES[p][1] for p in params])
     scaled = qmc.scale(unit, lo, hi)
-    return [(dict(zip(params, map(float, row))), {}) for row in scaled]
+    return [({**ref, **dict(zip(params, map(float, row)))}, {}) for row in scaled]
 
 
 def run_sweep(name, points, base_params, args, out_root, reference=None):
@@ -428,7 +584,8 @@ def run_sweep(name, points, base_params, args, out_root, reference=None):
           flush=True)
     t0 = time.time()
     results = Parallel(n_jobs=args.n_jobs, verbose=5, batch_size=8)(
-        delayed(run_point)(i, theta, base_params, subjects, feat_kwargs, extra)
+        delayed(run_point)(i, theta, base_params, subjects, feat_kwargs, extra,
+                           args.seeds)
         for i, (theta, extra) in enumerate(points)
     )
     elapsed = time.time() - t0
@@ -467,7 +624,7 @@ def run_sweep(name, points, base_params, args, out_root, reference=None):
                                    if not isinstance(v, np.ndarray)},
                    # the point every slice passes through; what the plots mark
                    "reference": reference,
-                   "feature_kwargs": feat_kwargs,
+                   "feature_kwargs": feat_kwargs, "n_seeds": args.seeds,
                    "param_ranges": PARAM_RANGES,
                    "subjects": subjects, "elapsed_s": elapsed}, f, indent=2,
                   default=str)
@@ -503,6 +660,11 @@ def parse_args(argv=None):
     p.add_argument("--noise", type=float, default=1.0,
                    help="Ib_noise_std; 0 leaves only self-sustained limit cycles visible")
     p.add_argument("--seed", type=int, default=0, help="noise / sampling seed")
+    p.add_argument("--seeds", type=int, default=1,
+                   help="noise realisations to average the spectra over before scoring "
+                        "(1 keeps the previous single-realisation behaviour; the peak "
+                        "of a single realisation is set as much by the noise draw as by "
+                        "the parameters)")
     p.add_argument("--subjects", type=int, nargs="+", default=[15],
                    help="subject IDs whose forward models the dipole ROIs use")
     p.add_argument("--no-dipoles", action="store_true",
@@ -515,6 +677,10 @@ def parse_args(argv=None):
                         "simulation_parameter.json values)")
     p.add_argument("--center-json", default=None,
                    help="JSON file of {parameter: value} for the reference point")
+    p.add_argument("--base", nargs="+", default=None, metavar="PARAM=VALUE",
+                   help="override a model parameter that is not part of the sweep space "
+                        "(e.g. Im_strength=4, Ib_noise_tau=0.008). --center only accepts "
+                        "swept parameters; this is the escape hatch for the rest")
     p.add_argument("--outdir", default=None,
                    help="default: $SIMDIR/parameter_space")
     p.add_argument("--tag", default=None,
@@ -537,6 +703,15 @@ def main(argv=None):
     args = parse_args(argv)
     apply_range_overrides(args.ranges)
     base_params = make_base_params(args)
+    for spec in args.base or []:
+        name, _, value = spec.partition("=")
+        if not value:
+            raise ValueError(f"--base expects PARAM=VALUE, got {spec!r}")
+        if name not in base_params:
+            raise ValueError(f"unknown model parameter {name!r} for --base")
+        base_params[name] = type(base_params[name])(value) if base_params[name] is not None \
+            else float(value)
+        print(f"base override: {name} -> {base_params[name]}")
     center = parse_center(args.center, args.center_json)
     ref = reference_point(base_params, center)
 
@@ -569,7 +744,7 @@ def main(argv=None):
             run_sweep("line_all", line_points(params, ref, args.n),
                       base_params, args, out_root, reference=ref)
         else:
-            run_sweep("screen", screen_points(params, args.n_samples, args.seed),
+            run_sweep("screen", screen_points(params, args.n_samples, args.seed, ref),
                       base_params, args, out_root, reference=ref)
 
 

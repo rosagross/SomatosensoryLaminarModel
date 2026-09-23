@@ -58,6 +58,13 @@ BANDS = (
 # flank to be referenced against.
 FMIN, FMAX = 1.0, 60.0
 
+# The passband of `band_amplitude`. Deliberately *not* ALPHA_BAND: 8-13 Hz is the band
+# the peak scoring and somato_model.PRESTIM_ALPHA_BAND use, and its upper edge is also
+# the theta band's upper flank, so widening or narrowing it would move the regime
+# classification. This one only sets which frequencies a time-domain amplitude is
+# measured over and can be chosen independently; 8-12 Hz is what the figures ask for.
+ALPHA_AMP_BAND = (8.0, 12.0)
+
 # ── regime thresholds ──────────────────────────────────────────────────────────
 # Relative fluctuation (std / max|x| of the settled signal) below which the signal is
 # a settled fixed point and its spectrum is numerical residue. Same floor as
@@ -142,6 +149,69 @@ def welch_spectrum(signal, step_size, seg_dur=1.0, overlap=0.5, settle_s=2.0,
         psd += ((np.abs(np.fft.rfft(seg * win)) ** 2) / seg_len ** 2)[fmask]
 
     return freqs[fmask], psd / len(starts), seg_stds
+
+
+def band_amplitude(x, step_size, band=ALPHA_AMP_BAND, settle_s=0.0, order=4):
+    """Mean Hilbert-envelope amplitude of `x` inside `band`, in the units of `x`.
+
+    Works on a 1-D trace or on a stack of them (the last axis is time), so the 33
+    population firing rates of one run filter in a single call.
+
+    "Amplitude" here is the **mean of the analytic envelope**, not `sqrt(2) * std` of the
+    filtered trace. For a pure sinusoid the two agree; for narrowband noise they differ
+    by about 13% (the envelope of a narrowband Gaussian process is Rayleigh, so its mean
+    is `sqrt(pi/2) * std` against the sinusoid convention's `sqrt(2) * std`). Which one
+    this is matters when the number is quoted later, hence saying so here.
+
+    `settle_s` is dropped *after* filtering rather than before. Pass the whole trace and
+    let this function cut it: `sosfiltfilt` has a start-up transient at each end, and
+    discarding the settle window afterwards puts the leading one inside the part that was
+    going to be thrown away anyway, instead of leaving it at the edge of the analysis
+    window where it would inflate the envelope.
+
+    Second-order sections, not a transfer function: at the model's 1 kHz sampling an
+    8-12 Hz passband is 0.016-0.024 normalised, and a Butterworth of any useful order in
+    `ba` form is numerically unstable that close to DC. `sosfiltfilt` is also zero-phase,
+    which a one-pass `sosfilt` would not be.
+
+    Because `sosfiltfilt` runs the filter forwards and backwards, the amplitude response
+    is the *square* of the designed one, so `band` marks the half-amplitude points, not
+    the usual -3 dB points. Measured gain at order 4 (a unit sinusoid, 1 kHz, 6 s window):
+
+        6 Hz 0.00 | 7 Hz 0.02 | 8 Hz 0.48 | 9 Hz 0.96 | 10 Hz 0.97 | 11 Hz 0.96
+        | 12 Hz 0.49 | 13 Hz 0.06 | 14 Hz 0.01 | 17 Hz 0.00
+
+    Flat to within 1% over 9-11 Hz and essentially blind by 14 Hz. Raising the order
+    sharpens the skirts but *lowers* the passband (order 8 peaks at 0.94), so 4 is the
+    useful choice here rather than a compromise.
+
+    Returns NaN (per trace) where the input is not finite - a diverged run - or where the
+    trace is too short for the filter's padding, matching what the other features do on a
+    failed point.
+    """
+    from scipy.signal import butter, hilbert, sosfiltfilt
+
+    x = np.asarray(x, dtype=float)
+    settle_i = int(round(settle_s / step_size))
+    out_shape = x.shape[:-1]
+    nan = np.full(out_shape, np.nan) if out_shape else np.float64(np.nan)
+
+    sos = butter(order, band, btype="bandpass", fs=1.0 / step_size, output="sos")
+    padlen = 3 * (2 * len(sos) + 1) - 1
+    if x.shape[-1] <= padlen or x.shape[-1] <= settle_i:
+        return nan
+
+    finite = np.all(np.isfinite(x), axis=-1)
+    if not np.any(finite):
+        return nan
+
+    # filter everything, then blank the rows that were not finite to begin with; a single
+    # inf anywhere in a row poisons the whole filtered row, so they cannot be trusted
+    safe = np.where(np.isfinite(x), x, 0.0)
+    env = np.abs(hilbert(sosfiltfilt(sos, safe, axis=-1), axis=-1))
+    amp = env[..., settle_i:].mean(axis=-1)
+    return np.where(finite, amp, np.nan) if out_shape else (
+        float(amp) if finite else np.nan)
 
 
 def relative_fluctuation(signal, step_size, settle_s=2.0):
@@ -335,6 +405,23 @@ def oscillation_features(signal, step_size, seg_dur=1.0, overlap=0.5, settle_s=2
         regime          one of REGIMES
     """
     x = np.asarray(signal, dtype=float)
+    if x.size == 0 or not np.all(np.isfinite(x)):
+        feats = empty_features()
+        return (feats, np.array([]), np.array([])) if return_psd else feats
+
+    settled = _settled(x, step_size, settle_s)
+    freqs, psd, seg_stds = welch_spectrum(x, step_size, seg_dur, overlap, settle_s,
+                                          fmin, fmax)
+    time_feats = {"amplitude": float(settled.std()),
+                  "mean_level": float(settled.mean()),
+                  "fluctuation": relative_fluctuation(x, step_size, settle_s),
+                  "amp_ratio": amplitude_ratio(seg_stds)}
+    feats = features_from_spectra(freqs, psd, psd_null, time_feats, rate_drive)
+    return (feats, freqs, psd) if return_psd else feats
+
+
+def empty_features():
+    """The feature dict with everything unset - the 'diverged' default."""
     keys = ["amplitude", "mean_level", "fluctuation", "amp_ratio", "peak_freq",
             "peak_prominence", "peak_power", "raw_peak_freq"]
     keys += [f"{name}_{suffix}" for name, _, _ in BANDS for suffix in ("prom", "freq")]
@@ -342,18 +429,32 @@ def oscillation_features(signal, step_size, seg_dur=1.0, overlap=0.5, settle_s=2
     feats["regime"] = "diverged"
     feats["band"] = "none"
     feats["scored_vs"] = "none"
+    return feats
 
-    if x.size == 0 or not np.all(np.isfinite(x)):
-        return (feats, np.array([]), np.array([])) if return_psd else feats
 
-    settled = _settled(x, step_size, settle_s)
-    feats["amplitude"] = float(settled.std())
-    feats["mean_level"] = float(settled.mean())
-    feats["fluctuation"] = relative_fluctuation(x, step_size, settle_s)
+def features_from_spectra(freqs, psd, psd_null, time_feats, rate_drive=np.nan):
+    """Band measures and regime from an ALREADY COMPUTED spectrum and its control.
 
-    freqs, psd, seg_stds = welch_spectrum(x, step_size, seg_dur, overlap, settle_s,
-                                          fmin, fmax)
-    feats["amp_ratio"] = amplitude_ratio(seg_stds)
+    Split out of `oscillation_features` so the seed-averaging path in
+    run_parameter_sweep.py can score a spectrum averaged over several noise
+    realisations with exactly this code, rather than a second copy of it. Scoring one
+    realisation was what made the single-seed sweep unusable: with 11 Welch segments a
+    bin scatters by ~30%, so the *location* of the dominant peak was set by the noise
+    draw (the same parameter set gave alpha, beta, gamma and theta on different seeds).
+    Averaging psd and psd_null over seeds before the ratio fixes that.
+
+    Args:
+        freqs, psd: the (possibly seed-averaged) spectrum.
+        psd_null:   the matching loop-free control spectrum, or None.
+        time_feats: dict with 'amplitude', 'mean_level', 'fluctuation', 'amp_ratio'
+                    (themselves averaged over seeds when seed-averaging).
+        rate_drive: see `classify_regime`.
+
+    Returns:
+        The same feature dict `oscillation_features` returns.
+    """
+    feats = empty_features()
+    feats.update({k: v for k, v in time_feats.items() if k in feats})
 
     band_peak = "none"
     if len(freqs):
@@ -372,5 +473,4 @@ def oscillation_features(signal, step_size, seg_dur=1.0, overlap=0.5, settle_s=2
     feats["regime"] = classify_regime(feats["fluctuation"], feats["amp_ratio"],
                                       feats["peak_prominence"], rate_drive)
     feats["band"] = band_peak if feats["regime"] == "oscillation" else "none"
-
-    return (feats, freqs, psd) if return_psd else feats
+    return feats

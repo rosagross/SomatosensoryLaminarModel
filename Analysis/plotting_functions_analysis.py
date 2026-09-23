@@ -1357,10 +1357,19 @@ def plot_gthalPOm_dipole_sweep(g_thalPOms, sim_overrides, figure_dir, subjects=(
 # source-resolved potential that results.hdf5 does not store, and re-simulating keeps the
 # two figures on exactly the same operating point without a step001 pass in between.
 
-# populations of the VIP -> SST -> E chain in each area that receives the drive
+# populations of the VIP -> SST -> E chain in each area that receives the drive.
+# The E entry is the layer the drive's VIP population sits in; IM_AREA_E_POPS below has
+# the rest, because the effect on E is not the same in every layer.
 IM_CHAIN = [('A3b', ['VIP3b', 'SST3b', 'E3b']),
             ('S1', ['VIP1', 'SST1', 'E1']),
             ('S2', ['VIP1S2', 'SST1S2', 'E1S2'])]
+
+# every excitatory population of those areas. A3b is a single-population area; S1 and S2
+# have one excitatory population per layer, and they do not respond alike - the drive
+# reaches VIP in one layer only, so the other layers see it through the local network.
+IM_AREA_E_POPS = [('A3b', ['E3b']),
+                  ('S1', ['E1', 'E2', 'E3', 'E4']),
+                  ('S2', ['E1S2', 'E2S2', 'E3S2', 'E4S2'])]
 
 # distinct, colourblind-friendly qualitative palette, as in the g_thalPOm sweeps
 IM_BASE_COLORS = ['#4477AA', '#EE6677', '#228833', '#AA3377', '#CCBB44',
@@ -1511,8 +1520,12 @@ def plot_Im_population_sweep(Im_strengths, sim_overrides, figure_dir, suffix='',
     step_size, input_onset = model.step_size, model.input_onset
     Iext_dur = model.Iext_duration
 
-    nrows, ncols = 3, len(IM_CHAIN)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.8 * ncols, 2.6 * nrows),
+    # VIP and SST of each area, then every excitatory population of it - the drive reaches
+    # VIP in one layer only, so the other layers respond through the local network
+    columns = [(area, list(chain[:2]) + list(dict(IM_AREA_E_POPS)[area]))
+               for area, chain in IM_CHAIN]
+    nrows, ncols = max(len(pops) for _, pops in columns), len(columns)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 2.3 * nrows),
                              sharex=True, squeeze=False)
 
     for Im, col in zip(Im_strengths, _im_colors(Im_strengths)):
@@ -1523,25 +1536,28 @@ def plot_Im_population_sweep(Im_strengths, sim_overrides, figure_dir, suffix='',
 
         t = np.arange(traces.shape[1]) * step_size - input_onset
         mask = (t >= plot_window[0]) & (t <= plot_window[1])
-        for c, (area, pops) in enumerate(IM_CHAIN):
+        for c, (area, pops) in enumerate(columns):
             for r, pop in enumerate(pops):
                 axes[r][c].plot(t[mask], traces[labels.index(pop)][mask],
                                 color=col, linewidth=1.2,
                                 label=f'{Im:g}' if (r == 0 and c == 0) else None)
 
     ylabel = 'Firing rate (Hz)' if signal == 'rate' else 'Potential (mV)'
-    for c, (area, pops) in enumerate(IM_CHAIN):
+    for c, (area, pops) in enumerate(columns):
         for r, pop in enumerate(pops):
             ax = axes[r][c]
             ax.axvspan(0, Iext_dur, color='0.85', linewidth=0, zorder=0)
             ax.set_title(pop, fontsize=9)
             if r == 0:
-                ax.text(0.5, 1.28, area, transform=ax.transAxes, ha='center',
+                ax.text(0.5, 1.32, area, transform=ax.transAxes, ha='center',
                         va='bottom', fontweight='bold')
             if c == 0:
                 ax.set_ylabel(ylabel)
-            if r == nrows - 1:
+            if r == len(pops) - 1:
                 ax.set_xlabel('Time from stimulus onset (s)')
+        # A3b has a single excitatory population; leave its remaining cells empty
+        for r in range(len(pops), nrows):
+            axes[r][c].axis('off')
 
     handles, lab = axes[0][0].get_legend_handles_labels()
     fig.legend(handles, lab, title=r'$I_m$', frameon=False, fontsize=8, title_fontsize=9,
@@ -1627,15 +1643,24 @@ def plot_Im_baseline_rates(Im_strengths, sim_overrides, figure_dir, suffix='',
     baseline_df.index.name = 'Im_strength'
 
     # One row per role rather than one panel per area: VIP saturates around 38 Hz while SST
-    # and E live below 2 Hz, so on a shared axis the suppression that is the whole point of
-    # the figure collapses onto the baseline. Rows share a y-axis so the three areas stay
-    # comparable within a role.
-    nrows, ncols = 3, len(IM_CHAIN)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.2 * ncols, 2.4 * nrows),
-                             sharex=True, sharey='row', squeeze=False)
+    # and E live in a much narrower range, so on a shared axis the suppression that is the
+    # whole point of the figure collapses onto the baseline. Rows share a y-axis so the
+    # three areas stay comparable within a role.
+    # The E part is one row per layer, not one row per area: the drive reaches VIP in a
+    # single layer, so the other layers see it only through the local network and can
+    # differ in size and even in sign.
+    columns = [(area, list(chain[:2]) + list(dict(IM_AREA_E_POPS)[area]))
+               for area, chain in IM_CHAIN]
+    nrows, ncols = max(len(pops) for _, pops in columns), len(columns)
+    # No sharey: the excitatory layers differ by an order of magnitude between areas
+    # (E2 sits near 1 Hz while E2S2 sits near 30), and a shared row axis flattens the
+    # smaller one onto the frame. Rows 0-1 are re-shared below, where it does help.
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.2 * ncols, 2.2 * nrows),
+                             sharex=True, squeeze=False)
     chain_colors = dict(zip(['VIP', 'SST', 'E'], IM_BASE_COLORS))
 
-    for c, (area, pops) in enumerate(IM_CHAIN):
+    first_visible = {}
+    for c, (area, pops) in enumerate(columns):
         for r, pop in enumerate(pops):
             role = 'VIP' if pop.startswith('VIP') else 'SST' if pop.startswith('SST') else 'E'
             ax = axes[r][c]
@@ -1643,12 +1668,26 @@ def plot_Im_baseline_rates(Im_strengths, sim_overrides, figure_dir, suffix='',
                     linewidth=1.4, color=chain_colors[role])
             ax.set_title(pop, fontsize=9)
             if r == 0:
-                ax.text(0.5, 1.30, area, transform=ax.transAxes, ha='center',
+                ax.text(0.5, 1.32, area, transform=ax.transAxes, ha='center',
                         va='bottom', fontweight='bold')
-            if c == 0:
+            # the label goes on the leftmost panel that actually exists in this row -
+            # A3b has no L2/L3/L4, so those rows start at the S1 column
+            if r not in first_visible:
+                first_visible[r] = c
                 ax.set_ylabel(f'{role} baseline\nrate (Hz)')
-            if r == nrows - 1:
+            if r == len(pops) - 1:
                 ax.set_xlabel(r'Modulatory input $I_m$')
+        # A3b has a single excitatory population; leave its remaining cells empty
+        for r in range(len(pops), nrows):
+            axes[r][c].axis('off')
+
+    # VIP and SST are one population per area and live in the same range, so sharing the
+    # axis there makes the three areas directly comparable
+    for r in (0, 1):
+        lo = min(ax.get_ylim()[0] for ax in axes[r])
+        hi = max(ax.get_ylim()[1] for ax in axes[r])
+        for ax in axes[r]:
+            ax.set_ylim(lo, hi)
 
     _im_fixed_param_box(axes[1][-1], sim_overrides)
     fig.suptitle('Modulatory (VIP) input: effect on baseline firing rate', fontweight='bold')
@@ -1676,11 +1715,14 @@ def plot_Im_effect_vs_parameter(param, param_values, Im_strengths, sim_overrides
     is sitting. This sweeps one parameter to show that, and in particular to locate the
     value at which the sign flips.
 
-    Two rows, three area columns (the areas the drive reaches, from IM_CHAIN), E
-    population only:
-      row 1  E baseline rate against Im, one line per swept value
-      row 2  the signed effect dE = E(max Im) - E(Im=0) against the swept value, with a
-             zero line, so 'raises' vs 'lowers' reads off the sign directly
+    Three area columns (the areas the drive reaches) and every excitatory population of
+    each, from IM_AREA_E_POPS - the drive reaches VIP in one layer only, so the other
+    layers see it through the local network and do not have to agree in sign:
+      rows 1-4  E baseline rate against Im, one panel per layer, one line per swept value
+                (A3b has a single excitatory population, so its lower panels are blank)
+      row 5     the signed effect dE = E(max Im) - E(Im=0) against the swept value, one
+                line per layer, with a zero line, so 'raises' vs 'lowers' reads off the
+                sign directly
 
     Every point is averaged over `seeds` noise realisations and row 2 carries a +/-SD
     ribbon. Note this is a time-domain mean over a 300 ms window, not a spectral peak, so
@@ -1707,8 +1749,8 @@ def plot_Im_effect_vs_parameter(param, param_values, Im_strengths, sim_overrides
 
     Returns
     -------
-    DataFrame indexed by the swept value, with one column per E population holding dE,
-    plus '<pop>_sd' columns for the across-seed spread.
+    DataFrame indexed by the swept value, with one column per excitatory population
+    holding dE, plus '<pop>_sd' columns for the across-seed spread.
     """
     figure_style()
     Im_strengths = [float(v) for v in Im_strengths]
@@ -1718,9 +1760,8 @@ def plot_Im_effect_vs_parameter(param, param_values, Im_strengths, sim_overrides
 
     model, _ = _im_model(sim_overrides)
     sample_dur, offset = _im_baseline_window()
-    Epops = [pops[2] for _, pops in IM_CHAIN]        # the E population of each area
 
-    # rates[value][Im] -> (n_seeds, n_pop) baseline rates
+    # rates[value][Im] -> populations x seeds baseline rates
     rates = {}
     for value in param_values:
         rates[value] = {}
@@ -1733,46 +1774,59 @@ def plot_Im_effect_vs_parameter(param, param_values, Im_strengths, sim_overrides
                         for sd in seeds]
             rates[value][Im] = pd.concat(per_seed, axis=1)   # populations x seeds
 
-    nrows, ncols = 2, len(IM_CHAIN)
-    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 2.8 * nrows),
+    # one curve row per layer, plus a final row holding the signed effect
+    n_layers = max(len(pops) for _, pops in IM_AREA_E_POPS)
+    nrows, ncols = n_layers + 1, len(IM_AREA_E_POPS)
+    fig, axes = plt.subplots(nrows, ncols, figsize=(3.6 * ncols, 2.5 * nrows),
                              squeeze=False)
     # sequential palette: the swept parameter is an ordered axis, not a set of categories
     cmap = plt.get_cmap('viridis')
     norm = Normalize(vmin=min(param_values), vmax=max(param_values))
 
     out = {}
-    for c, (area, pops) in enumerate(IM_CHAIN):
-        pop = pops[2]
-        ax_curve, ax_delta = axes[0][c], axes[1][c]
-
-        for value in param_values:
-            ax_curve.plot(Im_strengths,
-                          [rates[value][Im].loc[pop].mean() for Im in Im_strengths],
-                          color=cmap(norm(value)), linewidth=1.2)
-
-        delta = np.array([(rates[v][Im_hi].loc[pop] - rates[v][Im_lo].loc[pop]).values
-                          for v in param_values])          # (n_values, n_seeds)
-        mean, sd = delta.mean(axis=1), delta.std(axis=1)
-        out[pop], out[f'{pop}_sd'] = mean, sd
-
+    for c, (area, pops) in enumerate(IM_AREA_E_POPS):
+        ax_delta = axes[nrows - 1][c]
         ax_delta.axhline(0, color='0.4', linewidth=0.8, zorder=1)
-        ax_delta.fill_between(param_values, mean - sd, mean + sd,
-                              color='0.7', alpha=0.5, linewidth=0, zorder=2)
-        ax_delta.plot(param_values, mean, color='#AA3377', marker='o', markersize=3,
-                      linewidth=1.4, zorder=3)
 
-        ax_curve.set_title(pop, fontsize=9)
-        ax_curve.text(0.5, 1.28, area, transform=ax_curve.transAxes, ha='center',
-                      va='bottom', fontweight='bold')
-        ax_curve.set_xlabel(r'Modulatory input $I_m$')
+        for r, pop in enumerate(pops):
+            ax_curve = axes[r][c]
+            for value in param_values:
+                ax_curve.plot(Im_strengths,
+                              [rates[value][Im].loc[pop].mean() for Im in Im_strengths],
+                              color=cmap(norm(value)), linewidth=1.1)
+
+            delta = np.array([(rates[v][Im_hi].loc[pop] - rates[v][Im_lo].loc[pop]).values
+                              for v in param_values])        # (n_values, n_seeds)
+            mean, sd = delta.mean(axis=1), delta.std(axis=1)
+            out[pop], out[f'{pop}_sd'] = mean, sd
+
+            colour = IM_BASE_COLORS[r % len(IM_BASE_COLORS)]
+            ax_delta.fill_between(param_values, mean - sd, mean + sd,
+                                  color=colour, alpha=0.25, linewidth=0, zorder=2)
+            ax_delta.plot(param_values, mean, color=colour, marker='o', markersize=3,
+                          linewidth=1.4, zorder=3, label=pop)
+
+            ax_curve.set_title(pop, fontsize=9)
+            if r == 0:
+                ax_curve.text(0.5, 1.30, area, transform=ax_curve.transAxes, ha='center',
+                              va='bottom', fontweight='bold')
+            if r == len(pops) - 1:
+                ax_curve.set_xlabel(r'Modulatory input $I_m$')
+            if c == 0:
+                ax_curve.set_ylabel('E baseline rate (Hz)')
+
+        # A3b has fewer excitatory populations than S1/S2; leave those cells empty
+        for r in range(len(pops), n_layers):
+            axes[r][c].axis('off')
+
+        ax_delta.legend(frameon=False, fontsize=7.5, loc='best')
         ax_delta.set_xlabel(param_label or param)
         if c == 0:
-            ax_curve.set_ylabel('E baseline rate (Hz)')
             ax_delta.set_ylabel(f'$\\Delta$E baseline rate (Hz)\n'
                                 f'$I_m$ {Im_lo:g} $\\to$ {Im_hi:g}')
 
     # the swept parameter is on an axis now, so drop it from the fixed-parameter box
-    _im_fixed_param_box(axes[1][-1], {k: v for k, v in sim_overrides.items() if k != param})
+    _im_fixed_param_box(axes[-1][-1], {k: v for k, v in sim_overrides.items() if k != param})
 
     fig.suptitle(f'Modulatory (VIP) input: effect on baseline E rate vs '
                  f'{param_label or param}', fontweight='bold')
@@ -1781,7 +1835,7 @@ def plot_Im_effect_vs_parameter(param, param_values, Im_strengths, sim_overrides
     # compatible, and adding it first makes matplotlib warn and mis-place the panels
     fig.tight_layout(rect=[0, 0, 1, 0.95])
     sm = cm.ScalarMappable(cmap=cmap, norm=norm)
-    cbar = fig.colorbar(sm, ax=axes[0].tolist(), fraction=0.025, pad=0.01)
+    cbar = fig.colorbar(sm, ax=axes[:-1].ravel().tolist(), fraction=0.02, pad=0.01)
     cbar.set_label(param_label or param)
 
     figure_name = f'ImEffect_vs_{param}{suffix}'

@@ -2,6 +2,57 @@
 import numpy as np
 import pandas as pd
 
+# Canonical population order. Every connectivity matrix built here is indexed
+# [target, source] in exactly this order: A3b (4) | S1 (13) | S2 (13) | thalamus (3).
+# SomatoModel.get_population_labels() returns this list, so the row order and the names
+# have a single definition - a second hand-maintained copy would let a per-population
+# vector (see population_classes) drift out of step with the labels silently.
+POPULATION_LABELS = np.array([
+    "E3b", "PV3b", "SST3b", "VIP3b",
+    "E1", "PV1", "SST1", "VIP1",
+    "E2", "PV2", "SST2",
+    "E3", "PV3", "SST3",
+    "E4", "PV4", "SST4",
+    "E1S2", "PV1S2", "SST1S2", "VIP1S2",
+    "E2S2", "PV2S2", "SST2S2",
+    "E3S2", "PV3S2", "SST3S2",
+    "E4S2", "PV4S2", "SST4S2",
+    "ThalE", "ThalI", "ThalPOm",
+])
+
+# the cell classes a per-class parameter can address
+POPULATION_CLASSES = ("E", "PV", "SST", "VIP")
+
+
+def population_classes():
+    """Cell class of every population, in connectivity row order.
+
+    One of 'E' / 'PV' / 'SST' / 'VIP' for the 30 cortical populations and 'thal' for the
+    three thalamic ones. Derived from POPULATION_LABELS rather than from hardcoded row
+    indices so it cannot fall out of step with the names.
+    """
+    def _cls(label):
+        if label.startswith("Thal"):
+            return "thal"
+        for c in ("VIP", "SST", "PV"):     # before 'E': no class name starts with E
+            if label.startswith(c):
+                return c
+        return "E"
+    return np.array([_cls(str(l)) for l in POPULATION_LABELS])
+
+
+def class_ratio_vector(ratios, default=1.0):
+    """Per-population multiplier from a {class: ratio} mapping, in row order.
+
+    Thalamic rows get 0.0 - they receive no background input - so the vector can be
+    multiplied straight into a weight column. Classes missing from `ratios` fall back to
+    `default`, which is what keeps every existing caller at the uniform behaviour.
+    """
+    classes = population_classes()
+    return np.array([0.0 if c == "thal" else float(ratios.get(c, default))
+                     for c in classes])
+
+
 # %%
 class Parameter():
     
@@ -253,7 +304,7 @@ class Parameter():
 
         return C 
 
-    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount):
+    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount, bI_ratios=None):
         """Put together the connevtivity matrix (not yet scaled by coupling strength and EI-balance parameter)
 
         Args:
@@ -265,6 +316,11 @@ class Parameter():
             pom_cellcount: number of POm neurons
             mI_cellcount: number of modulatory input neurons (from frontal areas), which
                           project onto the VIP populations only
+            bI_ratios: {class: ratio} background-input strength per cell class, relative to
+                       the drive onto E. The background source is one channel; this scales
+                       how strongly it lands on each class, so a class's mean drive and its
+                       OU noise scale together. None (or a missing class) means 1.0, which
+                       reproduces the uniform background the model used to have.
 
         Returns: 
             W0 (2D numpy array): connectivity matrix of only cortical populations (no thalamus)! 
@@ -476,23 +532,23 @@ class Parameter():
         Wext = np.zeros((W_from_thal.shape[1],1))
         Wext[-3] = 1 * extI_cellcount # thalamus E (VPM) population
 
-        # .. and also for the background input (all cortical cells receive input, no thalamic population does)
-        Wb = np.zeros((W_from_thal.shape[1],1))
-        Wb[:-3] = 1 * bI_cellcount # cellcount from background input (exclude the 3 thalamic populations)
+        # .. and also for the background input (all cortical cells receive input, no thalamic
+        # population does). The per-class ratio scales the weight, not the input trace, so a
+        # class's mean drive and its OU noise scale by the same factor - the same background
+        # source simply makes weaker synapses onto that class.
+        classes = population_classes()
+        Wb = np.zeros((W_from_thal.shape[1], 1))
+        Wb[:, 0] = bI_cellcount * class_ratio_vector(bI_ratios or {})
 
-        # modulatory external background input (from frontal areas) targeting only VIP neurons.
-        # Row order is A3b (4) | S1 (13) | S2 (13) | thalamus (3), so the VIP rows are the
-        # 4th of A3b and the 4th of each 13-population block - see get_population_labels().
-        Wm = np.zeros((W_from_thal.shape[1],1))
-        Wm[3] = 1 * mI_cellcount        # VIP3b
-        Wm[3+4] = 1 * mI_cellcount      # VIP1   (S1)
-        Wm[3+4+13] = 1 * mI_cellcount   # VIP1S2 (S2)
+        # modulatory external background input (from frontal areas) targeting only VIP neurons
+        Wm = np.zeros((W_from_thal.shape[1], 1))
+        Wm[classes == "VIP", 0] = 1 * mI_cellcount   # VIP3b, VIP1 (S1), VIP1S2 (S2)
 
 
         return W0, W_to_thal, W_from_thal, Wb, Wext, Wm
 
 
-    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount, area='all'):
+    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount, area='all', bI_ratios=None):
         """Apply coupling strength parameter and compute the final connectivity matrix.
 
         Args:
@@ -503,6 +559,8 @@ class Parameter():
             thal_connect (int): connecivity between thalamic neurons (E and I)
             extI_cellcount (int): number of external input neurons (in the thalamus)
             bI_cellcount (int): number of background input neurons (from other cortical areas)
+            bI_ratios (dict): background-input strength per cell class relative to E; see
+                              get_raw_connectivity. None keeps the uniform background.
             thalE_cellcount (int): number of thalamic excitatory (VPM) neurons connecting to the somatosensory area
             thalI_cellcount (int): number of thalamic inhibitory (reticular nucleus) neurons
             pom_cellcount (int): number of POm neurons
@@ -518,7 +576,7 @@ class Parameter():
         """
         
 
-        W0, W_to_thal, W_from_thal, Wb, Wext, Wm = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount)
+        W0, W_to_thal, W_from_thal, Wb, Wext, Wm = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount, bI_ratios=bI_ratios)
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])

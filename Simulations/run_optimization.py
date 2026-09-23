@@ -66,8 +66,7 @@ roi_tag = "all" if FIT_ROIS == ALL_ROIS else "-".join(FIT_ROIS)
 
 # electrical-modality subjects; compute_dipoles reads each one's forward model
 # (same list as Analysis/SourceReconstruction/step002_inverse_solution_multisub_epochswise.py)
-subID_elec = [15, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 34, 35, 36, 37, 38, 39, 40,
-              42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
+subID_elec = [15]
 
 # where to store optimization diagnostics (fit comparison plots use the model's own dirs)
 diag_dir = os.path.join(SIMDIR, "optimization")
@@ -115,11 +114,12 @@ ps_data_path_raw = ps_data_path
 # parameters. Only the deviations specific to a GA run are set here.
 base_params = read_simulation_params()
 base_params.update({
-    # The pre-stim spectrum needs a long settled pre-stimulus period: with the 500 ms
-    # transient skipped this gives 6 Welch segments instead of 2 (see _prestim_segments),
-    # at ~50% more simulation time per evaluation.
-    "input_onset":      2.001,
-    "simulation_dur":   3,
+    # The pre-stim spectrum is scored on a single 400 ms segment ending at stimulus onset
+    # (see compute_error_prestim_osc), i.e. 1.6-2.0 s here. The long onset is what keeps the
+    # initialisation transient well clear of that window — the flat gate, which judges the
+    # wider 0.6-2.0 s span, needs the settled period too.
+    "input_onset":      6.001,
+    "simulation_dur":   8,
     # Background noise OFF: the pre-stimulus rhythms have to come from the network's own
     # dynamics, not from the spectrum of the OU input (with noise on, the fitted alpha/beta
     # peaks are largely a property of the filtered noise). See the flat-signal gate in
@@ -157,6 +157,7 @@ SYNTHETIC_TARGET_PATH = "/data/p_02989/Modelling/output_grossmannr/optimization/
 TRUE_PARAMS = {               # params used to generate the synthetic target
     "coupling_strength": 10, "strength_I": 0.68, "g_intercortical": 1.0, "g_thalPOm": 1.0,
     "Ib_strength": 6, "Iext_strength": 40, "Iext_duration": 0.016, "scaling_factor": 1.0,
+    "Ib_ratio_PV": 0.7, "Ib_ratio_SST": 1.0, "Ib_ratio_VIP": 0.4,
 }
 
 # loaded once: the (9, n_times) synthetic target dipole trace, or None for measured-data fit.
@@ -194,7 +195,7 @@ def preprocess_targets(tc_path, ps_path, outdir, fmin=1.0, fmax=40.0):
 
     Only the timecourse output is used by the "ps" fit's siblings; the flattened prestim CSV
     feeds compute_error_prestim_spectrum, which the "ps" mode no longer scores on (it uses
-    compute_error_prestim_peaks against the raw CSV). It is still written as a diagnostic.
+    compute_error_prestim_osc against the raw CSV). It is still written as a diagnostic.
 
     Processed CSVs are written to `outdir` with the same schema as the originals
     (so the model's load_target_* readers work unchanged); the raw measured CSVs
@@ -254,29 +255,32 @@ def preprocess_targets(tc_path, ps_path, outdir, fmin=1.0, fmax=40.0):
     return tc_out_path, ps_out_path
 
 
-# ── pre-stimulus rejection penalties ───────────────────────────────────────────
-# With the background noise off, the pre-stimulus rhythm has to be a self-sustained
-# oscillation, and almost the whole parameter space instead settles to a fixed point — 36 of
-# 40 random draws from the bounds below, with 3 more still ringing down. A single hard reject
-# for all of them (the old PS_FLAT_PENALTY of 1.0, against scored errors of ~1e-4) made the
-# landscape binary and left the GA nothing to follow: 69 % of the evaluations of a short A1
-# run landed on the same constant.
+# ── pre-stimulus rejection penalty ─────────────────────────────────────────────
+# With the background noise off the pre-stimulus rhythm has to come from the network itself,
+# and most of the parameter space instead settles to a fixed point — 24 of 40 random draws
+# from the bounds below. A single hard reject for all of them (the old PS_FLAT_PENALTY of 1.0,
+# against scored errors of ~1e-4) made the landscape binary and left the GA nothing to follow:
+# 69 % of the evaluations of a short A1 run landed on the same constant. So the rejection is
+# graded, and the two regimes are stacked into disjoint bands:
 #
-# So every rejection is graded, and the three regimes are stacked into disjoint bands:
-#
-#   scored (sustained)      0    ..  0.5    the alpha/beta peak error
-#   decaying transient      1.0  ..  2.0    graded by how fast the amplitude decays
+#   scored                  0    .. ~0.05   the whole-shape pre-stim spectrum error
+#                                           (measured range over random draws: 0.013 .. 0.049)
 #   settled fixed point     5.0  .. ~29     graded by how far below the activity floor it is,
 #                                           i.e. how close it is to losing stability
 #
-# The gradings are what matter. Within the fixed-point band the penalty falls as the residual
-# fluctuation grows, so the GA can walk uphill towards the Hopf boundary; within the transient
-# band it falls as the ring-down slows. Ordering is preserved under the GA's err**2 cost.
+# The grading is what matters: within the fixed-point band the penalty falls as the residual
+# fluctuation grows, so the GA can walk uphill towards the Hopf boundary. Ordering is
+# preserved under the GA's err**2 cost.
+#
+# NOTE (deliberate): decaying transients are *scored*, not rejected. A third of the random
+# draws (13 of 40) are ring-downs of the initialisation transient with an amplitude ratio of
+# ~0.00, and they score in the same range as genuinely sustained draws (0.013 .. 0.049 vs
+# 0.016 .. 0.032) — one ring-down scored better than every sustained draw. The GA can
+# therefore converge on a ring-down; check `_prestim_amplitude_ratio` of the best fit before
+# reading its pre-stimulus spectrum as a rhythm.
 PS_FLAT_PENALTY = 5.0
 PS_FLAT_DECADE = 1.0            # penalty added per decade of fluctuation below PS_ACTIVITY_FLOOR
 PS_ACTIVITY_FLOOR = 1e-6        # relative fluctuation below which there is no ongoing activity
-PS_OSC_PENALTY = 1.0
-PS_STATIONARY_MIN_RATIO = 0.8   # amplitude ratio a run must hold to count as sustained
 
 
 def objective(**params):
@@ -287,10 +291,11 @@ def objective(**params):
     When target_dip is set, errors are computed against the synthetic target instead
     of the measured CSVs.
 
-    In "ps"/"all" the pre-stim term is the alpha/beta peak error
-    (model.compute_error_prestim_peaks) rather than a whole-spectrum MSE. Parameter sets whose
-    pre-stimulus period carries no ongoing activity, or whose amplitude is still decaying, are
-    penalised rather than scored (see PS_FLAT_PENALTY / PS_OSC_PENALTY).
+    In "ps"/"all" the pre-stim term is the whole-shape spectrum error
+    (model.compute_error_prestim_osc), scored on a single 400 ms segment ending at stimulus
+    onset. The only rejection is the flat one: parameter sets whose pre-stimulus period
+    carries no ongoing activity at all are penalised rather than scored (see
+    PS_FLAT_PENALTY). Decaying transients are scored — see the note above the penalties.
     """
     model.apply_params(params)
     model.initialize_state()
@@ -313,20 +318,13 @@ def objective(**params):
             print(f"  [rejected] pre-stimulus signal flat (settled fixed point, "
                   f"fluctuation {fluct:.2e}, {decades:.1f} decades below floor)")
         else:
-            amp_ratio = model._prestim_amplitude_ratio(sim_dip, rois=FIT_ROIS)
-            if amp_ratio < PS_STATIONARY_MIN_RATIO:
-                # Ring-down of the initialisation transient rather than a sustained rhythm; its
-                # spectrum piles into the lowest bin and is not an oscillation the model keeps.
-                # Penalised in proportion to the decay so the GA can climb towards sustained.
-                err_ps = PS_OSC_PENALTY * (2.0 - amp_ratio / PS_STATIONARY_MIN_RATIO)
-                print(f"  [rejected] pre-stimulus amplitude decaying "
-                      f"(amplitude ratio {amp_ratio:.3f} < {PS_STATIONARY_MIN_RATIO})")
-            else:
-                err_ps, _, _ = model.compute_error_prestim_peaks(
-                    ps_data_path_raw, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
-                if not np.isfinite(err_ps):
-                    err_ps = PS_FLAT_PENALTY
-                    print("  [rejected] pre-stimulus spectrum has no usable power")
+            # compute pre-stim error
+            err_ps, _, _ = model.compute_error_prestim_osc(
+                ps_data_path_raw, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
+            if not np.isfinite(err_ps):
+                err_ps = PS_FLAT_PENALTY
+                print("  [rejected] pre-stimulus spectrum has no usable power")
+
     combined = err_tf + err_tc + err_ps
     print(f"  params={params}  →  err_tf={err_tf:.4f}  err_tc={err_tc:.4f}  err_ps={err_ps:.4f}  total={combined:.4f}")
     return combined
@@ -335,19 +333,22 @@ def objective(**params):
 # The searchable parameters and their bounds. scaling_factor is never searched in any mode —
 # the model never reads it (it is only a keyword of compute_error_timecourse).
 SEARCH_SPACE = {
-    "coupling_strength": (0,     20   ),
-    "strength_I":        (0.4,    0.8 ),
-    "g_intercortical":   (0.5,    2   ),
-    "g_thalPOm":         (0,      5   ),   # scales POm output connectivity
-    "Ib_strength":       (3,     20   ),
-    "e3b_tau":           (2,     10   ),   # ms, default 6
-    "e1_tau":            (2,     10   ),   # ms, default 6
-    "e2_tau":            (2,     10   ),   # ms, default 6
+    "coupling_strength": (0.1,     4   ),
+    "strength_I":        (0.6,    1.3 ),
+    "g_intercortical":   (0.5,    1.5   ),
+    "g_thalPOm":         (0,      3   ),   # scales POm output connectivity
+    "Ib_strength":       (3,     60   ),
+    "Ib_ratio_PV":       (0.2,   1.5 ),
+    "Ib_ratio_SST":      (0.2,   1.5 ),
+    "Ib_ratio_VIP":      (0.1,   1.5 ),
+    "e3b_tau":           (3,     8   ),   # ms, default 6
+    "e1_tau":            (3,     8   ),   # ms, default 6
+    "e2_tau":            (3,     8   ),   # ms, default 6
     "thal_delay_factor": (0.001,  0.005),  # s, default 3e-3
-    "delay_factor":      (0.001,  0.008),  # s, default 5e-3
-    "p_2PVE":            (10,     40   ),  # L4 PV<-E connection probability, %; default 37.6
-    "p_4PVE":            (10,     40   ),  # L6 PV<-E connection probability, %; default 39.4
-    "Iext_strength":     (0,    100    ),  # evoked input amplitude
+    "delay_factor":      (0.003,  0.008),  # s, default 5e-3
+    "p_2PVE":            (25,     45   ),  # L4 PV<-E connection probability, %; default 37.6
+    "p_4PVE":            (25,     45   ),  # L6 PV<-E connection probability, %; default 39.4
+    "Iext_strength":     (0,    50    ),  # evoked input amplitude
     "Iext_duration":     (0.0005,  0.003  ),  # s; > 0 so the pulse is at least one integration step
 }
 
@@ -372,7 +373,11 @@ opt_config = {
     "N2":         80,        # crossover offspring per iteration
     "N3":         80,       # mutation offspring per iteration
     "n_iter":     30,
-    "tolerance":  0.05,   # gradient-search tolerance (conf['gTol'])
+    # Gradient-search tolerance (conf['gTol']): gauss_newton_slow quits once the cost improves
+    # by less than this between inner loops. The cost is err**2, and a scored "ps" err is
+    # ~0.013..0.049, i.e. a cost of ~2e-4..2e-3 — far below the old 0.05, so every gradient
+    # search quit after two loops having spent ~80 simulations it could never use.
+    "tolerance":  1e-8,   # gradient-search tolerance (conf['gTol'])
     # Early-stop threshold on the GA cost, which is err**2. Kept far below any error the
     # objectives actually reach so the GA always runs its full n_iter: the default 1e-5 sits
     # above a converged fit's cost and would break after the first iteration, returning a
@@ -439,11 +444,15 @@ def plot_best_fit(model, best_params, outdir):
     err_tc, tc_sim, tc_target = model.compute_error_timecourse(tc_data_path, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
     model.plot_timecourse_comparison(tc_sim, tc_target)      # saves to the model's TIMECOURSE_DIR
 
-    # the peak error does its own local 1/f referencing, so it takes the *raw* measured CSV
+    # the spectrum error compares raw (unflattened) power, so it takes the *raw* measured CSV
     # (ps_data_path points at the already-flattened one after preprocess_targets)
-    err_ps, ps_sim, ps_target = model.compute_error_prestim_peaks(
-        ps_data_path_raw, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
-    model.plot_prestim_spectrum_comparison(ps_data_path_raw, sim_dip, target_dip=target_dip)  # saves to PRESTIM_SPECTRUM_DIR
+    err_ps, ps_sim, ps_target = model.compute_error_prestim_osc(
+        ps_data_path_raw, sim_dip, target_dip=target_dip, rois=FIT_ROIS, verbose=True)
+
+    # same window/grid the fit was scored on, so the figure shows the compared spectra
+    model.plot_prestim_spectrum_comparison(  # saves to PRESTIM_SPECTRUM_DIR
+        ps_data_path_raw, sim_dip, target_dip=target_dip,
+        seg_dur=1, overlap=0.5, settle_s=2, n_segments=5)
 
     # also persist the comparison maps/traces for this best run
     model.save_timefreq_comparison(outdir, tf_sim, tf_target, err_tf, filename="best_tf_comparison")
@@ -519,7 +528,9 @@ if __name__ == "__main__":
     print("\n── Optimised parameters ──")
     for name, val in best_params.items():
         print(f"  {name}: {val:.4f}")
-    print(f"  Best combined error: {ga.errors[-1]:.4f}")
+    # ga.errors holds the GA *cost* = err**2 (the GA minimises (reference - objective)**2),
+    # so take the root to report the same number the per-evaluation "total=" lines print.
+    print(f"  Best combined error: {np.sqrt(ga.errors[-1]):.6f}  (cost {ga.errors[-1]:.3e})")
 
     # in parameter-recovery mode, show the known TRUE_PARAMS alongside the recovered ones
     if target_dip is not None:
@@ -542,8 +553,9 @@ if __name__ == "__main__":
         "error_mode": ERROR_MODE,
         "fit_rois": list(FIT_ROIS),
         "best_params": {k: float(v) for k, v in best_params.items()},
-        "best_combined_error": float(ga.errors[-1]),
-        "error_per_iteration": [float(e) for e in ga.errors],
+        "best_combined_error": float(np.sqrt(ga.errors[-1])),
+        "cost_per_iteration": [float(e) for e in ga.errors],   # GA cost = err**2
+        "error_per_iteration": [float(np.sqrt(e)) for e in ga.errors],
         "best_fit_err_tf": float(err_tf),
         "best_fit_err_tc": float(err_tc),
         "best_fit_err_ps": float(err_ps),

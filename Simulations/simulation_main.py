@@ -130,12 +130,17 @@ if not os.path.exists(filedir):
 # and are only applied in the `if not use_opt:` branch below - with use_opt = True
 # the whole block is unused and the parameters come from load_optimized_params().
 coupling_strengths = [1] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
-strength_Is = [0.7] #np.arange(0.6, 1.1, 0.1) #[0.4133] # [0.8499] #[0.76131] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-backgrndI_strengths = [100] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
-modulI_strengths = [10] #[0, 5, 10]
+strength_Is = [1] #np.arange(0.6, 1.1, 0.1) #[0.4133] # [0.8499] #[0.76131] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
+backgrndI_strengths = [50] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+Ib_noise_std = 0.5
+Ib_ratio_E = 1.0
+Ib_ratio_PV = 0.7 # default 0.7
+Ib_ratio_SST = 1 # default 0.9
+Ib_ratio_VIP = 0.5 # default 0.4    
+modulI_strengths = [2] #[0, 5, 10]
 input_durations = [0.005] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [0] # np.arange(0,50,10)
-ginters = [0.8] #np.arange(0.4, 1.4, 0.1) #[0.7994] #[1.418] #np.arange(0,2,0.2)
+input_strengths = [10] # np.arange(0,50,10)
+ginters = [1] #np.arange(0.4, 1.4, 0.1) #[0.7994] #[1.418] #np.arange(0,2,0.2)
 g_thalPOms = [1] #np.arange(0.76, 1.4, 0.1) #[0.325] # [0.2097] # [0.2766] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
 delay_factor = 0.004 #0.00565 #0.00637 #0.00615
 delay_factor_short = 0.002 #0.00352 # 0.00472 # 0.004
@@ -146,16 +151,14 @@ e1_tau = 9.351 #4.8 #8.682 #7.126 #4.132
 e2_tau = 4.445 #2.55 #4.15 #4.712
 p_2PVE = 37.4 #25.95 # 22.51 #21.65 # 31.1 # L4 PV <- E connection probability (S1 and S2); original value 37.4
 p_4PVE = 39.6 #12.35 #28.4 #38.41 # L6 PV <- E connection probability (S1 and S2); original value 39.6
-params['input_onset'] = 2.001
+params['input_onset'] = 12.001
+params['simulation_dur'] = 15
 params['g_thal'] = 1 #4.726 #4.17 #2 #0.4211 #1.315 
 resistance_factor = 1
 area = 'all'
 pyrates = False
 use_opt = False
 save_connectivity = False
-
-Ib_noise_std = 0.5
-
 
 if use_opt:
     # option to read file from optimization run: simulation_parameter.json base params
@@ -164,7 +167,12 @@ if use_opt:
     # its opt_run too when changing it here.
     opt_run = "opt_20260806_141628_tc_roi-S2" 
     #"opt_20260804_090235_tc_roi-S2" #"opt_20260803_124557_tc_roi-A1"
-    params = load_optimized_params(opt_run, overrides={'Im_strength' : modulI_strengths, 'Ib_noise_std': Ib_noise_std, 'delay_factor_short': 0})
+    opt_run = "opt_20260827_153421_tc_roi-A1"
+    #opt_run = "opt_20260827_153511_tc_roi-A3b"
+    params = load_optimized_params(opt_run, overrides={'Iext_strength' : 10, 'Ib_strength': 40})
+    
+    #params = load_optimized_params(opt_run) #, overrides={'Im_strength' : modulI_strengths, 'Ib_noise_std': Ib_noise_std, 'delay_factor_short': 0})
+    #params = load_optimized_params(opt_run, overrides={'Ib_ratio_PV' : Ib_ratio_PV, 'Ib_ratio_SST': Ib_ratio_SST, 'Ib_ratio_VIP': Ib_ratio_VIP})
 
     
 for ginter in ginters:
@@ -185,6 +193,7 @@ for ginter in ginters:
                         for Im in modulI_strengths:
                             
                             if not use_opt:
+                                
                                 params['g_intercortical'] = np.round(ginter, 4)
                                 params['coupling_strength'] = g 
                                 params['strength_I'] = np.round(sI, 4)
@@ -192,6 +201,10 @@ for ginter in ginters:
                                 params['Iext_strength'] = s
                                 params['Ib_strength'] = sb
                                 params['Ib_noise_std'] = Ib_noise_std
+                                params['Ib_ratio_E'] = Ib_ratio_E
+                                params['Ib_ratio_PV'] = Ib_ratio_PV
+                                params['Ib_ratio_SST'] = Ib_ratio_SST
+                                params['Ib_ratio_VIP'] = Ib_ratio_VIP
                                 params['Im_strength'] = Im
                                 params['area'] = area
                                 params['resistance_factor'] = resistance_factor
@@ -215,6 +228,10 @@ for ginter in ginters:
                             else: 
                                 seeds = [None]
                             
+                            all_rates = []
+                            all_potentials = []
+                            all_dipoles = []
+
                             for seed in seeds:
                                 params['Ib_noise_seed'] = seed
 
@@ -244,146 +261,169 @@ for ginter in ginters:
                                 stop = time.time()
                                 duration = stop - start
                                 all_durations.append(duration)
-                                #print("Simulation duration (in s):", duration)
 
-                                # analyse signal (frequency spectra)
-                                #model.analyse_signal(save_spectrum=True)
-                                # time-frequency error against measured data
+                                # compute dipole for separate runs and average those in the end
                                 sim_dip = model.compute_dipoles(subID_elec)
+                                all_dipoles.append(sim_dip)
+                                all_rates.append(model.rate)
+                                all_potentials.append(model.potential.copy())
 
-                                if plot_dipole_computation:
-                                    # how this run's dipole was built: the excitatory potentials
-                                    # feeding each layer -> the layer dipoles -> the area sum,
-                                    # and which source populations contribute to each layer.
-                                    # Placed right after compute_dipoles so the forward-model
-                                    # projections it just cached are reused instead of rebuilt.
-                                    for dipole_area in ('S2', 'A1', 'A3b'):
-                                        plot_dipole_computation_area(model, sim_dip, dipole_area)
-                                        plot_layer_interneuron_contributions(
-                                            model, sim_dip, dipole_area, subID_elec)
-                                    plt.show()
 
-                                tf_error, tf_sim, tf_target = model.compute_error_timefreq(tf_target_path, sim_dip)
-                                print("TF error (log-MSE):", tf_error)
-                                model.plot_timefreq_comparison(tf_sim, tf_target)
+                            # show the dipole computation of the last run
+                            if plot_dipole_computation:
+                                # how this run's dipole was built: the excitatory potentials
+                                # feeding each layer -> the layer dipoles -> the area sum,
+                                # and which source populations contribute to each layer.
+                                # Placed right after compute_dipoles so the forward-model
+                                # projections it just cached are reused instead of rebuilt.
+                                for dipole_area in ('S2', 'A1', 'A3b'):
+                                    plot_dipole_computation_area(model, sim_dip, dipole_area)
+                                    plot_layer_interneuron_contributions(
+                                        model, sim_dip, dipole_area, subID_elec)
+                                plt.show()
 
-                                # time-course error against measured data
-                                tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path, sim_dip)
-                                print("Time-course error (peak-norm MSE):", tc_error)
-                                model.plot_timecourse_comparison(tc_sim, tc_target, show=True)
 
-                                # pre-stimulus spectrum error against measured data
-                                # ps_target_path is the raw measured CSV, so flatten both sides
-                                ps_error, ps_sim, ps_target = model.compute_error_prestim_spectrum(
-                                    ps_target_path, sim_dip, flatten_sim=True, flatten_target=True)
-                                print("Pre-stim spectrum error (log-residual MSE):", ps_error)
-                                # the alpha/beta peak error is what the "ps" optimization actually scores
-                                ps_peak_error, _, _ = model.compute_error_prestim_peaks(ps_target_path, sim_dip)
-                                print("Pre-stim peak error (alpha-weighted):", ps_peak_error)
-                                model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip, show=True)  # saves to PRESTIM_SPECTRUM_DIR
 
-                                # persist per-run comparison maps/traces + values for later animation
+                            # average the computed dipoles
+                            # NOTE this is a signal-domain average: it keeps the evoked
+                            # response but cancels whatever is not phase-locked across the
+                            # noise realisations, so the pre-stim spectrum (and the induced
+                            # part of the TF map) of the average is attenuated relative to
+                            # the measured epochwise targets. run_parameter_sweep.py takes
+                            # the other route (averaging the spectra, not the signals).
+                            sim_dip_avg = np.mean(np.stack(all_dipoles, axis=0), axis=0)
+
+                            # average the resulting rates, and potentials
+                            # written back onto the model so everything downstream that
+                            # reads model.rate / model.potential (save_results_csv via
+                            # prepare_dataframes, the pf.plot_* calls) sees the average
+                            # instead of the last realisation. model.Ib / model.Iext stay
+                            # the last seed's, so the plotted input traces remain a single
+                            # realisation.
+                            model.rate      = np.mean(np.stack(all_rates, axis=0), axis=0)
+                            model.potential = np.mean(np.stack(all_potentials, axis=0), axis=0)
+
+                            tf_error, tf_sim, tf_target = model.compute_error_timefreq(tf_target_path, sim_dip_avg)
+                            print("TF error (log-MSE):", tf_error)
+                            model.plot_timefreq_comparison(tf_sim, tf_target)
+
+                            # time-course error against measured data
+                            tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path, sim_dip_avg)
+                            print("Time-course error (peak-norm MSE):", tc_error)
+                            model.plot_timecourse_comparison(tc_sim, tc_target, show=True)
+
+                            # pre-stimulus spectrum error against measured data
+                            # ps_target_path is the raw measured CSV, so flatten both sides
+                            ps_error, ps_sim, ps_target = model.compute_error_prestim_spectrum(
+                                ps_target_path, sim_dip_avg, flatten_sim=True, flatten_target=True)
+                            print("Pre-stim spectrum error (log-residual MSE):", ps_error)
+                            # the alpha/beta peak error, kept as a diagnostic; the "ps" optimization
+                            # now scores compute_error_prestim_osc (whole-shape MSE) instead
+                            ps_peak_error, _, _ = model.compute_error_prestim_peaks(ps_target_path, sim_dip_avg)
+                            print("Pre-stim peak error (alpha-weighted):", ps_peak_error)
+                            model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip_avg, fmin=3, show=True)  # saves to PRESTIM_SPECTRUM_DIR
+
+                            # persist per-run comparison maps/traces + values for later animation
+                            run_dir = model.prepare_run_dir(filedir)
+                            model.save_timefreq_comparison(
+                                run_dir, tf_sim, tf_target, tf_error, filename="tf_comparison")
+                            model.save_timecourse_comparison(
+                                run_dir, tc_sim, tc_target, tc_error, filename="tc_comparison")
+                            model.append_comparison_summary(tf_error=tf_error, tc_error=tc_error)
+
+                            # print important parameters
+                            print('simulation_dur', model.simulation_dur)
+                            print('step_size', model.step_size)
+                            print('input_onset', model.input_onset) 
+                            print('thal_connect', model.thal_connect) 
+                            print('extI_cellcounts', model.extI_cellcounts) 
+                            print('strength_I', model.strength_I) 
+                            print('bI_cellcounts', model.bI_cellcounts) 
+                            print('thalE_cellcounts', model.thalE_cellcounts)
+                            print('thalI_cellcounts', model.thalI_cellcounts)
+                            print('pom_cellcounts', model.pom_cellcounts)
+                            print('sI_thal', model.sI_thal) 
+                            print('g_thal', model.g_thal) 
+                            print('input_type', model.input_type) 
+                            print('area', model.area) 
+                            #print('coupling strength', model.coupling_strength) 
+                            #print('b input', model.Ib_strength) 
+                            #print('Iext strength', model.Iext_strength) 
+                            #print('Iext dur', model.Iext_duration) 
+
+                            if save_results:
+                                # create per-run output folder (holds params.json + all HDF5s for this run)
                                 run_dir = model.prepare_run_dir(filedir)
-                                model.save_timefreq_comparison(
-                                    run_dir, tf_sim, tf_target, tf_error, filename="tf_comparison")
-                                model.save_timecourse_comparison(
-                                    run_dir, tc_sim, tc_target, tc_error, filename="tc_comparison")
-                                model.append_comparison_summary(tf_error=tf_error, tc_error=tc_error)
+                                start = time.time()
+                                # rates/potentials on the model are the seed averages by now,
+                                # and the averaged dipole goes into the same file ('dipole' key)
+                                model.save_results_csv(run_dir, "results", save_full_potentials,
+                                                       dipole=sim_dip_avg)
+                                stop = time.time()
+                                duration = stop - start
+                                all_durations_saving.append(duration)
+                                #print("Saving duration (in s):", duration)
 
-                                # print important parameters
-                                print('simulation_dur', model.simulation_dur)
-                                print('step_size', model.step_size)
-                                print('input_onset', model.input_onset) 
-                                print('thal_connect', model.thal_connect) 
-                                print('extI_cellcounts', model.extI_cellcounts) 
-                                print('strength_I', model.strength_I) 
-                                print('bI_cellcounts', model.bI_cellcounts) 
-                                print('thalE_cellcounts', model.thalE_cellcounts)
-                                print('thalI_cellcounts', model.thalI_cellcounts)
-                                print('pom_cellcounts', model.pom_cellcounts)
-                                print('sI_thal', model.sI_thal) 
-                                print('g_thal', model.g_thal) 
-                                print('input_type', model.input_type) 
-                                print('area', model.area) 
-                                #print('coupling strength', model.coupling_strength) 
-                                #print('b input', model.Ib_strength) 
-                                #print('Iext strength', model.Iext_strength) 
-                                #print('Iext dur', model.Iext_duration) 
+                            start_plot = 500
+                            stop_plot = 1000
+                            if plot_rates:
+                                pf.plot_results(
+                                    model.rate,
+                                    model.Iext[-2],
+                                    model.Ib[0],
+                                    model.step_size,
+                                    simulation_dur,
+                                    start_plot,
+                                    sI,
+                                    g,
+                                    model.area,
+                                    d,
+                                    sb,
+                                    s,
+                                    figure_dir,
+                                    stop_plot = stop_plot
+                                )
 
-                                if save_results:
-                                    # create per-run output folder (holds params.json + all HDF5s for this run)
-                                    run_dir = model.prepare_run_dir(filedir)
-                                    start = time.time()
-                                    model.save_results_csv(run_dir, f"results{seed}", save_full_potentials)
-                                    stop = time.time()
-                                    duration = stop - start
-                                    all_durations_saving.append(duration)
-                                    #print("Saving duration (in s):", duration)
+                            if plot_potentials:
+                                resolution_tstep = 1e-2
+                                if pyrates:
+                                    potential_sum = model.potential
+                                else:
+                                    potential_sum = np.sum(model.potential, axis=1)
 
-                                start_plot = 1000
-                                stop_plot = 2200
-                                if plot_rates:
-                                    pf.plot_results(
-                                        model.rate,
-                                        model.Iext[-2],
-                                        model.Ib[0],
-                                        model.step_size,
-                                        simulation_dur,
-                                        start_plot,
-                                        sI,
-                                        g,
-                                        model.area,
-                                        d,
-                                        sb,
-                                        s,
-                                        figure_dir,
-                                        stop_plot = stop_plot
-                                    )
+                                pf.plot_potentials(
+                                    potential_sum,
+                                    model.Iext[-2],
+                                    model.Ib[0],
+                                    model.step_size,
+                                    simulation_dur,
+                                    start_plot,
+                                    figure_dir,
+                                    sI,
+                                    g,
+                                    d,
+                                    sb,
+                                    s,
+                                    stop_plot = stop_plot
+                                )
 
-                                if plot_potentials:
-                                    resolution_tstep = 1e-2
-                                    if pyrates:
-                                        potential_sum = model.potential
-                                    else:
-                                        potential_sum = np.sum(model.potential, axis=1)
-
-                                    pf.plot_potentials(
-                                        potential_sum,
-                                        model.Iext[-2],
-                                        model.Ib[0],
-                                        model.step_size,
-                                        simulation_dur,
-                                        start_plot,
-                                        figure_dir,
-                                        sI,
-                                        g,
-                                        d,
-                                        sb,
-                                        s,
-                                        stop_plot = stop_plot
-                                    )
-
-                                if plot_all_potentials:
-                                    pf.plot_all_potentials(
-                                        model.potential,
-                                        model.Iext[-2],
-                                        model.Ib[0],
-                                        model.step_size,
-                                        simulation_dur,
-                                        start_plot,
-                                        figure_dir,
-                                        sI,
-                                        g,
-                                        d,
-                                        sb,
-                                        s,
-                                        pop_labels=model.get_population_labels(),
-                                        stop_plot=stop_plot
-                                    )
-
-            # if (len(coupling_strengths) > 1):
-            #    # used to plot with coupling strength on the x-axis and max/min rate on the y
-            #    pf.plot_minmax(all_rates, coupling_strengths)
+                            if plot_all_potentials:
+                                pf.plot_all_potentials(
+                                    model.potential,
+                                    model.Iext[-2],
+                                    model.Ib[0],
+                                    model.step_size,
+                                    simulation_dur,
+                                    start_plot,
+                                    figure_dir,
+                                    sI,
+                                    g,
+                                    d,
+                                    sb,
+                                    s,
+                                    pop_labels=model.get_population_labels(),
+                                    stop_plot=stop_plot
+                                )
 
 print("Mean Simulation duration: ", np.mean(all_durations))
 print("Mean Saving duration: ", np.mean(all_durations_saving))
