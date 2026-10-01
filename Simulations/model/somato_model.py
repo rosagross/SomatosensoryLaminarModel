@@ -2117,21 +2117,29 @@ class SomatoModel():
                      if target_dip is not None else self.load_target_timecourse(data_path))
 
         # Analysis window: stimulus onset (0 ms) onward -> index 250 on the 2 ms / -500..400 axis.
-        analysis_slice = slice(250, None)
+        analysis_slice_pre = slice(0, 250)
+        analysis_slice_post = slice(250, None)
+        
         eps = 1e-10
         rois = tuple(rois) if rois else ("A3b", "A1", "S2")
 
         # collect the sliced, shape-matched traces per ROI
-        sims, tgts = {}, {}
+        sims_pre, sims_post, tgts_pre, tgts_post = {}, {}, {}, {}
         for roi in rois:
             if roi not in tc_sim or roi not in tc_target:
                 raise RuntimeError(f"Missing time-course data for ROI '{roi}'.")
-            x_sim = tc_sim[roi][analysis_slice]
-            x_tgt = tc_target[roi][analysis_slice]
-            if x_sim.shape != x_tgt.shape:
+            x_sim_pre = tc_sim[roi][analysis_slice_pre]
+            x_sim_post = tc_sim[roi][analysis_slice_post]
+            x_tgt_pre = tc_target[roi][analysis_slice_pre] # we only need the precise timecourse of the post-stimulus target
+            x_tgt_post = tc_target[roi][analysis_slice_post] # we only need the precise timecourse of the post-stimulus target
+            if x_sim_post.shape != x_tgt_post.shape:
                 # cut simulated signal to same size
-                x_sim = x_sim[:x_tgt.shape[0]]
-            sims[roi], tgts[roi] = x_sim, x_tgt
+                x_sim_post = x_sim_post[:x_tgt_post.shape[0]]
+            
+            sims_pre[roi] = x_sim_pre
+            sims_post[roi] = x_sim_post 
+            tgts_post[roi] = x_tgt_post
+            tgts_pre[roi] = x_tgt_pre
 
 
         if scaling_factor:
@@ -2140,15 +2148,30 @@ class SomatoModel():
             tgt_peak = {roi: 1 for roi in rois}
         else:
             # separate peak per area -> each ROI normalized to its own amplitude
-            sim_peak = {roi: np.max(np.abs(sims[roi])) + eps for roi in rois}
-            tgt_peak = {roi: np.max(np.abs(tgts[roi])) + eps for roi in rois}
+            sim_peak = {roi: np.max(np.abs(sims_post[roi])) + eps for roi in rois}
+            tgt_peak = {roi: np.max(np.abs(tgts_post[roi])) + eps for roi in rois}
 
-        # the error of the ERP time course should be computed starting from stimulation onset 0 ms
-        errors = [
-            float(np.mean((sims[roi] / sim_peak[roi] - tgts[roi] / tgt_peak[roi]) ** 2))
-            for roi in rois
-        ]
+        # compute error per roi
+        errors = []
+        for roi in rois:
+            # implement separate error weight for pre-stimlus and post-stimulus period
+            error_post = float(np.sqrt(np.mean((sims_post[roi] / sim_peak[roi] - tgts_post[roi] / tgt_peak[roi]) ** 2)))
+            # I compute the amplitude of the simulated pre-stimulus signal and make sure it has 
+            # a lower amplitude compared to the ERP
+            error_sim_pre = float(np.sqrt(np.mean((sims_pre[roi] / sim_peak[roi] - np.mean(sims_pre[roi] / sim_peak[roi])) ** 2)))
+            error_target_pre = float(np.sqrt(np.mean((tgts_pre[roi]/ tgt_peak[roi] - np.mean(tgts_pre[roi]/tgt_peak[roi])) ** 2)))
+            error_pre = ((error_sim_pre - error_target_pre)/error_target_pre)**2
+            print('ROI', roi)
+            print('Error pre', error_pre)
+            print('Error post', error_post)
+            error = error_pre + error_post
+            errors.append(error)
 
+        plt.plot(tc_sim["A1"]/sim_peak["A1"])
+        plt.plot(tc_target["A1"]/tgt_peak["A1"])
+        plt.title(f"error pre {np.round(error_pre, 3)} and post {np.round(error_post,3)} and sum {float(np.mean(errors))}")
+        plt.show()
+            
         return float(np.mean(errors)), tc_sim, tc_target
 
 

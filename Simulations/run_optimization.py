@@ -18,6 +18,18 @@ Description:
         ROI=A3b,S2 python run_optimization.py    # average the error over BA3b and S2
     The full network is always simulated; ROI only selects which ROIs the objective
     is scored on (use base_params["area"] to isolate part of the network instead).
+
+    Warm start from a finished run (env var WARM_START, folder name in SIMDIR/optimization):
+        WARM_START=opt_20260805_152744_tc_roi-S2 python run_optimization.py
+    Its best parameters are put into the initial population unchanged (bounds are widened to
+    contain them). The run must have the same fitted parameters, ERROR_MODE, ROI and base_params,
+    otherwise the script exits with an error.
+
+    Hand-set starting point (env var INITIAL_PARAMS=1):
+        INITIAL_PARAMS=1 python run_optimization.py
+    Reads Simulations/optimization_parameter.json (one value per fitted parameter) and puts it
+    into the initial population unchanged, bounds widened as for WARM_START. Cannot be combined
+    with WARM_START.
 """
 
 import numpy as np
@@ -28,6 +40,10 @@ import json
 import mne
 import matplotlib.pyplot as plt
 from datetime import datetime
+
+# settings
+INITIAL_PARAMS=1
+FIT_ROIS = "A1"
 
 # ── paths ──────────────────────────────────────────────────────────────────────
 WDDIR    = os.getenv("WDDIR")   # /data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel
@@ -125,7 +141,7 @@ base_params.update({
     # peaks are largely a property of the filtered noise). See the flat-signal gate in
     # objective(): without noise a parameter set that settles to a fixed point has no
     # ongoing activity at all and is rejected rather than scored.
-    "Ib_noise_std":     0.0,
+    "Ib_noise_std":     0.5,
     # Inert while Ib_noise_std == 0 (add_background_noise returns its input unchanged).
     # With noise on it makes the objective deterministic, so the GA selects on parameters
     # rather than on the luckier noise realisation.
@@ -136,9 +152,9 @@ base_params.update({
     # The values are the best A1 timecourse fit (opt_20260728_152103_tc_roi-A1), so a "ps"
     # run's tf/tc diagnostic figures stay interpretable instead of falling back to the JSON
     # defaults (Iext_strength=0, Iext_duration=0 s).
-    "Iext_strength":            99.85,
-    "Iext_duration":            0.0291,
-    "receptor_thalamus_delay":  0.01127,
+    "Iext_strength":            10,
+    "Iext_duration":            0.005,
+    "receptor_thalamus_delay":  0.015,
 })
 model = SomatoModel(base_params)
 
@@ -338,9 +354,9 @@ SEARCH_SPACE = {
     "g_intercortical":   (0.5,    1.5   ),
     "g_thalPOm":         (0,      3   ),   # scales POm output connectivity
     "Ib_strength":       (3,     60   ),
-    "Ib_ratio_PV":       (0.2,   1.5 ),
-    "Ib_ratio_SST":      (0.2,   1.5 ),
-    "Ib_ratio_VIP":      (0.1,   1.5 ),
+    "Ib_ratio_PV":       (0.5,   1.2 ),
+    "Ib_ratio_SST":      (0.7,   1.5 ),
+    "Ib_ratio_VIP":      (0.1,   0.7 ),
     "e3b_tau":           (3,     8   ),   # ms, default 6
     "e1_tau":            (3,     8   ),   # ms, default 6
     "e2_tau":            (3,     8   ),   # ms, default 6
@@ -369,10 +385,10 @@ opt_config = {
     "reference":  0.0,
     "simulation": objective,
     "op":         -1,    # minimise
-    "N1":         80, #30,    # initial population size
+    "N1":         50, #30,    # initial population size
     "N2":         80,        # crossover offspring per iteration
     "N3":         80,       # mutation offspring per iteration
-    "n_iter":     30,
+    "n_iter":     10,
     # Gradient-search tolerance (conf['gTol']): gauss_newton_slow quits once the cost improves
     # by less than this between inner loops. The cost is err**2, and a scored "ps" err is
     # ~0.013..0.049, i.e. a cost of ~2e-4..2e-3 — far below the old 0.05, so every gradient
@@ -385,6 +401,77 @@ opt_config = {
     "single_run_tol": 1e-12,
     "verbose":    1,
 }
+
+def _seed_population(config, values, label):
+    """Put `values` ({parameter: value}) into the GA's initial population, unchanged.
+
+    The seed is taken by name in the order of config["model_parameters"]; the bounds are
+    widened where needed so it lies inside them. Returns the seed as {parameter: value}.
+    """
+    names = config["model_parameters"]
+    seed = np.array([values[p] for p in names], dtype=float)
+    bounds = np.asarray(config["bounds"], dtype=float)
+    bounds[:, 0] = np.minimum(bounds[:, 0], seed)
+    bounds[:, 1] = np.maximum(bounds[:, 1], seed)
+    config["bounds"] = bounds
+    config["initial_population"] = seed[None, :]
+
+    print(f"{label}: " + ", ".join(f"{p}={v:.6g}" for p, v in zip(names, seed)))
+    return dict(zip(names, seed.tolist()))
+
+
+def apply_warm_start(name, config):
+    """Seed the GA with the best parameters of a finished run (folder `name` in diag_dir).
+
+    The old run must match this one exactly (fitted parameters, error mode, ROIs, base_params),
+    otherwise SystemExit. Values are taken by name and passed unchanged as GA.initial_population;
+    the bounds are widened where needed so the seed lies inside them.
+    Returns the seed as {parameter: value}.
+    """
+    run_dir = os.path.join(diag_dir, name)
+    with open(os.path.join(run_dir, "run_config.json")) as f:
+        old_cfg = json.load(f)
+    with open(os.path.join(run_dir, "optimization_summary.json")) as f:
+        old_best = json.load(f)["best_params"]
+
+    names = config["model_parameters"]
+    checks = {
+        "optimized_parameters": (old_cfg["optimized_parameters"], list(names)),
+        "error_mode":           (old_cfg["error_mode"], ERROR_MODE),
+        "fit_rois":             (old_cfg["fit_rois"], list(FIT_ROIS)),
+        # json round trip so numpy scalars / tuples compare like the stored values
+        "base_params":          (old_cfg["base_params"], json.loads(json.dumps(base_params))),
+    }
+    bad = [k for k, (old, new) in checks.items() if old != new]
+    if bad:
+        raise SystemExit(f"WARM_START={name} does not match the current run: {bad}")
+
+    return _seed_population(config, old_best, f"Warm start from {name}")
+
+
+# hand-set initial parameters; edit this file to choose the starting point
+INITIAL_PARAMS_PATH = os.path.join(WDDIR, "Simulations", "optimization_parameter.json")
+
+
+def apply_initial_params(config, path=INITIAL_PARAMS_PATH):
+    """Seed the GA with the parameters hard-coded in optimization_parameter.json.
+
+    Every fitted parameter must be present in the file, otherwise SystemExit; extra keys are
+    ignored. Returns the seed as {parameter: value}.
+    """
+    with open(path) as f:
+        values = json.load(f)
+
+    names = config["model_parameters"]
+    missing = [p for p in names if p not in values]
+    if missing:
+        raise SystemExit(f"{path} has no value for {missing}")
+    extra = [p for p in values if p not in names]
+    if extra:
+        print(f"  [initial params] ignoring {extra} (not fitted in this run)")
+
+    return _seed_population(config, values, f"Initial parameters from {os.path.basename(path)}")
+
 
 # ── diagnostics from the fitting process ────────────────────────────────────────
 def plot_fit_diagnostics(ga, config, outdir):
@@ -482,6 +569,18 @@ if __name__ == "__main__":
     print(f"Optimization session: {session_dir}")
     print(f"Fitting ROIs: {', '.join(FIT_ROIS)}  (ROI={_roi_env!r})")
 
+    # Seed the GA from a finished run (before run_config is built, so the widened bounds are logged).
+    warm_start = None
+    initial_params = None
+    if os.getenv("WARM_START") and INITIAL_PARAMS:
+        raise SystemExit("set only one of WARM_START and INITIAL_PARAMS")
+    if os.getenv("WARM_START"):
+        warm_start = {"source": os.getenv("WARM_START")}
+        warm_start["seed"] = apply_warm_start(warm_start["source"], opt_config)
+    if INITIAL_PARAMS:
+        initial_params = {"source": INITIAL_PARAMS_PATH}
+        initial_params["seed"] = apply_initial_params(opt_config)
+
     # Log the full run configuration up front (persisted even if the run crashes).
     # target_csvs are recorded before preprocess_targets repoints them below, so
     # the log keeps the raw measured sources.
@@ -499,6 +598,8 @@ if __name__ == "__main__":
         "target_csvs": {"tf": tf_data_path, "tc": tc_data_path, "ps": ps_data_path},
         "synthetic_target_path": SYNTHETIC_TARGET_PATH if target_dip is not None else None,
         "true_params": TRUE_PARAMS if target_dip is not None else None,
+        "warm_start": warm_start,
+        "initial_params": initial_params,
     }
     with open(os.path.join(session_dir, "run_config.json"), "w") as f:
         json.dump(run_config, f, indent=2)

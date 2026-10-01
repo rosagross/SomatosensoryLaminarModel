@@ -1,0 +1,19 @@
+{
+  "coupling_strength": 1,
+  "strength_I": 1,
+  "g_intercortical": 1,
+  "g_thalPOm": 1,
+  "Ib_strength": 50,
+  "Ib_ratio_PV": 0.7,
+  "Ib_ratio_SST": 1,
+  "Ib_ratio_VIP": 0.5,
+  "e3b_tau": 6.925,
+  "e1_tau": 9.351,
+  "e2_tau": 4.445,
+  "thal_delay_factor": 0.005,
+  "delay_factor": 0.004,
+  "p_2PVE": 37.4,
+  "p_4PVE": 39.6,
+  "Iext_strength": 10,
+  "Iext_duration": 0.005
+}
