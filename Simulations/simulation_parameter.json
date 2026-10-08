@@ -26,6 +26,7 @@
     "e2_tau": 6,
     "p_2PVE": 37.6,
     "p_4PVE": 39.4,
+    "f_intra": 1.0,
     "area": "all",
     "filedir": "/data/pt_02989/output_grossmannr",
     "input_type": "step",

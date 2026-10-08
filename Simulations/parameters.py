@@ -57,11 +57,12 @@ def class_ratio_vector(ratios, default=1.0):
 class Parameter():
     
     def __init__(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6,
-                 p_2PVE=15, p_4PVE=20):
+                 p_2PVE=15, p_4PVE=20, f_intra=1.0):
         # kept on the instance because get_raw_connectivity() and save_to_yaml() call
         # get_connectProb() without arguments, and they must see these values
         self.p_2PVE = p_2PVE
         self.p_4PVE = p_4PVE
+        self.f_intra = f_intra
         self.tau, self.nPop = self.get_params(delay_factor_short=delay_factor_short, delay_factor=delay_factor, thal_delay_factor=thal_delay_factor, e3b_tau=e3b_tau, e1_tau=e1_tau, e2_tau=e2_tau)
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
@@ -131,7 +132,7 @@ class Parameter():
         
         return tau, nPopTotal
 
-    def get_connectProb(self, p_2PVE=None, p_4PVE=None):
+    def get_connectProb(self, p_2PVE=None, p_4PVE=None, f_intra=None):
         """Connection probabilities (targets in rows, sources in columns).
 
         Values for area 3b are merged values from S1 (after already computed W = P*S*C).
@@ -142,13 +143,18 @@ class Parameter():
                     all others, hence the instance default of 15.
             p_4PVE: probability of the layer 6 PV <- E connection (row PV4, column E4).
                     39.6 is the original value, hence the instance default of 20.
+            f_intra: factor on the probability of the A1 (S1) layer 4 E -> layer 2/3 E
+                     (row E1, column E2) and layer 4 E -> layer 5 E (row E3, column E2)
+                     connections. 1 keeps the original values. Applied to S1 only; S2 and
+                     the area 3b collapse (see get_raw_connectivity) are not affected.
 
-        Both default to the values the Parameter instance was constructed with, and both
-        are used for S1 and S2 alike, so one value sets that layer's PV <- E drive in
-        both areas.
+        All three default to the values the Parameter instance was constructed with. p_2PVE
+        and p_4PVE are used for S1 and S2 alike, so one value sets that layer's PV <- E
+        drive in both areas.
         """
         p_2PVE = self.p_2PVE if p_2PVE is None else p_2PVE
         p_4PVE = self.p_4PVE if p_4PVE is None else p_4PVE
+        f_intra = self.f_intra if f_intra is None else f_intra
 
         # E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (Thalamus is added later!)
         P_S1 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
@@ -163,7 +169,11 @@ class Parameter():
                          [ 1.6,  0.4,  1.,  1.9,  3.8,  3.0,  2.5, 20.5, 31.1,  0.6,  0.6, 1-.5,  3.2],
                          [0, 0.2, 0.3, 0.8, 3.0, 1.5, 1.0, 4.0, 1.9, 1.7, 2.1, 39.6, 15.1],
                          [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, p_4PVE, 24.6, 24.1],
-                         [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
+                         [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2
+
+        # layer 4 E (column 4) -> layer 2/3 E (row 0) and layer 5 E (row 7) within A1
+        P_S1[0, 4] *= f_intra
+        P_S1[7, 4] *= f_intra
 
         P_S2 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
                     [28.5, 31.8, 11.8,  5.5,  0.4,  1.7,  3.2,  0.05,  0.1,  1.4,  0.01, 0.01, 0.6],
@@ -332,7 +342,9 @@ class Parameter():
         """
 
         S = self.get_connectStrength()
-        P = self.get_connectProb()
+        # f_intra is left out here on purpose: the area 3b connectivity below is collapsed
+        # from these S1 weights, and it must not change when only A1 is rescaled
+        P = self.get_connectProb(f_intra=1.0)
         C = self.get_cellcounts()
 
         # Final connectivity matrix s
@@ -393,8 +405,29 @@ class Parameter():
         WS1_collapse_targets_P = np.dot(W0[idx_S1_P,:int(len(W0)/2)].T, C[idx_S1_P])/np.sum(C[idx_S1_P])
         WS1_collapse_targets_S = np.dot(W0[idx_S1_S,:int(len(W0)/2)].T, C[idx_S1_S])/np.sum(C[idx_S1_S])
         WS1_collapse_targets_V = np.dot(W0[idx_S1_V,:int(len(W0)/2)].T, C[idx_S1_V])/np.sum(C[idx_S1_V])
-        W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
+        #W_A3bS1 = np.vstack((WS1_collapse_targets_E, WS1_collapse_targets_P, WS1_collapse_targets_S, WS1_collapse_targets_V))
+        #print("SHAPE", W_A3bS1.shape)
 
+        # A1 layer 4 E -> layer 2/3 E and layer 5 E with the f_intra-scaled probabilities
+        # (same formula as W0 = P * S * C; the area 3b collapse above used the unscaled ones)
+        P_A1 = self.get_connectProb()
+        for tgt in (0, 7):
+            W0[tgt, 4] = P_A1[tgt, 4] * S[tgt, 4] * C[4]
+
+        # ... between area a1 and 3b
+        # implement manually
+        W_S1A3b = np.zeros((13, 4)) #np.zeros(W_S1A3b.shape)
+        W_S1A3b[0,0] = 60 * g_intercortical # to E in layer 2/3 from E in A3b
+        W_S1A3b[4,0] = 500 * g_intercortical # to E in layer 4 from E in A3b
+        W_S1A3b[7,0] = 60 * g_intercortical # to E in layer 5 from E in A3b
+        W_A3bS1 = np.zeros((4,13)) 
+        W_A3bS1[0,0] = 50 * g_intercortical # to E3b from E in layer 2/3 in A1
+        W_A3bS1[1,0] = 100 * g_intercortical # to PV3b from E in layer 2/3 in A1
+        W_A3bS1[2,0] = 10 * g_intercortical # to PV3b from E in layer 2/3 in A1
+        W_A3bS1[0,7] = 30 * g_intercortical # to E3b from E in layer 5 in A1
+
+
+        # between S2 and A3b
         # connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
         W_S2A3b[0,0] = 60 * g_intercortical # to E in layer 2/3 from E in A3b
@@ -415,8 +448,8 @@ class Parameter():
         # feedforward S1 to S2
         W0[idx_S1_E[0]+13,idx_S1_E[0]] = 40 * g_intercortical # S1 layer 2/3 E to S2 layer 2/3 E
         W0[idx_S1_E[0]+13,idx_S1_E[2]] = 20 * g_intercortical # S1 layer 5 E to S2 layer 2/3 E
-        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 60 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
-        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 60 * g_intercortical # S1 layer 5 E to S2 layer 5 E
+        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 60 #500 #60 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
+        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 60 #500 #60 * g_intercortical # S1 layer 5 E to S2 layer 4 E
         W0[idx_S1_E[2]+13,idx_S1_E[0]] = 40 * g_intercortical # S1 layer 2/3 E to S2 layer 5 E
         W0[idx_S1_E[2]+13,idx_S1_E[2]] = 20 * g_intercortical # S1 layer 5 E to S2 layer 5 E
         
@@ -472,7 +505,7 @@ class Parameter():
                                 [10, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0]])*1e-2 # POm to A3b
         
         thal_to_S1 = np.array([6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0]) # based on Jiang et al. 2023
-        P_thalToA1 = np.array([thal_to_S1*0.7, # thal E to A1 (less strong than to A3b, therefore 0.7!)
+        P_thalToA1 = np.array([thal_to_S1*0.5, # thal E to A1 (less strong than to A3b)
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
                                 [20, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S1
 
@@ -481,7 +514,7 @@ class Parameter():
                                 [30, 0, 0, 0, 20, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S2
 
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
-        P_A3bto_thal = np.array([[10, 0, 0, 0], # thal E
+        P_A3bto_thal = np.array([[20, 0, 0, 0], # thal E
                                  [10, 0, 0, 0], # thal I
                                  [10, 0, 0, 0]])*1e-2 # POm
         P_A1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0], # S1 to Thal E (some projections from L6 to VPM)

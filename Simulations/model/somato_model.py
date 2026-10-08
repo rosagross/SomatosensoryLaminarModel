@@ -102,7 +102,7 @@ REQUIRED_PARAMS = (
     'coupling_strength', 'strength_I', 'g_thal', 'sI_thal', 'g_thalPOm', 'g_intercortical',
     # delays / time constants / connection probabilities (passed to Parameter)
     'delay_factor_short', 'delay_factor', 'thal_delay_factor', 'receptor_thalamus_delay',
-    'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE',
+    'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE', 'f_intra',
     # structure
     'area', 'thal_connect', 'extI_cellcounts', 'bI_cellcounts',
     'thalE_cellcounts', 'thalI_cellcounts', 'pom_cellcounts', 'mI_cellcounts',
@@ -279,7 +279,7 @@ class SomatoModel():
 
         self.p = Parameter(delay_factor_short=self.delay_factor_short, delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
-                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE)
+                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE, f_intra=self.f_intra)
         self.tau = self.p.tau
         self.tau_external = 0.003 # fixed, was always 3 ms but I took it from the thalamus time constant, this is cleaner
         self.nPop = self.p.nPop
@@ -369,14 +369,14 @@ class SomatoModel():
         # rebuild the Parameter tables so the params baked into them take effect on
         # every update: the tau/delay-shaping ones (delay_factor_short, delay_factor,
         # thal_delay_factor, e3b_tau, e1_tau, e2_tau) and the connection probabilities
-        # (p_2PVE, p_4PVE), which self.W below is then recomputed from.
+        # (p_2PVE, p_4PVE, f_intra), which self.W below is then recomputed from.
         # delay_factor_short used to be left out here, so it silently reverted to the
         # Parameter default (3 ms) on every update - a sweep over it would have
         # produced a flat result.
         self.p = Parameter(delay_factor_short=self.delay_factor_short,
                            delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
-                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE)
+                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE, f_intra=self.f_intra)
         self.tau = self.p.tau
 
         # recompute inputs and gains
@@ -2160,16 +2160,28 @@ class SomatoModel():
             # a lower amplitude compared to the ERP
             error_sim_pre = float(np.sqrt(np.mean((sims_pre[roi] / sim_peak[roi] - np.mean(sims_pre[roi] / sim_peak[roi])) ** 2)))
             error_target_pre = float(np.sqrt(np.mean((tgts_pre[roi]/ tgt_peak[roi] - np.mean(tgts_pre[roi]/tgt_peak[roi])) ** 2)))
-            error_pre = ((error_sim_pre - error_target_pre)/error_target_pre)**2
+            error_pre = float(np.sqrt(np.mean((sims_pre[roi] / sim_peak[roi]) ** 2)))**2
+            #((error_sim_pre - error_target_pre)/error_target_pre)**2
             print('ROI', roi)
             print('Error pre', error_pre)
             print('Error post', error_post)
             error = error_pre + error_post
             errors.append(error)
 
-        plt.plot(tc_sim["A1"]/sim_peak["A1"])
-        plt.plot(tc_target["A1"]/tgt_peak["A1"])
-        plt.title(f"error pre {np.round(error_pre, 3)} and post {np.round(error_post,3)} and sum {float(np.mean(errors))}")
+        # row 0: simulation normalized by its own ROI peak; row 1: by the peak over all ROIs
+        # (target stays normalized by its own ROI peak in both rows)
+        global_sim_peak = max(np.max(np.abs(sims_post[roi])) for roi in rois) + eps
+        fig, axes = plt.subplots(2, len(rois), figsize=(4 * len(rois), 6), sharex=True, sharey=True, squeeze=False)
+        for col, roi in enumerate(rois):
+            axes[0, col].plot(tc_sim[roi] / sim_peak[roi], label="simulation")
+            axes[1, col].plot(tc_sim[roi] / global_sim_peak, label="simulation")
+            for row in (0, 1):
+                axes[row, col].plot(tc_target[roi] / tgt_peak[roi], label="target")
+                axes[row, col].legend()
+            axes[0, col].set_title(roi)
+        axes[0, 0].set_ylabel("sim / own ROI peak")
+        axes[1, 0].set_ylabel("sim / peak of all ROIs")
+        fig.suptitle(f"error pre {np.round(error_pre, 3)} and post {np.round(error_post, 3)} and mean {float(np.mean(errors))}")
         plt.show()
             
         return float(np.mean(errors)), tc_sim, tc_target

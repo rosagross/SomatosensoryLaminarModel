@@ -131,9 +131,9 @@ if not os.path.exists(filedir):
 # the whole block is unused and the parameters come from load_optimized_params().
 coupling_strengths = [1] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
 strength_Is = [1] #np.arange(0.6, 1.1, 0.1) #[0.4133] # [0.8499] #[0.76131] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-backgrndI_strengths = [50] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+backgrndI_strengths = [20] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
 Ib_noise_std = 0.5
-Ib_ratio_E = 1.0
+Ib_ratio_E = 1.0    
 Ib_ratio_PV = 0.7 # default 0.7
 Ib_ratio_SST = 1 # default 0.9
 Ib_ratio_VIP = 0.5 # default 0.4    
@@ -151,6 +151,7 @@ e1_tau = 9.351 #4.8 #8.682 #7.126 #4.132
 e2_tau = 4.445 #2.55 #4.15 #4.712
 p_2PVE = 37.4 #25.95 # 22.51 #21.65 # 31.1 # L4 PV <- E connection probability (S1 and S2); original value 37.4
 p_4PVE = 39.6 #12.35 #28.4 #38.41 # L6 PV <- E connection probability (S1 and S2); original value 39.6
+f_intra = 2 # A1 layer 4 E -> layer 2/3 E and layer 5 E connection probability, factor on the original (1 = original)
 params['input_onset'] = 12.001
 params['simulation_dur'] = 15
 params['g_thal'] = 1 #4.726 #4.17 #2 #0.4211 #1.315 
@@ -159,19 +160,20 @@ area = 'all'
 pyrates = False
 use_opt = False
 save_connectivity = False
+plot_dipole_computation = False
 
 if use_opt:
     # option to read file from optimization run: simulation_parameter.json base params
     # updated with the run's best_params (keeps input_onset, cell counts, filedir, ...)
     # EEGSimulation/plot_dipole_computation.py plots this same configuration - update
     # its opt_run too when changing it here.
-    opt_run = "opt_20260806_141628_tc_roi-S2" 
+    opt_run = "opt_20261001_131042_tc_roi-A1"  #"opt_20260806_141628_tc_roi-S2" 
     #"opt_20260804_090235_tc_roi-S2" #"opt_20260803_124557_tc_roi-A1"
-    opt_run = "opt_20260827_153421_tc_roi-A1"
+    #opt_run = "opt_20260827_153421_tc_roi-A1"
     #opt_run = "opt_20260827_153511_tc_roi-A3b"
-    params = load_optimized_params(opt_run, overrides={'Iext_strength' : 10, 'Ib_strength': 40})
+    #params = load_optimized_params(opt_run, overrides={'Iext_strength' : 10, 'Ib_strength': 40})
     
-    #params = load_optimized_params(opt_run) #, overrides={'Im_strength' : modulI_strengths, 'Ib_noise_std': Ib_noise_std, 'delay_factor_short': 0})
+    params = load_optimized_params(opt_run) #, overrides={'Im_strength' : modulI_strengths, 'Ib_noise_std': Ib_noise_std, 'delay_factor_short': 0})
     #params = load_optimized_params(opt_run, overrides={'Ib_ratio_PV' : Ib_ratio_PV, 'Ib_ratio_SST': Ib_ratio_SST, 'Ib_ratio_VIP': Ib_ratio_VIP})
 
     
@@ -220,6 +222,7 @@ for ginter in ginters:
                                 params['e2_tau'] = e2_tau
                                 params['p_2PVE'] = p_2PVE
                                 params['p_4PVE'] = p_4PVE
+                                params['f_intra'] = f_intra
 
 
                             # run several iterations when noise is present
@@ -308,7 +311,8 @@ for ginter in ginters:
                             model.plot_timefreq_comparison(tf_sim, tf_target)
 
                             # time-course error against measured data
-                            tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path, sim_dip_avg)
+                            rois = ["A3b", "A1", "S2"]
+                            tc_error, tc_sim, tc_target = model.compute_error_timecourse(tc_target_path, sim_dip_avg, rois=rois)
                             print("Time-course error (peak-norm MSE):", tc_error)
                             model.plot_timecourse_comparison(tc_sim, tc_target, show=True)
 
