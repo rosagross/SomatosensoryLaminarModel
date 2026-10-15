@@ -305,7 +305,7 @@ gthalPOm_sim = {
     'bI_cellcounts': 100,
 }
 
-plot_gthalPOm_dipole_sweep(gthalPOm_values, gthalPOm_sim, figure_dir, subjects=[15], area='S2', suffix=suffix, plot_window=(-0.1,0.3))
+plot_gthalPOm_dipole_sweep(gthalPOm_values, gthalPOm_sim, figure_dir, area='S2', suffix=suffix, plot_window=(-0.1,0.3))
 
 
 # %%

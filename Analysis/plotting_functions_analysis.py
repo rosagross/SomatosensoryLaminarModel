@@ -1242,13 +1242,13 @@ def plot_gthalPOm_potential_sweep(g_thalPOms, fixed_params, populations, raw_dir
     plt.show()
 
 
-def plot_gthalPOm_dipole_sweep(g_thalPOms, sim_overrides, figure_dir, subjects=(15,),
+def plot_gthalPOm_dipole_sweep(g_thalPOms, sim_overrides, figure_dir,
                                area='S2', suffix='', plot_window=(-0.1, 0.25)):
     """
     Companion to plot_gthalPOm_potential_sweep: the SUMMED computed dipole of an area (default S2)
     for each g_thalPOm value. The dipole is a source-resolved weighting of the full 3-D potential
     (SomatoModel.compute_dipoles), which is not saved in results.hdf5, so each parameter set is
-    re-simulated here and its dipole computed with a subject forward model.
+    re-simulated here and its dipole computed.
 
     Parameters
     ----------
@@ -1261,8 +1261,6 @@ def plot_gthalPOm_dipole_sweep(g_thalPOms, sim_overrides, figure_dir, subjects=(
          'extI_cellcounts', 'bI_cellcounts'}. g_thalPOm is set per value.
     figure_dir : str
         Where to save the figure.
-    subjects : sequence of int
-        Subject IDs whose forward models project the dipole (averaged); default (15,).
     area : str
         'A3b', 'A1' or 'S2' - which area's summed dipole to plot.
     plot_window : (float, float)
@@ -1289,8 +1287,7 @@ def plot_gthalPOm_dipole_sweep(g_thalPOms, sim_overrides, figure_dir, subjects=(
                    '#66CCEE', '#EE7733', '#000000']
     colors = (base_colors * (len(g_thalPOms) // len(base_colors) + 1))[:len(g_thalPOms)]
 
-    # one model, reused across values (compute_dipoles caches the forward projection after the
-    # first call, so the forward model is read only once) - mirrors run_optimization.py
+    # one model, reused across values - mirrors run_optimization.py
     base_params = read_simulation_params()
     base_params.update(sim_overrides)
     model = SomatoModel(base_params)
@@ -1305,7 +1302,7 @@ def plot_gthalPOm_dipole_sweep(g_thalPOms, sim_overrides, figure_dir, subjects=(
         model.apply_params({**sim_overrides, 'g_thalPOm': np.round(gp, 3)})
         model.initialize_state()
         model.simulate()
-        simDipoles = model.compute_dipoles(list(subjects))
+        simDipoles = model.compute_dipoles()
         dip = simDipoles[rows].sum(axis=0)
 
         t = np.arange(len(dip)) * step_size - input_onset
@@ -1422,7 +1419,7 @@ def _im_fixed_param_box(ax, sim_overrides):
             bbox=dict(boxstyle='round', facecolor='0.96', edgecolor='0.7', linewidth=0.6))
 
 
-def plot_Im_dipole_sweep(Im_strengths, sim_overrides, figure_dir, subjects=(15,),
+def plot_Im_dipole_sweep(Im_strengths, sim_overrides, figure_dir,
                          area='S2', suffix='', plot_window=(-0.1, 0.25)):
     """
     Summed computed dipole of one area for each modulatory-input strength.
@@ -1430,7 +1427,7 @@ def plot_Im_dipole_sweep(Im_strengths, sim_overrides, figure_dir, subjects=(15,)
     Companion to plot_Im_population_sweep: this is the EEG-facing view of the same
     sweep. The dipole is a source-resolved weighting of the full 3-D potential
     (SomatoModel.compute_dipoles), which results.hdf5 does not store, so each value is
-    re-simulated and projected through a subject forward model.
+    re-simulated and its dipole computed.
 
     Parameters
     ----------
@@ -1443,8 +1440,6 @@ def plot_Im_dipole_sweep(Im_strengths, sim_overrides, figure_dir, subjects=(15,)
         noise draw as much as by Im_strength.
     figure_dir : str
         Where to save the figure.
-    subjects : sequence of int
-        Subject IDs whose forward models project the dipole (averaged); default (15,).
     area : str
         'A3b', 'A1' or 'S2' - which area's summed dipole to plot.
     plot_window : (float, float)
@@ -1458,7 +1453,7 @@ def plot_Im_dipole_sweep(Im_strengths, sim_overrides, figure_dir, subjects=(15,)
         raise ValueError(f"area must be one of {list(area_rows)}, got {area!r}")
     rows = area_rows[area]
 
-    # one model reused across values, so the forward model is read only once
+    # one model reused across values
     model, _ = _im_model(sim_overrides)
     step_size, input_onset = model.step_size, model.input_onset
     Iext_dur = model.Iext_duration
@@ -1470,7 +1465,7 @@ def plot_Im_dipole_sweep(Im_strengths, sim_overrides, figure_dir, subjects=(15,)
         model.apply_params({**sim_overrides, 'Im_strength': float(Im)})
         model.initialize_state()
         model.simulate()
-        dip = model.compute_dipoles(list(subjects))[rows].sum(axis=0)
+        dip = model.compute_dipoles()[rows].sum(axis=0)
 
         t = np.arange(len(dip)) * step_size - input_onset
         mask = (t >= plot_window[0]) & (t <= plot_window[1])

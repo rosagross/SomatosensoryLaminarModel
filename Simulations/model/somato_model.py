@@ -99,24 +99,24 @@ REQUIRED_PARAMS = (
     # background-input strength per cell class, as a ratio against the drive onto E
     'Ib_ratio_E', 'Ib_ratio_PV', 'Ib_ratio_SST', 'Ib_ratio_VIP',
     # gains
-    'coupling_strength', 'strength_I', 'g_thal', 'sI_thal', 'g_thalPOm', 'g_intercortical',
+    'coupling_strength', 'strength_I', 'g_thal', 'sI_thal', 'sI_thalPOm', 'g_thalPOm', 'g_intercortical',
     # delays / time constants / connection probabilities (passed to Parameter)
     'delay_factor_short', 'delay_factor', 'thal_delay_factor', 'receptor_thalamus_delay',
-    'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE', 'f_intra',
+    'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE', 'f_intra', 'f_intra_S2',
     # structure
     'area', 'thal_connect', 'extI_cellcounts', 'bI_cellcounts',
-    'thalE_cellcounts', 'thalI_cellcounts', 'pom_cellcounts', 'mI_cellcounts',
+    'thalE_cellcounts', 'thalI_cellcounts', 'pom_cellcounts', 'pomI_cellcounts', 'mI_cellcounts',
     # misc
     'resistance_factor',
 )
 
 # --- dipole-parameter file layout -------------------------------------------------
 # The JSONs in EEGSimulation/ label every value by *source* region, layer and cell
-# type; the model needs them as vectors over the 33 source populations in
+# type; the model needs them as vectors over the 34 source populations in
 # get_population_labels() order. DIPOLE_SOURCE_PATHS is that order expressed as key
 # paths into the nested file, so the reader below can flatten it and, more
 # importantly, complain when a value is missing or misnamed instead of silently
-# shifting a whole block (which a bare list of 33 numbers does).
+# shifting a whole block (which a bare list of 34 numbers does).
 DIPOLE_TARGET_LAYERS = ["L2/3", "L4", "L5", "L6"]
 DIPOLE_SOURCE_PATHS = (
     [("A3b", ct) for ct in ("E", "PV", "SST", "VIP")]
@@ -130,7 +130,7 @@ DIPOLE_SOURCE_PATHS = (
                                    [("E", "PV", "SST", "VIP"), ("E", "PV", "SST"),
                                     ("E", "PV", "SST"), ("E", "PV", "SST")])
        for ct in celltypes]
-    + [("Thalamus", pop) for pop in ("ThalE", "ThalI", "ThalPOm")]
+    + [("Thalamus", pop) for pop in ("ThalE", "ThalI", "ThalPOm", "ThalPOmI")]
 )
 # the source region of the S1/A1 populations is spelled "S1" in the files, but the
 # same area is the target "A1" (get_population_mapping's name) - accept both
@@ -138,7 +138,7 @@ DIPOLE_SOURCE_ALIASES = {"S1": ("S1", "A1"), "A1": ("A1", "S1")}
 
 
 def _flatten_dipole_sources(block, where):
-    """Nested source dict -> list of 33 values in get_population_labels() order.
+    """Nested source dict -> list of 34 values in get_population_labels() order.
 
     A list is passed through unchanged, so the older flat files still load.
     Raises ValueError naming the offending key path on a missing, misnamed or
@@ -181,7 +181,7 @@ def read_dipole_params(path):
     """Read a dipole-parameter JSON and flatten it to per-source vectors.
 
     Returns the file's dict with 'dipole_lengths' and 'dipole_orientation' replaced by
-        {'A3b': [33 values], 'A1': [[33], [33], [33], [33]], 'S2': [[33], ...]}
+        {'A3b': [34 values], 'A1': [[34], [34], [34], [34]], 'S2': [[34], ...]}
     where the outer list is the *target* layer in DIPOLE_TARGET_LAYERS order (fixed
     here, so JSON key order can never reorder the layers) and the inner list runs over
     the *source* populations in get_population_labels() order.
@@ -279,7 +279,8 @@ class SomatoModel():
 
         self.p = Parameter(delay_factor_short=self.delay_factor_short, delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
-                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE, f_intra=self.f_intra)
+                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE, f_intra=self.f_intra,
+                           f_intra_S2=self.f_intra_S2)
         self.tau = self.p.tau
         self.tau_external = 0.003 # fixed, was always 3 ms but I took it from the thalamus time constant, this is cleaner
         self.nPop = self.p.nPop
@@ -294,6 +295,7 @@ class SomatoModel():
         self.gI = self.coupling_strength * self.strength_I
         self.gEthal = self.g_thal
         self.gIthal = self.g_thal * self.sI_thal
+        self.gIthalPOm = self.g_thal * self.sI_thalPOm
         self.gPOmthal = self.g_thalPOm
 
         # Synaptic kernel
@@ -338,11 +340,8 @@ class SomatoModel():
         self.t = 0.0
 
         # Weight matrix [to x from]
-        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios())
+        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios())
 
-        # per-subject dipole projection vectors (forward model + labels + geometry), invariant
-        # across simulation runs → built once per subjects list and reused (see compute_dipoles).
-        self._dipole_projection_cache = {}
 
 
     def initialize_state(self):
@@ -369,14 +368,15 @@ class SomatoModel():
         # rebuild the Parameter tables so the params baked into them take effect on
         # every update: the tau/delay-shaping ones (delay_factor_short, delay_factor,
         # thal_delay_factor, e3b_tau, e1_tau, e2_tau) and the connection probabilities
-        # (p_2PVE, p_4PVE, f_intra), which self.W below is then recomputed from.
+        # (p_2PVE, p_4PVE, f_intra, f_intra_S2), which self.W below is then recomputed from.
         # delay_factor_short used to be left out here, so it silently reverted to the
         # Parameter default (3 ms) on every update - a sweep over it would have
         # produced a flat result.
         self.p = Parameter(delay_factor_short=self.delay_factor_short,
                            delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
-                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE, f_intra=self.f_intra)
+                           p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE, f_intra=self.f_intra,
+                           f_intra_S2=self.f_intra_S2)
         self.tau = self.p.tau
 
         # recompute inputs and gains
@@ -392,6 +392,7 @@ class SomatoModel():
         self.gI = self.coupling_strength * self.strength_I
         self.gEthal = self.g_thal
         self.gIthal = self.g_thal * self.sI_thal
+        self.gIthalPOm = self.g_thal * self.sI_thalPOm
         self.gPOmthal = self.g_thalPOm
 
         # update connectivity with new gains and counts
@@ -402,12 +403,14 @@ class SomatoModel():
             self.gEthal,
             self.gIthal,
             self.gPOmthal,
+            self.gIthalPOm,
             self.thal_connect,
             self.extI_cellcounts,
             self.bI_cellcounts,
             self.thalE_cellcounts,
             self.thalI_cellcounts,
             self.pom_cellcounts,
+            self.pomI_cellcounts,
             self.mI_cellcounts,
             area=self.area,
             bI_ratios=self.bI_ratios(),
@@ -475,7 +478,7 @@ class SomatoModel():
         S = self.p.get_connectStrength()
         P = self.p.get_connectProb()
         C = self.p.get_cellcounts()
-        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, bI_ratios=self.bI_ratios())
+        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, bI_ratios=self.bI_ratios())
 
         # Convert numpy arrays to lists
         parameters = {
@@ -504,7 +507,7 @@ class SomatoModel():
                 is only drawn, not saved.
         """
         pop_names = self.get_population_labels()
-        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios())
+        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios())
         # drop the background (B) and external (Ext) input columns so the matrix is square
         W_df = pd.DataFrame(W[:, :-3], index=pop_names, columns=pop_names)
 
@@ -694,7 +697,7 @@ class SomatoModel():
             ("S2 Layer 4", ["E2S2", "PV2S2", "SST2S2"]),
             ("S2 Layer 5", ["E3S2", "PV3S2", "SST3S2"]),
             ("S2 Layer 6", ["E4S2", "PV4S2", "SST4S2"]),
-            ("Thalamus", ["ThalE", "ThalI"]),
+            ("Thalamus", ["ThalE", "ThalI", "ThalPOm", "ThalPOmI"]),
         ]
 
     def prepare_dataframes(self):
@@ -1003,7 +1006,7 @@ class SomatoModel():
 
     def load_dipole_params(self):
         # read the dipole geometry; read_dipole_params flattens the per-source-region /
-        # layer / cell type nesting of the file into vectors over the 33 source
+        # layer / cell type nesting of the file into vectors over the 34 source
         # populations, in get_population_labels() order
         dipole_params = read_dipole_params(
             os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters_flippedPVSST.json'))
@@ -1028,7 +1031,7 @@ class SomatoModel():
         # A3b: E, PV, SST, VIP (indices 0-3)
         # A1: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (indices 4-16)  
         # S2: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (indices 17-29)
-        # Thalamus: ThalE, ThalI (indices 30-31)
+        # Thalamus: ThalE, ThalI, ThalPOm, ThalPOmI (indices 30-33)
         
         mapping = {
             # A3b populations
@@ -1051,7 +1054,7 @@ class SomatoModel():
             },
             # Thalamic populations
             'Thalamus': {
-                'E': 30, 'I': 31
+                'E': 30, 'I': 31, 'POm': 32, 'POmI': 33
             }
         }
         
@@ -1075,32 +1078,18 @@ class SomatoModel():
         return dipoles_weighted
 
 
-    def prepDipoles_normal(self, label, src_fixed, dipole_length, dipole_orientation, resistance_factor, cellcountsE_relative):
+    def prepDipoles_normal(self, dipole_length, dipole_orientation, resistance_factor, cellcountsE_relative):
         """
         Differently to the prepDipoles() function, here we consider the vertex normal orientation.
         Only like this we can actually compare it to the source reconstructed values.
         """
 
-        # get the vertex normal orientation
-
-        # Find which source space vertices are in the label
-        src_rh = src_fixed[1]  # right hemisphere
-        label_verts = np.intersect1d(label.vertices, src_rh['vertno'])
-        idx = np.searchsorted(src_rh["vertno"], label_verts)
-        normals = src_rh["nn"][idx]
-        # compute average norm from all vertices
-        mean_normal = normals.mean(axis=0)
-        mean_normal /= np.linalg.norm(mean_normal)
-        #print(label.name)
-        #print(mean_normal)
         # TODO: instead of using the mean vertex orientation compute the dipole for each single vertex. 
-
 
         # dipoles
         # each dipole set has a value for each source population
         dipole_matrix = []
         for i, s in enumerate(dipole_length):
-            #dipole = s * np.dot(dipole_orientation[i], mean_normal) * resistance_factor 
             dipole = s * dipole_orientation[i] * resistance_factor 
             #print("dipole before vertex normal transformation:", s * dipole_orientation[i] * resistance_factor)
             #print(".. after vertex normal transformation:", s * np.dot((dipole_orientation)[i], mean_normal) * resistance_factor)
@@ -1115,23 +1104,7 @@ class SomatoModel():
 
         return dipoles_weighted
 
-
-    def _build_dipole_projections(self, subjects):
-        """Precompute the per-subject dipole projection vectors that are invariant across
-        simulation runs.
-
-        The forward models, subject labels, dipole geometry (dipole_parameters.json),
-        resistance factor and cell counts do not depend on the optimized parameters
-        (apply_params only changes inputs/gains/connectivity), so this expensive work —
-        reading + converting each subject's forward solution and projecting it through
-        prepDipoles_normal — is done once per subjects list and cached (see compute_dipoles).
-        The Forward objects are read here and discarded; only the small projection vectors
-        are kept.
-
-        Returns:
-            dict with 'exc_pops' (potential indices) and 'per_subject' (list, in `subjects`
-            order, of {'A3b', 'A1', 'S2'} projection vectors).
-        """
+    def build_dipole_projection(self):
         # load dipole parameters
         dipole_length, dipole_orientation, resistance_factor, cellcounts = self.load_dipole_params()
 
@@ -1165,57 +1138,32 @@ class SomatoModel():
         cellcounts_EA1_relative = cellcounts_A1_relative[np.array(exc_pops[1:5])-4]
         cellcounts_ES2_relative = cellcounts_S2_relative[np.array(exc_pops[-4:])-17]
 
-        # for each subject, compute the (parameter-independent) dipole projections
-        per_subject = []
-        for subID in subjects:
-            soma_labels, _ = self.read_labels(subID)
-            label_A3b = soma_labels[7]
-            label_A1 = soma_labels[4]
-            label_A2 = soma_labels[9]   # RH S2 (Lat_Fis-post-rh)
+        dipoles_A3b_sub = self.prepDipoles_normal(dipole_lengths_A3b, dipole_orientation_A3b, resistance_factor, cellcounts_EA3b_relative)
+        dipoles_A1_layers = []
+        dipoles_ES2_layers = []
 
-            # read the per-subject elec forward model and take its fixed-orientation source
-            # space, mirroring step002_inverse_solution_multisub_epochswise.py
-            fwd_file = os.path.join(DATADIR, 'derivatives', 'eeg-preproc',
-                                    f'sub-0{subID}', 'ses-elec',
-                                    f'sub-0{subID}_ico-5_ses-elec_fwd.fif')
-            fwd_vector = mne.read_forward_solution(fwd_file, verbose=0)
-            fwd_fixed = mne.convert_forward_solution(
-                fwd_vector, surf_ori=True, force_fixed=True, use_cps=True)
-            src_fixed_sub = fwd_fixed['src']
+        for i, layer in enumerate(['L1_E', 'L4_E', 'L5_E', 'L6_E']):
+            # compute dipoles for layers in A1
+            dipole_layer_A1 = self.prepDipoles_normal(dipole_lengths_A1[i], dipole_orientation_A1[i], resistance_factor, cellcounts_EA1_relative[i])
+            dipoles_A1_layers.append(dipole_layer_A1)
 
-            dipoles_A3b_sub = self.prepDipoles_normal(label_A3b, src_fixed_sub, dipole_lengths_A3b, dipole_orientation_A3b, resistance_factor, cellcounts_EA3b_relative)
+            # compute dipoles for layers in S2
+            dipole_layer_S2 = self.prepDipoles_normal(dipole_lengths_ES2[i], dipole_orientation_ES2[i], resistance_factor, cellcounts_ES2_relative[i])
+            dipoles_ES2_layers.append(dipole_layer_S2)
 
-            dipoles_A1_layers = []
-            dipoles_ES2_layers = []
-
-            for i, layer in enumerate(['L1_E', 'L4_E', 'L5_E', 'L6_E']):
-                # compute dipoles for layers in A1
-                dipole_layer_A1 = self.prepDipoles_normal(label_A1, src_fixed_sub, dipole_lengths_A1[i], dipole_orientation_A1[i], resistance_factor, cellcounts_EA1_relative[i])
-                dipoles_A1_layers.append(dipole_layer_A1)
-
-                # compute dipoles for layers in S2
-                dipole_layer_S2 = self.prepDipoles_normal(label_A2, src_fixed_sub, dipole_lengths_ES2[i], dipole_orientation_ES2[i], resistance_factor, cellcounts_ES2_relative[i])
-                dipoles_ES2_layers.append(dipole_layer_S2)
-
-            per_subject.append({"A3b": dipoles_A3b_sub, "A1": dipoles_A1_layers, "S2": dipoles_ES2_layers})
-
-        return {"exc_pops": exc_pops, "per_subject": per_subject}
+        dipoles = []
+        dipoles.append({"A3b": dipoles_A3b_sub, "A1": dipoles_A1_layers, "S2": dipoles_ES2_layers})
+        return {"exc_pops": exc_pops, "dipoles": dipoles}
 
 
-    def compute_dipoles(self, subjects):
-        # The forward-model projections are invariant across simulation runs, so build them
-        # once per subjects list and reuse; only the dot products with self.potential (which
-        # changes every simulation) are recomputed on each call.
-        key = tuple(subjects)
-        cache = self._dipole_projection_cache.get(key)
-        if cache is None:
-            cache = self._build_dipole_projections(subjects)
-            self._dipole_projection_cache[key] = cache
-        exc_pops = cache["exc_pops"]
+    def compute_dipoles(self):
+
+        dipole_projections = self.build_dipole_projection()
+        exc_pops = dipole_projections["exc_pops"]
 
         # for each subject compute dipoles for A3b, A1, S2
         simDipoles_all = []
-        for proj in cache["per_subject"]:
+        for proj in dipole_projections["dipoles"]:
             dipoles_A3b_sub = proj["A3b"]
             dipoles_A1_layers = proj["A1"]
             dipoles_ES2_layers = proj["S2"]
@@ -1253,7 +1201,6 @@ class SomatoModel():
             "S2": [5, 6, 7, 8],
         }
         labels = self.DIPOLE_AREA_LAYERS
-
         fig, axes = plt.subplots(3, 1, figsize=(12, 9), sharex=True)
         for ax, area in zip(axes, ["A3b", "A1", "S2"]):
             area_indices = area_groups[area]
@@ -2086,7 +2033,7 @@ class SomatoModel():
         return tc_target
 
 
-    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor=None, target_dip=None, rois=None):
+    def compute_error_timecourse(self, data_path, sim_dip, scaling_factor=None, target_dip=None, rois=None, t_window=None):
         """
         Compute the dimensionless time-course error between simulation and measured data.
 
@@ -2100,6 +2047,9 @@ class SomatoModel():
         If `target_dip` is given (a saved dipole trace), the target is derived from it
         via compute_timecourse instead of loading `data_path` — used for parameter-recovery
         tests against a synthetic ground-truth trace.
+
+        `t_window` = (first, last) sample index limits the pre-stimulus part to [first, 250) and the
+        post-stimulus part to [250, last) (default: the whole axis).
 
         `rois` selects which ROIs the returned error averages over (default: all three).
         The returned tc dicts always hold every ROI, so plotting/saving is unaffected.
@@ -2117,8 +2067,9 @@ class SomatoModel():
                      if target_dip is not None else self.load_target_timecourse(data_path))
 
         # Analysis window: stimulus onset (0 ms) onward -> index 250 on the 2 ms / -500..400 axis.
-        analysis_slice_pre = slice(0, 250)
-        analysis_slice_post = slice(250, None)
+        t_first, t_last = t_window if t_window is not None else (0, None)
+        analysis_slice_pre = slice(t_first, 250)
+        analysis_slice_post = slice(250, t_last)
         
         eps = 1e-10
         rois = tuple(rois) if rois else ("A3b", "A1", "S2")
@@ -2141,6 +2092,8 @@ class SomatoModel():
             tgts_post[roi] = x_tgt_post
             tgts_pre[roi] = x_tgt_pre
 
+        global_sim_peak = max(np.max(np.abs(sims_post[roi])) for roi in rois) + eps
+        global_target_peak = max(np.max(np.abs(tgts_post[roi])) for roi in rois) + eps
 
         if scaling_factor:
             # one shared scalar across all areas -> preserves cross-area ratios
@@ -2155,22 +2108,23 @@ class SomatoModel():
         errors = []
         for roi in rois:
             # implement separate error weight for pre-stimlus and post-stimulus period
-            error_post = float(np.sqrt(np.mean((sims_post[roi] / sim_peak[roi] - tgts_post[roi] / tgt_peak[roi]) ** 2)))
+            error_post = float(np.sqrt(np.mean((sims_post[roi] / global_sim_peak - tgts_post[roi] / global_target_peak) ** 2)))
             # I compute the amplitude of the simulated pre-stimulus signal and make sure it has 
             # a lower amplitude compared to the ERP
-            error_sim_pre = float(np.sqrt(np.mean((sims_pre[roi] / sim_peak[roi] - np.mean(sims_pre[roi] / sim_peak[roi])) ** 2)))
-            error_target_pre = float(np.sqrt(np.mean((tgts_pre[roi]/ tgt_peak[roi] - np.mean(tgts_pre[roi]/tgt_peak[roi])) ** 2)))
-            error_pre = float(np.sqrt(np.mean((sims_pre[roi] / sim_peak[roi]) ** 2)))**2
+            error_sim_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak - np.mean(sims_pre[roi] / global_sim_peak)) ** 2)))
+            error_target_pre = float(np.sqrt(np.mean((tgts_pre[roi]/ global_target_peak - np.mean(tgts_pre[roi]/global_target_peak)) ** 2)))
+            error_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak) ** 2)))**2
             #((error_sim_pre - error_target_pre)/error_target_pre)**2
-            print('ROI', roi)
-            print('Error pre', error_pre)
-            print('Error post', error_post)
+            #print('ROI', roi)
+            #print('Error pre', error_pre)
+            #print('Error post', error_post)
             error = error_pre + error_post
             errors.append(error)
 
         # row 0: simulation normalized by its own ROI peak; row 1: by the peak over all ROIs
         # (target stays normalized by its own ROI peak in both rows)
         global_sim_peak = max(np.max(np.abs(sims_post[roi])) for roi in rois) + eps
+        """
         fig, axes = plt.subplots(2, len(rois), figsize=(4 * len(rois), 6), sharex=True, sharey=True, squeeze=False)
         for col, roi in enumerate(rois):
             axes[0, col].plot(tc_sim[roi] / sim_peak[roi], label="simulation")
@@ -2183,7 +2137,7 @@ class SomatoModel():
         axes[1, 0].set_ylabel("sim / peak of all ROIs")
         fig.suptitle(f"error pre {np.round(error_pre, 3)} and post {np.round(error_post, 3)} and mean {float(np.mean(errors))}")
         plt.show()
-            
+        """
         return float(np.mean(errors)), tc_sim, tc_target
 
 

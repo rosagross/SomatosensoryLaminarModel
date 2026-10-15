@@ -4,8 +4,7 @@ Description:
     Demonstrate how the EEG-scale current dipole is computed from the simulated
     laminar membrane potentials (see SomatoModel.compute_dipoles).
 
-    Runs one stimulated simulation, computes the dipole for a subject forward
-    model, and produces seven publication-style figures:
+    Runs one stimulated simulation, computes the dipole, and produces seven publication-style figures:
 
       Figure 1 - dipole parameters per cell:
           the geometric dipole model (signed length x orientation) assigned to
@@ -23,7 +22,7 @@ Description:
           dipole-silent. The signs come from the parameter file the model loads
           (dipole_parameters_flippedPVSST.json: E -1, PV +1, SST -1, VIP 0) and are
           read from it rather than hard-coded. Structured by source: one column per layer, one row per
-          source cell type showing the individual contributions of all 33 source
+          source cell type showing the individual contributions of all 34 source
           populations (colour = source area, its lightness = source layer, line
           style = source cell type, as in plot_all_potentials), plus a summary row
           with the cell-type sums adding up to that layer's dipole. A3b is
@@ -31,7 +30,7 @@ Description:
 
       Figures 8-10 - dipole parameters per source->target connection, one per area:
           the dipole length and orientation the parameter file assigns to every one of
-          the 33 source populations, for each target layer of the area
+          the 34 source populations, for each target layer of the area
           (plot_dipole_parameters_per_connection). Figure 1 summarises these as one
           length per layer and one orientation per cell type, which is a
           simplification: the orientation varies by source beyond its cell type (for
@@ -39,7 +38,7 @@ Description:
           These three figures come from the parameter file alone - no simulation and
           no forward model is involved.
 
-    Run with the project env (WDDIR/SIMDIR/DATADIR/SUBJECTS_DIR must be exported):
+    Run with the project env (WDDIR/SIMDIR must be exported):
         python EEGSimulation/plot_dipole_computation.py
 """
 # %%
@@ -188,10 +187,10 @@ def plot_dipole_parameters_per_connection(json_path, area, figure_dir=None,
     Dipole length and orientation of every source -> target connection of one area.
 
     The dipole model is defined per (target, source) pair: a target layer's dipole
-    weights the synaptic potential arriving from each of the 33 source populations by
+    weights the synaptic potential arriving from each of the 34 source populations by
     that pair's length and orientation. This figure shows those parameters directly,
     laid out like Simulations/plotting_functions.plot_connectivity - one column per
-    target layer, the 33 sources along x, bar colour = source area, dashed lines
+    target layer, the 34 sources along x, bar colour = source area, dashed lines
     between the source blocks - with one row per quantity: the signed dipole
     (length x orientation), the length in mm and the orientation (-1 / 0 / +1).
 
@@ -199,7 +198,7 @@ def plot_dipole_parameters_per_connection(json_path, area, figure_dir=None,
     are the target layers and the rows carry the quantity, where plot_connectivity has
     one panel per target population and rows of cell types. A3b is unlaminated, so its
     figure has a single column. The dipole has no background / external / modulatory
-    sources - compute_dipoles drops those synapse columns - so the x axis is the 33
+    sources - compute_dipoles drops those synapse columns - so the x axis is the 34
     populations only.
 
     Parameters
@@ -431,11 +430,11 @@ def _source_population_table(model):
       cell type   : 'E', 'PV', 'SST', 'VIP' or 'I' (the reticular nucleus).
 
     The thalamic labels have no E/PV/SST/VIP prefix, so they are mapped explicitly:
-    ThalE (VPM) and ThalPOm are excitatory, ThalI is the inhibitory reticular nucleus
-    (which is dipole-silent, length 0).
+    ThalE (VPM) and ThalPOm are excitatory, ThalI and ThalPOmI are the inhibitory reticular
+    populations (which are dipole-silent, length 0).
     """
     labels = model.get_population_labels()
-    thal_types = {'ThalE': 'E', 'ThalI': 'I', 'ThalPOm': 'E'}
+    thal_types = {'ThalE': 'E', 'ThalI': 'I', 'ThalPOm': 'E', 'ThalPOmI': 'I'}
 
     table = []
     for j in range(model.nPop):
@@ -510,17 +509,15 @@ def _celltype_orientations(model, area, sources):
 
 
 def _layer_weight(cache, area, layer_index):
-    """Mean-over-subjects dipole weight vector (33,) for one target population.
+    """Dipole weight vector (34,) for one target population.
 
-    compute_dipoles averages w_k . potential over subjects and the potential does
-    not depend on subject, so averaging the weight vectors reproduces it exactly.
     A3b is stored as a single vector, A1/S2 as a list of four layer vectors.
     """
-    return np.mean([(s[area] if layer_index is None else s[area][layer_index])
-                    for s in cache['per_subject']], axis=0)
+    proj = cache['dipoles'][0]
+    return np.asarray(proj[area] if layer_index is None else proj[area][layer_index])
 
 
-def plot_layer_interneuron_contributions(model, simDipoles, area, subjects,
+def plot_layer_interneuron_contributions(model, simDipoles, area,
                                          figure_dir=None):
     """
     Show how every source population contributes to each layer's dipole.
@@ -549,12 +546,9 @@ def plot_layer_interneuron_contributions(model, simDipoles, area, subjects,
     model : SomatoModel
         A simulated model (model.potential populated).
     simDipoles : np.ndarray, shape (9, ntimes)
-        Output of model.compute_dipoles(subjects).
+        Output of model.compute_dipoles().
     area : str
         'A3b', 'A1' (= S1) or 'S2'.
-    subjects : list of int
-        The subject list passed to compute_dipoles, used to look up the cached
-        dipole projection vectors.
     figure_dir : str, optional
         Where to save the figure. None (the default) only builds and returns it.
     """
@@ -572,11 +566,8 @@ def plot_layer_interneuron_contributions(model, simDipoles, area, subjects,
     else:
         columns = [(spec['labels'][0], pop_map['E'], None, spec['rows'].start)]
 
-    # dipole projections built by compute_dipoles; rebuilt only if this figure is
-    # made standalone (reading every subject's forward solution is slow).
-    cache = model._dipole_projection_cache.get(tuple(subjects))
-    if cache is None:
-        cache = model._build_dipole_projections(subjects)
+    # dipole projections built by compute_dipoles
+    cache = model.build_dipole_projection()
 
     sources = _source_population_table(model)
     orientations = _celltype_orientations(model, area, sources)
@@ -612,7 +603,7 @@ def plot_layer_interneuron_contributions(model, simDipoles, area, subjects,
         # keeps this correct however many drives the model grows - a hard-coded [:-2]
         # silently became wrong when the third one appeared.
         pot = model.potential[e_idx, :model.nPop]
-        contrib = w[:, None] * pot               # (33, ntimes) signed contributions
+        contrib = w[:, None] * pot               # (34, ntimes) signed contributions
 
         groups = {}
         for j, (_, _, _, ctype) in enumerate(sources):
@@ -731,8 +722,6 @@ if __name__ == '__main__':
     figure_dir = os.path.join(SIMDIR, "Figures", "dipole_computation")
     os.makedirs(figure_dir, exist_ok=True)
 
-    # subject forward model(s) used to project the dipoles (as in simulation_main.py)
-    subjects = [15]
 
     # 1) Run one stimulated simulation.
     # Read the parameters from an optimization run. Same configuration as
@@ -747,7 +736,7 @@ if __name__ == '__main__':
 
     # 2) Compute the dipole from the simulated potentials.
     #    simDipoles shape (9, ntimes): 0 = A3b, 1-4 = A1 L{1,4,5,6}_E, 5-8 = S2 L{1,4,5,6}_E
-    simDipoles = model.compute_dipoles(subjects)
+    simDipoles = model.compute_dipoles()
 
     # Figure 1: dipole parameters per cell
     fig1 = plot_dipole_parameters_clean(
@@ -759,7 +748,7 @@ if __name__ == '__main__':
 
     # Figures 5-7: source contributions per layer
     figs_IN = {area: plot_layer_interneuron_contributions(
-                   model, simDipoles, area, subjects, figure_dir)
+                   model, simDipoles, area, figure_dir)
                for area in ('S2', 'A1', 'A3b')}
 
     # Figures 8-10: dipole parameters per source->target connection
