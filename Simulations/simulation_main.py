@@ -129,29 +129,30 @@ if not os.path.exists(filedir):
 # They are overrides on top of the simulation_parameter.json defaults loaded above,
 # and are only applied in the `if not use_opt:` branch below - with use_opt = True
 # the whole block is unused and the parameters come from load_optimized_params().
-coupling_strengths = [1] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
+coupling_strengths = [3] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
 strength_Is = [1] #np.arange(0.6, 1.1, 0.1) #[0.4133] # [0.8499] #[0.76131] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-backgrndI_strengths = [20] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+backgrndI_strengths = [1] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
 Ib_noise_std = 0.5
 Ib_ratio_E = 1.0    
-Ib_ratio_PV = 0.7 # default 0.7
+Ib_ratio_PV = 0.74 # default 0.7
 Ib_ratio_SST = 1 # default 0.9
-Ib_ratio_VIP = 0.5 # default 0.4    
-modulI_strengths = [2] #[0, 5, 10]
+Ib_ratio_VIP = 0.66 #5 # default 0.4    
+modulI_strengths = [0] #[0, 5, 10]
 input_durations = [0.005] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [10] # np.arange(0,50,10)
+input_strengths = [30] # np.arange(0,50,10)
 ginters = [1] #np.arange(0.4, 1.4, 0.1) #[0.7994] #[1.418] #np.arange(0,2,0.2)
 g_thalPOms = [1] #np.arange(0.76, 1.4, 0.1) #[0.325] # [0.2097] # [0.2766] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
-delay_factor = 0.004 #0.00565 #0.00637 #0.00615
-delay_factor_short = 0.002 #0.00352 # 0.00472 # 0.004
-receptor_thalamus_delay = 0.015 # from periphery to thal
+delay_factor = 0.008 # 4 #0.00565 #0.00637 #0.00615
+delay_factor_short = 0.001 #0.00352 # 0.00472 # 0.004
+receptor_thalamus_delay = 0.01 # from periphery to thal
 thal_delay_factor = 0.005 # 0.00426 # 0.00426 #0.00498 # from thal to cortex delay
-e3b_tau = 6.925 # 2.247 #4.814 
-e1_tau = 9.351 #4.8 #8.682 #7.126 #4.132 
-e2_tau = 4.445 #2.55 #4.15 #4.712
+e3b_tau = 5.2# 6.925 # 2.247 #4.814 
+e1_tau = 5.4 #9.351 #4.8 #8.682 #7.126 #4.132 
+e2_tau = 4.8 #4.445 #2.55 #4.15 #4.712
 p_2PVE = 37.4 #25.95 # 22.51 #21.65 # 31.1 # L4 PV <- E connection probability (S1 and S2); original value 37.4
 p_4PVE = 39.6 #12.35 #28.4 #38.41 # L6 PV <- E connection probability (S1 and S2); original value 39.6
-f_intra = 2 # A1 layer 4 E -> layer 2/3 E and layer 5 E connection probability, factor on the original (1 = original)
+f_intra = 1.3 # A1 layer 4 E -> layer 2/3 E and layer 5 E connection probability, factor on the original (1 = original)
+f_intra_S2 = 1.3 # the same for S2 (layer 4 E -> layer 2/3 E and layer 5 E)
 params['input_onset'] = 12.001
 params['simulation_dur'] = 15
 params['g_thal'] = 1 #4.726 #4.17 #2 #0.4211 #1.315 
@@ -167,7 +168,7 @@ if use_opt:
     # updated with the run's best_params (keeps input_onset, cell counts, filedir, ...)
     # EEGSimulation/plot_dipole_computation.py plots this same configuration - update
     # its opt_run too when changing it here.
-    opt_run = "opt_20261001_131042_tc_roi-A1"  #"opt_20260806_141628_tc_roi-S2" 
+    opt_run = "opt_20261009_233444_tc_roi-all" #"opt_20261009_004742_tc_roi-all"  #"opt_20260806_141628_tc_roi-S2" 
     #"opt_20260804_090235_tc_roi-S2" #"opt_20260803_124557_tc_roi-A1"
     #opt_run = "opt_20260827_153421_tc_roi-A1"
     #opt_run = "opt_20260827_153511_tc_roi-A3b"
@@ -176,21 +177,21 @@ if use_opt:
     params = load_optimized_params(opt_run) #, overrides={'Im_strength' : modulI_strengths, 'Ib_noise_std': Ib_noise_std, 'delay_factor_short': 0})
     #params = load_optimized_params(opt_run, overrides={'Ib_ratio_PV' : Ib_ratio_PV, 'Ib_ratio_SST': Ib_ratio_SST, 'Ib_ratio_VIP': Ib_ratio_VIP})
 
-    
+   
 for ginter in ginters:
-    print("ginter", np.round(ginter, 3))
+    #print("ginter", np.round(ginter, 3))
     for g_thalPOm in g_thalPOms:
-      print("g_thalPOm", np.round(g_thalPOm, 3))
+      #print("g_thalPOm", np.round(g_thalPOm, 3))
       for d in input_durations:
         for sb in backgrndI_strengths:
-            print("background", sb)
+            #print("background", sb)
             for s in input_strengths:
                 # arrays to store simulation duration
                 all_durations = []
                 all_durations_saving = []
 
                 for g in coupling_strengths:
-                    print('coupling g', g)
+                    #print('coupling g', g)
                     for sI in strength_Is:
                         for Im in modulI_strengths:
                             
@@ -223,11 +224,12 @@ for ginter in ginters:
                                 params['p_2PVE'] = p_2PVE
                                 params['p_4PVE'] = p_4PVE
                                 params['f_intra'] = f_intra
+                                params['f_intra_S2'] = f_intra_S2
 
 
                             # run several iterations when noise is present
                             if Ib_noise_std > 0:
-                                seeds = np.arange(0,5,1)
+                                seeds = np.arange(0,1,1)
                             else: 
                                 seeds = [None]
                             
@@ -266,7 +268,7 @@ for ginter in ginters:
                                 all_durations.append(duration)
 
                                 # compute dipole for separate runs and average those in the end
-                                sim_dip = model.compute_dipoles(subID_elec)
+                                sim_dip = model.compute_dipoles()
                                 all_dipoles.append(sim_dip)
                                 all_rates.append(model.rate)
                                 all_potentials.append(model.potential.copy())
@@ -282,7 +284,7 @@ for ginter in ginters:
                                 for dipole_area in ('S2', 'A1', 'A3b'):
                                     plot_dipole_computation_area(model, sim_dip, dipole_area)
                                     plot_layer_interneuron_contributions(
-                                        model, sim_dip, dipole_area, subID_elec)
+                                        model, sim_dip, dipole_area)
                                 plt.show()
 
 
@@ -307,8 +309,8 @@ for ginter in ginters:
                             model.potential = np.mean(np.stack(all_potentials, axis=0), axis=0)
 
                             tf_error, tf_sim, tf_target = model.compute_error_timefreq(tf_target_path, sim_dip_avg)
-                            print("TF error (log-MSE):", tf_error)
-                            model.plot_timefreq_comparison(tf_sim, tf_target)
+                            #print("TF error (log-MSE):", tf_error)
+                            #model.plot_timefreq_comparison(tf_sim, tf_target)
 
                             # time-course error against measured data
                             rois = ["A3b", "A1", "S2"]
@@ -325,7 +327,7 @@ for ginter in ginters:
                             # now scores compute_error_prestim_osc (whole-shape MSE) instead
                             ps_peak_error, _, _ = model.compute_error_prestim_peaks(ps_target_path, sim_dip_avg)
                             print("Pre-stim peak error (alpha-weighted):", ps_peak_error)
-                            model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip_avg, fmin=3, show=True)  # saves to PRESTIM_SPECTRUM_DIR
+                            #model.plot_prestim_spectrum_comparison(ps_target_path, sim_dip_avg, fmin=3, show=True)  # saves to PRESTIM_SPECTRUM_DIR
 
                             # persist per-run comparison maps/traces + values for later animation
                             run_dir = model.prepare_run_dir(filedir)
@@ -336,6 +338,7 @@ for ginter in ginters:
                             model.append_comparison_summary(tf_error=tf_error, tc_error=tc_error)
 
                             # print important parameters
+                            """
                             print('simulation_dur', model.simulation_dur)
                             print('step_size', model.step_size)
                             print('input_onset', model.input_onset) 
@@ -354,7 +357,7 @@ for ginter in ginters:
                             #print('b input', model.Ib_strength) 
                             #print('Iext strength', model.Iext_strength) 
                             #print('Iext dur', model.Iext_duration) 
-
+                            """
                             if save_results:
                                 # create per-run output folder (holds params.json + all HDF5s for this run)
                                 run_dir = model.prepare_run_dir(filedir)
@@ -368,15 +371,16 @@ for ginter in ginters:
                                 all_durations_saving.append(duration)
                                 #print("Saving duration (in s):", duration)
 
-                            start_plot = 500
-                            stop_plot = 1000
+                            start_plot = 11900
+                            stop_plot = 12200
+                            #print(model.rate.shape)
                             if plot_rates:
                                 pf.plot_results(
                                     model.rate,
                                     model.Iext[-2],
                                     model.Ib[0],
                                     model.step_size,
-                                    simulation_dur,
+                                    model.simulation_dur,
                                     start_plot,
                                     sI,
                                     g,
@@ -400,7 +404,7 @@ for ginter in ginters:
                                     model.Iext[-2],
                                     model.Ib[0],
                                     model.step_size,
-                                    simulation_dur,
+                                    model.simulation_dur,
                                     start_plot,
                                     figure_dir,
                                     sI,
@@ -417,7 +421,7 @@ for ginter in ginters:
                                     model.Iext[-2],
                                     model.Ib[0],
                                     model.step_size,
-                                    simulation_dur,
+                                    model.simulation_dur,
                                     start_plot,
                                     figure_dir,
                                     sI,

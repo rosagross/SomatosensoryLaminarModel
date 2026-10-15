@@ -43,7 +43,8 @@ from datetime import datetime
 
 # settings
 INITIAL_PARAMS=1
-FIT_ROIS = "A1"
+WARM_START = None #"opt_20261001_140520_tc_roi-A1"
+ROI = "all"
 
 # ── paths ──────────────────────────────────────────────────────────────────────
 WDDIR    = os.getenv("WDDIR")   # /data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel
@@ -58,7 +59,7 @@ SIMDIR   = os.getenv("SIMDIR")  # base output dir; optimization diagnostics go i
 ALL_ROIS   = ("A3b", "A1", "S2")
 _ROI_ALIAS = {"A3B": "A3b", "BA3B": "A3b", "A1": "A1", "BA1": "A1", "S2": "S2"}
 
-_roi_env = (os.getenv("ROI") or "all").strip()
+_roi_env = ROI #(os.getenv("ROI") or "all").strip()
 if _roi_env.lower() == "all":
     FIT_ROIS = ALL_ROIS
 else:
@@ -194,7 +195,7 @@ def generate_synthetic_target():
     model.apply_params(TRUE_PARAMS)
     model.initialize_state()
     model.simulate()
-    sim_dip = model.compute_dipoles(subID_elec)
+    sim_dip = model.compute_dipoles()
     path = model.save_dipole_trace(sim_dip, diag_dir, filename="synthetic_target")
     print(f"Synthetic target saved to {path}")
     print(f"TRUE_PARAMS: {TRUE_PARAMS}")
@@ -316,7 +317,7 @@ def objective(**params):
     model.apply_params(params)
     model.initialize_state()
     model.simulate()
-    sim_dip = model.compute_dipoles(subID_elec)
+    sim_dip = model.compute_dipoles()
     err_tf = err_tc = err_ps = 0.0
     if ERROR_MODE in ("tf", "both", "all"):
         err_tf, _, _ = model.compute_error_timefreq(tf_data_path, sim_dip, target_dip=target_dip, rois=FIT_ROIS)
@@ -349,11 +350,11 @@ def objective(**params):
 # The searchable parameters and their bounds. scaling_factor is never searched in any mode —
 # the model never reads it (it is only a keyword of compute_error_timecourse).
 SEARCH_SPACE = {
-    "coupling_strength": (0.1,     4   ),
-    "strength_I":        (0.6,    1.3 ),
+    "coupling_strength": (0.6,     2   ),
+    "strength_I":        (0.8,    1.2 ),
     "g_intercortical":   (0.5,    1.5   ),
     "g_thalPOm":         (0,      3   ),   # scales POm output connectivity
-    "Ib_strength":       (3,     60   ),
+    "Ib_strength":       (3,     50   ),
     "Ib_ratio_PV":       (0.5,   1.2 ),
     "Ib_ratio_SST":      (0.7,   1.5 ),
     "Ib_ratio_VIP":      (0.1,   0.7 ),
@@ -364,6 +365,7 @@ SEARCH_SPACE = {
     "delay_factor":      (0.003,  0.008),  # s, default 5e-3
     "p_2PVE":            (25,     45   ),  # L4 PV<-E connection probability, %; default 37.6
     "p_4PVE":            (25,     45   ),  # L6 PV<-E connection probability, %; default 39.4
+    "f_intra":           (0.5,    2    ),  # factor on A1 L4 E -> L2/3 E and L5 E connection probability; 1 = original
     "Iext_strength":     (0,    50    ),  # evoked input amplitude
     "Iext_duration":     (0.0005,  0.003  ),  # s; > 0 so the pulse is at least one integration step
 }
@@ -385,10 +387,10 @@ opt_config = {
     "reference":  0.0,
     "simulation": objective,
     "op":         -1,    # minimise
-    "N1":         50, #30,    # initial population size
+    "N1":         30,    # initial population size
     "N2":         80,        # crossover offspring per iteration
     "N3":         80,       # mutation offspring per iteration
-    "n_iter":     10,
+    "n_iter":     1,
     # Gradient-search tolerance (conf['gTol']): gauss_newton_slow quits once the cost improves
     # by less than this between inner loops. The cost is err**2, and a scored "ps" err is
     # ~0.013..0.049, i.e. a cost of ~2e-4..2e-3 — far below the old 0.05, so every gradient
@@ -521,7 +523,7 @@ def plot_best_fit(model, best_params, outdir):
     model.initialize_state()
     model.simulate()
 
-    sim_dip = model.compute_dipoles(subID_elec)
+    sim_dip = model.compute_dipoles()
 
     # errors are scored on FIT_ROIS (as the GA did), while the comparison figures below
     # still show all three ROIs — useful to see what the fit did to the unfitted ones.
@@ -572,10 +574,10 @@ if __name__ == "__main__":
     # Seed the GA from a finished run (before run_config is built, so the widened bounds are logged).
     warm_start = None
     initial_params = None
-    if os.getenv("WARM_START") and INITIAL_PARAMS:
+    if WARM_START and INITIAL_PARAMS:
         raise SystemExit("set only one of WARM_START and INITIAL_PARAMS")
-    if os.getenv("WARM_START"):
-        warm_start = {"source": os.getenv("WARM_START")}
+    if WARM_START:
+        warm_start = {"source": WARM_START}
         warm_start["seed"] = apply_warm_start(warm_start["source"], opt_config)
     if INITIAL_PARAMS:
         initial_params = {"source": INITIAL_PARAMS_PATH}

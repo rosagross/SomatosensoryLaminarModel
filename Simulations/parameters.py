@@ -17,7 +17,7 @@ POPULATION_LABELS = np.array([
     "E2S2", "PV2S2", "SST2S2",
     "E3S2", "PV3S2", "SST3S2",
     "E4S2", "PV4S2", "SST4S2",
-    "ThalE", "ThalI", "ThalPOm",
+    "ThalE", "ThalI", "ThalPOm", "ThalPOmI",
 ])
 
 # the cell classes a per-class parameter can address
@@ -28,7 +28,7 @@ def population_classes():
     """Cell class of every population, in connectivity row order.
 
     One of 'E' / 'PV' / 'SST' / 'VIP' for the 30 cortical populations and 'thal' for the
-    three thalamic ones. Derived from POPULATION_LABELS rather than from hardcoded row
+    four thalamic ones. Derived from POPULATION_LABELS rather than from hardcoded row
     indices so it cannot fall out of step with the names.
     """
     def _cls(label):
@@ -57,12 +57,13 @@ def class_ratio_vector(ratios, default=1.0):
 class Parameter():
     
     def __init__(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6,
-                 p_2PVE=15, p_4PVE=20, f_intra=1.0):
+                 p_2PVE=15, p_4PVE=20, f_intra=1.0, f_intra_S2=1.0):
         # kept on the instance because get_raw_connectivity() and save_to_yaml() call
         # get_connectProb() without arguments, and they must see these values
         self.p_2PVE = p_2PVE
         self.p_4PVE = p_4PVE
         self.f_intra = f_intra
+        self.f_intra_S2 = f_intra_S2
         self.tau, self.nPop = self.get_params(delay_factor_short=delay_factor_short, delay_factor=delay_factor, thal_delay_factor=thal_delay_factor, e3b_tau=e3b_tau, e1_tau=e1_tau, e2_tau=e2_tau)
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
@@ -75,18 +76,18 @@ class Parameter():
         nPopA3b = 4 # E, PV, SST, VIP
         nPopS1 = 13 # 4*E, 4*PV, 4*SST, 1*VIP
         nPopS2 = 13 # 4*E, 4*PV, 4*SST, 1*VIP
-        nPopThal = 3 # one forward excitatory, one inhibitory feedback (reticulus nucleus), one higher order thalamus E population 
+        nPopThal = 4 # one forward excitatory, one inhibitory feedback (reticulus nucleus), one higher order thalamus E population (POm), one reticular population for POm 
         nPopTotal = nPopS1+nPopS2+nPopA3b+nPopThal
 
         # SYNAPTIC DECAY (depends on the connection type excitatory/inhibitory)
         # Based on visual cortex values
         # the last two values are used for the external input and background input
-        # with nPopTotal = 33 the shape of tau should be (33, 33) 
+        # with nPopTotal = 34 the shape of tau should be (34, 34) 
         # order: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 
         pv_tau = 3 # 3 is the original value
         tauA3b = np.tile(np.array([e3b_tau,pv_tau,20,15])*1e-3, (nPopTotal,1)) # sec
         tauS1 = np.tile(np.array([e1_tau,pv_tau,20,15,e1_tau,pv_tau,20,e1_tau,pv_tau,20,e1_tau,pv_tau,20])*1e-3, (nPopTotal,1)) # sec
-        tauS2 = np.tile(np.array([e2_tau,pv_tau,20,15,e2_tau,pv_tau,20,e2_tau,pv_tau,20,e2_tau,pv_tau,20,3,3,3])*1e-3, (nPopTotal,1)) # sec
+        tauS2 = np.tile(np.array([e2_tau,pv_tau,20,15,e2_tau,pv_tau,20,e2_tau,pv_tau,20,e2_tau,pv_tau,20,3,3,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
         
@@ -120,8 +121,10 @@ class Parameter():
         tau[7+4+13, 7+4] += delay_factor
 
         # delay from thalamus (first order and higher order) to S1 and S2 
-        tau[:-3, -3] += thal_delay_factor
-        tau[:-3, -1] += thal_delay_factor
+        # explicit indices: ThalE = 30, POm = 32 (the reticular populations 31 and 33 stay local)
+        n_cortical = nPopA3b + nPopS1 + nPopS2
+        tau[:n_cortical, n_cortical] += thal_delay_factor
+        tau[:n_cortical, n_cortical + 2] += thal_delay_factor
 
         # Alternative, old values for tau
         # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1
@@ -132,7 +135,7 @@ class Parameter():
         
         return tau, nPopTotal
 
-    def get_connectProb(self, p_2PVE=None, p_4PVE=None, f_intra=None):
+    def get_connectProb(self, p_2PVE=None, p_4PVE=None, f_intra=None, f_intra_S2=None):
         """Connection probabilities (targets in rows, sources in columns).
 
         Values for area 3b are merged values from S1 (after already computed W = P*S*C).
@@ -145,16 +148,18 @@ class Parameter():
                     39.6 is the original value, hence the instance default of 20.
             f_intra: factor on the probability of the A1 (S1) layer 4 E -> layer 2/3 E
                      (row E1, column E2) and layer 4 E -> layer 5 E (row E3, column E2)
-                     connections. 1 keeps the original values. Applied to S1 only; S2 and
-                     the area 3b collapse (see get_raw_connectivity) are not affected.
+                     connections. 1 keeps the original values. Applied to S1 only; the
+                     area 3b collapse (see get_raw_connectivity) is not affected.
+            f_intra_S2: the same factor for S2 (layer 4 E -> layer 2/3 E and layer 5 E).
 
-        All three default to the values the Parameter instance was constructed with. p_2PVE
+        All four default to the values the Parameter instance was constructed with. p_2PVE
         and p_4PVE are used for S1 and S2 alike, so one value sets that layer's PV <- E
         drive in both areas.
         """
         p_2PVE = self.p_2PVE if p_2PVE is None else p_2PVE
         p_4PVE = self.p_4PVE if p_4PVE is None else p_4PVE
         f_intra = self.f_intra if f_intra is None else f_intra
+        f_intra_S2 = self.f_intra_S2 if f_intra_S2 is None else f_intra_S2
 
         # E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4 (Thalamus is added later!)
         P_S1 = np.array([[ 6.7, 27.1, 28.,  4.3, 11.,  2.,  4.5,  2.4,  0.1,  1.5,  0., 0, 0],
@@ -187,7 +192,11 @@ class Parameter():
                     [ 1.6,  0.4,  1.,  1.9,  3.8,  3.0,  2.5, 20.5, 31.1,  0.6,  0.6, 1-.5,  3.2],
                     [0, 0.2, 0.3, 0.8, 3.0, 1.5, 1.0, 4.0, 1.9, 1.7, 2.1, 39.6, 15.1],
                     [0.3, 0.01, 0.02, 0.2, 0.5, 0.2, 0.05, 1.6, 0, 0.3, p_4PVE, 24.6, 24.1],
-                    [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2      
+                    [0.2, 0, 0.02, 0.1, 0.5, 0.2, 0.04, 1.5, 0, 0.2, 20.5, 31.1, 0.6]])*1e-2
+
+        # layer 4 E (column 4) -> layer 2/3 E (row 0) and layer 5 E (row 7) within S2
+        P_S2[0, 4] *= f_intra_S2
+        P_S2[7, 4] *= f_intra_S2      
         
         
         # forward connections: S1 Layer 5, E3 --> S2 layer 4 E2 
@@ -314,16 +323,19 @@ class Parameter():
 
         return C 
 
-    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount, bI_ratios=None):
+    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, bI_ratios=None):
         """Put together the connevtivity matrix (not yet scaled by coupling strength and EI-balance parameter)
 
         Args:
-            thal_connect: connecivity between thalamic neurons (E and I)
+            thal_connect: connectivity between thalamic neurons, [tEE, tEI, tIE, tII, tPOmI, tIPOm]
+                          (t<target><source>: tPOmI = reticular -> POm, tIPOm = POm -> reticular;
+                          a list with 5 entries is padded with tIPOm = 0)
             extI_cellcount: number of external input neurons (in the thalamus)
             bI_cellcount: number of background input neurons (from other cortical areas)
             thalE_cellcount: number of thalamic excitatory (VPM) neurons connecting to the somatosensory area
             thalI_cellcount: number of thalamic inhibitory (reticular nucleus) neurons
             pom_cellcount: number of POm neurons
+            pomI_cellcount: number of neurons in the reticular population of POm
             mI_cellcount: number of modulatory input neurons (from frontal areas), which
                           project onto the VIP populations only
             bI_ratios: {class: ratio} background-input strength per cell class, relative to
@@ -343,7 +355,8 @@ class Parameter():
 
         S = self.get_connectStrength()
         # f_intra is left out here on purpose: the area 3b connectivity below is collapsed
-        # from these S1 weights, and it must not change when only A1 is rescaled
+        # from these S1 weights, and it must not change when only A1 is rescaled.
+        # f_intra_S2 stays in: the S2 block is not used by the collapse and goes into W0 as is
         P = self.get_connectProb(f_intra=1.0)
         C = self.get_cellcounts()
 
@@ -423,16 +436,16 @@ class Parameter():
         W_A3bS1 = np.zeros((4,13)) 
         W_A3bS1[0,0] = 50 * g_intercortical # to E3b from E in layer 2/3 in A1
         W_A3bS1[1,0] = 100 * g_intercortical # to PV3b from E in layer 2/3 in A1
-        W_A3bS1[2,0] = 10 * g_intercortical # to PV3b from E in layer 2/3 in A1
+        W_A3bS1[2,0] = 10 * g_intercortical # to SST3b from E in layer 2/3 in A1
         W_A3bS1[0,7] = 30 * g_intercortical # to E3b from E in layer 5 in A1
 
 
         # between S2 and A3b
         # connectivity between S2 and A3b has to be defined manually
         W_S2A3b = np.zeros(W_S1A3b.shape) 
-        W_S2A3b[0,0] = 60 * g_intercortical # to E in layer 2/3 from E in A3b
-        W_S2A3b[4,0] = 120 * g_intercortical # to E in layer 4 from E in A3b
-        W_S2A3b[7,0] = 60 * g_intercortical # to E in layer 5 from E in A3b
+        W_S2A3b[0,0] = 20 * g_intercortical # to E in layer 2/3 from E in A3b # 60
+        W_S2A3b[4,0] = 40 * g_intercortical # to E in layer 4 from E in A3b # 120
+        W_S2A3b[7,0] = 20 * g_intercortical # to E in layer 5 from E in A3b # 60
         # feedback to A3b (interneuron ratios from Nasker 2021)
         W_A3bS2 = np.zeros(W_A3bS1.shape) 
         W_A3bS2[0,0] = 100 * g_intercortical # to E3b from E in layer 2/3 in S2
@@ -463,7 +476,8 @@ class Parameter():
 
 
         W0[idx_S1_E[2],idx_S1_E[0]+13] = 20 * g_intercortical # S2 layer 2 E to S1 layer 5 E
-        W0[idx_S1_E[2],idx_S1_E[2]+13] = 100 * g_intercortical # S2 layer 5 E to S1 layer 5 E
+        W0[idx_S1_E[2],idx_S1_E[2]+13] = 110 * g_intercortical # S2 layer 5 E to S1 layer 5 E
+
 
         # stack the matrices together 
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))
@@ -473,56 +487,75 @@ class Parameter():
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
 
         # the A3b values will be summed below so that they fit the 4 population structure
+        POm_A3bL235_drive  = 0.5 # 0.5
         S_thalToA3b = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
                             [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # no connections from thal I to S1 
-                            [0.5, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0]]) 
-        
+                            [POm_A3bL235_drive, 0, 0, 0, 0, 0, 0, POm_A3bL235_drive, 0, 0, 0, 0, 0],
+                            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])  # reticular nucleus of POm: no connections to cortex
+        POm_A1L235_drive  = 0.5 # 0.5
         S_thalToA1 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S1: Based on Jiang et al. 2023 only! 
                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # no connections from thal I to S1 
-                              [0.5, 0, 0, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0]]) # POm to S1 (mainly to L2/3 and L5a pyramidal cells) 
+                              [POm_A1L235_drive, 0, 0, 0, 0, 0, 0, POm_A1L235_drive, 0, 0, 0, 0, 0], # POm to S1 (mainly to L2/3 and L5a pyramidal cells) 
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])  # reticular nucleus of POm: no connections to cortex
         
+        POm_S2L235_drive = 1
         S_thalToS2 = np.array([[0.49, 0.49, 0.245, 0, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245, 0.49, 0.49, 0.245], # Thal to S2, using S1 values but reduce them later!
                               [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],  # no connections from thal I to S2
-                              [0.3, 0, 0, 0, 0.2, 0, 0, 0.3, 0, 0, 0, 0, 0]]) # POm to S2 (mainly to L2/3 and L5a pyramidal cells, but also L4 which is driving in S2) 
+                              [POm_S2L235_drive, 0, 0, 0, 0.2, 0, 0, POm_S2L235_drive, 0, 0, 0, 0, 0], # POm to S2 (mainly to L2/3 and L5a pyramidal cells, but also L4 which is driving in S2) 
+                              [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])  # reticular nucleus of POm: no connections to cortex
         
         # approximation of synpatic strength: 0.5 for driver, 0.3 for modulator
-
+        A3bL5_POm_drive = 0.2
         S_A3bto_thal = np.array([[0.1, 0, 0, 0], # thal E
                                  [0.1, 0, 0, 0], # thal I
-                                 [0.2, 0, 0, 0]]) # POm
+                                 [A3bL5_POm_drive, 0, 0, 0], # POm
+                                 [0.1, 0, 0, 0]]) # reticular nucleus of POm (same as the VPM reticular row)
+        A1L5_POm_drive = 0.7 #0.3
+        A1L6_POm_drive = 0.2 # 0.2
         S_A1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], # to thal E 
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], # to thal I (reticular nucleus)
-                                [0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0.2, 0, 0]]) # S1 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
+                                [0, 0, 0, 0, 0, 0, 0, A1L5_POm_drive, 0, 0, A1L6_POm_drive, 0, 0], # S1 to POm
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0]]) # to reticular nucleus of POm (L6 collaterals) (L5a pyramidal cells are "driver" cells for thalamic loop)
+        
+        S2L5_POm_drive = 1 #0.3
+        S2L6_POm_drive = 0.5 #0.2
         S_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], 
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0], 
-                                [0, 0, 0, 0, 0, 0, 0, 0.3, 0, 0, 0.2, 0, 0]]) # S2 to POm (L5a pyramidal cells are "driver" cells for thalamic loop)
+                                [0, 0, 0, 0, 0, 0, 0, S2L5_POm_drive, 0, 0, S2L6_POm_drive, 0, 0], # S2 to POm
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0.1, 0, 0]]) # to reticular nucleus of POm (L6 collaterals) (L5a pyramidal cells are "driver" cells for thalamic loop)
         S_to_thal = np.hstack((S_A3bto_thal, S_A1to_thal, S_S2to_thal))
 
         # connection probabilities
         # E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         P_thalToA3b = np.array([[6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0], # thalamus excitatory
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
-                                [10, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0]])*1e-2 # POm to A3b
+                                [10, 0, 0, 0, 0, 0, 0, 20, 0, 0, 0, 0, 0], # POm to A3b
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticular nucleus of POm: no cortical targets
         
         thal_to_S1 = np.array([6.2, 6.2, 0, 0, 40, 40, 20, 25.9, 25.9, 0, 9, 9, 0]) # based on Jiang et al. 2023
         P_thalToA1 = np.array([thal_to_S1*0.5, # thal E to A1 (less strong than to A3b)
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
-                                [20, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S1
+                                [20, 0, 0, 0, 0, 0, 0, 30, 0, 0, 0, 0, 0], # POm to S1
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticular nucleus of POm: no cortical targets
 
         P_thalToS2 = np.array([thal_to_S1*0.2, # thal E to S2 (even weaker, therefore 0.2!)
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], # reticlar nucleus inhibitory (estimation)
-                                [30, 0, 0, 0, 20, 0, 0, 30, 0, 0, 0, 0, 0]])*1e-2 # POm to S2
+                                [30, 0, 0, 0, 20, 0, 0, 30, 0, 0, 0, 0, 0], # POm to S2
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]])*1e-2 # reticular nucleus of POm: no cortical targets
 
         # order: E1, PV1, SST1, VIP, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
         P_A3bto_thal = np.array([[20, 0, 0, 0], # thal E
                                  [10, 0, 0, 0], # thal I
-                                 [10, 0, 0, 0]])*1e-2 # POm
+                                 [10, 0, 0, 0], # POm
+                                 [10, 0, 0, 0]])*1e-2 # reticular nucleus of POm
         P_A1to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0], # S1 to Thal E (some projections from L6 to VPM)
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0],
-                                [0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 5, 0, 0]])*1e-2 # S1 to POm (L5b driver)
+                                [0, 0, 0, 0, 0, 0, 0, 10, 0, 0, 5, 0, 0], # S1 to POm (L5b driver)
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0]])*1e-2 # S1 to reticular nucleus of POm
         P_S2to_thal = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0], 
                                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0],
-                                [0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 20, 0, 0]])*1e-2 # S2 to POm (L5b driver, 6 modulator)
+                                [0, 0, 0, 0, 0, 0, 0, 30, 0, 0, 20, 0, 0], # S2 to POm (L5b driver, 6 modulator)
+                                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 0]])*1e-2 # S2 to reticular nucleus of POm
         P_to_thal = np.hstack((P_A3bto_thal, P_A1to_thal, P_S2to_thal))
         
         # calculate final thalamus connectivity
@@ -535,9 +568,9 @@ class Parameter():
         PS_from_thal_A3b = np.multiply(P_thalToA3b, S_thalToA3b)
         PS_from_thal_A1 = np.multiply(P_thalToA1, S_thalToA1)
         PS_from_thal_S2 = np.multiply(P_thalToS2, S_thalToS2)
-        # column vector so each thalamic source row (E/VPM, I/reticular, POm) is scaled by its own cell count
+        # column vector so each thalamic source row (E/VPM, I/reticular, POm, reticular of POm) is scaled by its own cell count
         # (Jiang et al. 2023 use 230; for us it might be different for reticular nucleus and POm)
-        cell_count_thal = np.array([[thalE_cellcount], [thalI_cellcount], [pom_cellcount]])
+        cell_count_thal = np.array([[thalE_cellcount], [thalI_cellcount], [pom_cellcount], [pomI_cellcount]])
 
         W_from_thal_A3b = np.multiply(PS_from_thal_A3b, cell_count_thal)
         W_from_thal_A1 = np.multiply(PS_from_thal_A1, cell_count_thal)
@@ -553,17 +586,23 @@ class Parameter():
         # join area 3b, S1 and S2 input arrays
         W_from_thal = np.hstack((W_A3bThal.T, W_from_thal_A1, W_from_thal_S2))
         # add within thalamus (E and I) connectivity 
-        tEE, tEI, tIE, tII, tPOmI = thal_connect
-        # tPOmI: input to the POm from the reticular nucleus I
-        # POm connectivity to other thalamic neurons is not present (=0)
-        W_from_thal = np.hstack((W_from_thal, [[tEE,tIE,0],[tEI,tII,tPOmI],[0,0,0]]))
+        thal_connect = list(thal_connect) + [0] * (6 - len(thal_connect))
+        tEE, tEI, tIE, tII, tPOmI, tIPOm = thal_connect
+        # Rows are the sources, columns the targets, both in the order VPM (E), reticular (I),
+        # POm, reticular of POm (POmI).
+        # tPOmI: input to the POm from its own reticular population POmI
+        # tIPOm: input to POmI from the POm (excitatory; scaled by gPOmthal together with the
+        #        other POm outputs in get_connectivity)
+        # The VPM reticular population I projects to VPM only; POm projections to VPM and to
+        # itself are not present (=0)
+        W_from_thal = np.hstack((W_from_thal, [[tEE,tIE,0,0],[tEI,tII,0,0],[0,0,0,tIPOm],[0,0,tPOmI,0]]))
 
         # Create the external input matrix
-        # Thalamic block order is [thal E (VPM), thal I (reticular), POm] = indices -3, -2, -1.
-        # Only the thalamus E (VPM) population receives the external input (from the brain stem);
-        # reticular I (-2) and POm (-1) receive none.
+        # Thalamic block order is [thal E (VPM), thal I (reticular), POm, POmI] = the last four
+        # populations. Only the thalamus E (VPM) population receives the external input (from
+        # the brain stem); the other three receive none.
         Wext = np.zeros((W_from_thal.shape[1],1))
-        Wext[-3] = 1 * extI_cellcount # thalamus E (VPM) population
+        Wext[W_from_thal.shape[1] - 4] = 1 * extI_cellcount # thalamus E (VPM) population
 
         # .. and also for the background input (all cortical cells receive input, no thalamic
         # population does). The per-class ratio scales the weight, not the input trace, so a
@@ -581,7 +620,7 @@ class Parameter():
         return W0, W_to_thal, W_from_thal, Wb, Wext, Wm
 
 
-    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount, area='all', bI_ratios=None):
+    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, gIthalPOm, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, area='all', bI_ratios=None):
         """Apply coupling strength parameter and compute the final connectivity matrix.
 
         Args:
@@ -589,6 +628,7 @@ class Parameter():
                             It should be the result of the equation: g * bEI (where g is the general coupling strength and bEI is the EI-balance).
             gEthal, gIthal (float): Same as above, just for thalamic E (VPM) and I (reticular) neurons.
             gPOmthal (float): Coupling strength scaling the POm population's output connectivity.
+            gIthalPOm (float): Coupling strength of the reticular population of POm (inhibitory, applied as negative).
             thal_connect (int): connecivity between thalamic neurons (E and I)
             extI_cellcount (int): number of external input neurons (in the thalamus)
             bI_cellcount (int): number of background input neurons (from other cortical areas)
@@ -597,19 +637,20 @@ class Parameter():
             thalE_cellcount (int): number of thalamic excitatory (VPM) neurons connecting to the somatosensory area
             thalI_cellcount (int): number of thalamic inhibitory (reticular nucleus) neurons
             pom_cellcount (int): number of POm neurons
+            pomI_cellcount (int): number of neurons in the reticular population of POm
             mI_cellcount (int): number of modulatory input neurons (from frontal areas),
                                 targeting the VIP populations only
             area (string): area to chose if you want to look at an isolated area (sets all other connections to zero).
                            Options: 'ThalA3b', 'S1', 'A3b', 'S1','ThalS1', 'A1', 'ThalA1', 'ThalA1S2', 'S2', 'A1S2'
         
         Returns:
-            2D numpy array: complete connectivity matrix (nPop x nPop+3, i.e. 33x36):
+            2D numpy array: complete connectivity matrix (nPop x nPop+3, i.e. 34x37):
                             the nPop population columns followed by the background,
                             external and modulatory input columns.
         """
         
 
-        W0, W_to_thal, W_from_thal, Wb, Wext, Wm = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, mI_cellcount, bI_ratios=bI_ratios)
+        W0, W_to_thal, W_from_thal, Wb, Wext, Wm = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, bI_ratios=bI_ratios)
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])
@@ -633,6 +674,8 @@ class Parameter():
         W_from_thal[1,:] = W_from_thal[1,:] * -gIthal
         # scale the POm population's output connectivity separately
         W_from_thal[2,:] = W_from_thal[2,:] * gPOmthal
+        # the reticular population of POm is inhibitory as well
+        W_from_thal[3,:] = W_from_thal[3,:] * -gIthalPOm
 
         # include the external input to the matrix 
         # append the thalamus population(s) values to the matrix
@@ -648,14 +691,14 @@ class Parameter():
         # those same populations plus the background (i_input), external (i_input+1)
         # and modulatory (i_input+2) input synapses:
         #   [0:i_S1) A3b | [i_S1:i_S2) S1 | [i_S2:i_thal) S2 |
-        #   [i_thal:i_input) ThalE, ThalI, ThalPOm |
+        #   [i_thal:i_input) ThalE, ThalI, ThalPOm, ThalPOmI |
         #   i_input background | +1 external | +2 modulatory
         # Address the thalamic block through i_thal/i_input rather than with negative
-        # indices: it grew from two to three columns when POm was added, which shifted
+        # indices: it grew from two to three columns when POm was added and to four with its reticular population, which shifted
         # every hard-coded negative column index by one and left POm connected in the
         # branches that are supposed to cut the thalamus out.
         i_S1, i_S2 = 4, 4 + 13
-        i_thal = W.shape[0] - 3
+        i_thal = W.shape[0] - 4
         i_input = W.shape[0]
         if area=='ThalA3b':
             W[i_S1:i_thal,:] = 0 # to A1, S2 from everywhere
@@ -746,7 +789,8 @@ class Parameter():
                                     [  0.07937015,  42.01276379,  56.95305832],
                                     [  0.1,  40,  30], # Thalamus E
                                     [  0.1,  40,  30], # Thalamus E
-                                    [  0.1,  40,  30]] # Thalamus E POm
+                                    [  0.1,  40,  30], # Thalamus E POm
+                                    [  0.1,  40,  30]] # Thalamus I (reticular) for POm
 
         sigmoid_params = np.vstack((sigmoid_params_A3b, sigmoid_params_S1, sigmoid_params_S2))
                                        

@@ -37,7 +37,7 @@ _REGION_SPANS = [
     ('A3b',      0,  4, '#dce8ff'),
     ('S1',       4, 17, '#ffe0e0'),
     ('S2',      17, 30, '#e0ffe0'),
-    ('Thalamus',30, 32, '#fff8d0'),
+    ('Thalamus',30, 34, '#fff8d0'),
 ]
 
 # For each display area: (JSON key, is_multilayer)
@@ -48,20 +48,20 @@ _AREA_META = {
     'Thalamus': (None,  False),
 }
 
-N_POPS = 32
+N_POPS = 34
 
 
 def load_dipole_json(json_path=None):
     if json_path is None:
         json_path = os.path.join(_eeg_dir, 'dipole_parameters.json')
     # read_dipole_params flattens the file's per-source-region / layer / cell type
-    # nesting into vectors over the 33 source populations, in the order the plots below
+    # nesting into vectors over the 34 source populations, in the order the plots below
     # index (SomatoModel.get_population_labels())
     return read_dipole_params(json_path)
 
 
 def _build_pop_labels(pop_mapping):
-    """Return list of (x_label, cell_type) ordered by population index 0–31."""
+    """Return list of (x_label, cell_type) ordered by population index 0–33."""
     short = {'A3b': 'A3b', 'S1': 'S1', 'S2': 'S2', 'Thalamus': 'Thal'}
     idx_info = {}
     for region, pops in pop_mapping.items():

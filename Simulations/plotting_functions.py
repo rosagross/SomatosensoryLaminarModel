@@ -17,15 +17,15 @@ LAYER_ROWS = ['Layer 2/3', 'Layer 4', 'Layer 5', 'Layer 6']
 POP_GRID_A3B = [[0, 1, 2, 3]]
 POP_GRID_S1 = [[4, 5, 6, 7], [8, 9, 10, None], [11, 12, 13, None], [14, 15, 16, None]]
 POP_GRID_S2 = [[17, 18, 19, 20], [21, 22, 23, None], [24, 25, 26, None], [27, 28, 29, None]]
-POP_GRID_THAL = [[30, 31, 32, None]]  # ThalE (VPM), ThalI (reticular), ThalPOm
-THAL_COLUMNS = ['ThalE (VPM)', 'ThalI (reticular)', 'ThalPOm', '']
+POP_GRID_THAL = [[30, 31, 32, 33]]  # ThalE (VPM), ThalI (reticular), ThalPOm, ThalPOmI (reticular of POm)
+THAL_COLUMNS = ['ThalE (VPM)', 'ThalI (reticular)', 'ThalPOm', 'ThalPOmI (reticular)']
 
 # presynaptic source blocks -> line colour (the two extra synapse columns of the
 # 3D potential array, background and external input, are handled separately)
 SOURCE_AREA_BLOCKS = [('A3b', range(0, 4)), ('S1', range(4, 17)),
-                      ('S2', range(17, 30)), ('Thalamus', range(30, 33))]
+                      ('S2', range(17, 30)), ('Thalamus', range(30, 34))]
 # source cell type -> line style; thalamic sources reuse E/PV/SST styles in
-# array order (ThalE, ThalI, ThalPOm)
+# array order (ThalE, ThalI, ThalPOm, ThalPOmI)
 CELLTYPE_LINESTYLES = {'E': '-', 'PV': '--', 'SST': '-.', 'VIP': ':'}
 # style of the input synapse columns of W / the 3D potential array, keyed by distance
 # from the end: -3 background, -2 external, -1 modulatory. The modulatory input gets a
@@ -127,8 +127,8 @@ def _build_source_styles(pop_labels, n_sources, area_colors):
                 break
 
         if area == 'Thalamus':
-            # ThalE / ThalI / ThalPOm have no E/PV/SST/VIP name, style them by array order
-            linestyle = ['-', '--', '-.'][offset]
+            # ThalE / ThalI / ThalPOm / ThalPOmI have no E/PV/SST/VIP name, style them by array order
+            linestyle = ['-', '--', '-.', ':'][offset]
         else:
             linestyle = CELLTYPE_LINESTYLES[_source_celltype(str(pop_labels[src]))]
         styles.append((area_colors[area], linestyle, area))
@@ -225,7 +225,7 @@ def _plot_potential_grid(rows, all_potentials, steps, start_plot, source_styles,
     fig.legend(area_handles, [group for _, group in area_entries], title='Source area',
                frameon=False, loc='lower left', bbox_to_anchor=(1.0, 0.52))
 
-    style_labels = ['E / ThalE', 'PV / ThalI', 'SST / ThalPOm', 'VIP']
+    style_labels = ['E / ThalE', 'PV / ThalI', 'SST / ThalPOm', 'VIP / ThalPOmI']
     style_handles = [plt.Line2D([0], [0], color='0.3', linewidth=1.5,
                                 linestyle=CELLTYPE_LINESTYLES[celltype])
                      for celltype in CELLTYPE_COLUMNS]
@@ -608,18 +608,18 @@ def plot_potentials(potentials, Iext, Ib, step_size, simulation_time, start_plot
         axes[0, 0].set_title('External input')
         axes[0, 0].set_ylabel('Hz')
 
-        # Thalamus block = last three populations, in array order: Thalamus E/VPM (-3),
-        # Thalamus I/reticular (-2), POm (-1). Order matches get_population_labels().
-        # POm gets its own panel: its potential is on a very different scale, so sharing
-        # the axes with ThalE/ThalI flattens those two.
-        plot_population_rates(axes[1, 0], [-3, -2], potentials, steps, start_plot,
+        # Thalamus block = the last four populations, in array order: Thalamus E/VPM (30),
+        # Thalamus I/reticular (31), POm (32), POm reticular (33). Order matches
+        # get_population_labels(). POm gets its own panel: its potential is on a very
+        # different scale, so sharing the axes with ThalE/ThalI flattens those two.
+        plot_population_rates(axes[1, 0], [30, 31], potentials, steps, start_plot,
                               ['Thalamus E', 'Thalamus I'], colors=['green', 'purple'],
                               stop_plot=stop_plot)
         axes[1, 0].set_title('Thalamus')
         axes[1, 0].set_ylabel('mV')
 
-        plot_population_rates(axes[2, 0], [-1], potentials, steps, start_plot,
-                              ['POm'], colors=['grey'], stop_plot=stop_plot)
+        plot_population_rates(axes[2, 0], [32, 33], potentials, steps, start_plot,
+                              ['POm', 'POm reticular'], colors=['grey', 'orange'], stop_plot=stop_plot)
         axes[2, 0].set_title('POm')
         axes[2, 0].set_ylabel('mV')
 
@@ -710,13 +710,14 @@ def plot_results(rates, Iext, Ib, step_size, simulation_time, start_plot, sI, g,
     axs_extI.set_ylabel('Hz')
     # thalamus
     axs_thal = axs[1][0]
-    # Thalamus block = last three populations, in array order: Thalamus E/VPM (-3,
-    # the externally-driven population), Thalamus I/reticular (-2), POm (-1).
-    # Order matches get_population_labels().
-    axs_thal.plot(steps[start_plot:stop_plot], rates[-3].T[start_plot:stop_plot], color='green')
-    axs_thal.plot(steps[start_plot:stop_plot], rates[-2].T[start_plot:stop_plot], color='purple')
-    axs_thal.plot(steps[start_plot:stop_plot], rates[-1].T[start_plot:stop_plot], color='grey')
-    axs_thal.legend(['Thalamus E', 'Thalamus I', 'POm'])
+    # Thalamus block = last four populations, in array order: Thalamus E/VPM (30, the
+    # externally-driven population), Thalamus I/reticular (31), POm (32), POm reticular
+    # (33). Order matches get_population_labels().
+    axs_thal.plot(steps[start_plot:stop_plot], rates[30].T[start_plot:stop_plot], color='green')
+    axs_thal.plot(steps[start_plot:stop_plot], rates[31].T[start_plot:stop_plot], color='purple')
+    axs_thal.plot(steps[start_plot:stop_plot], rates[32].T[start_plot:stop_plot], color='grey')
+    axs_thal.plot(steps[start_plot:stop_plot], rates[33].T[start_plot:stop_plot], color='orange')
+    axs_thal.legend(['Thalamus E', 'Thalamus I', 'POm', 'POm reticular'])
     axs_thal.set_ylabel('Hz')
 
     # area 3b

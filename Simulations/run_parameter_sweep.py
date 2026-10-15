@@ -110,12 +110,14 @@ PARAM_RANGES = {
     # thalamo-cortical loop
     "g_thal": (0.0, 5.0),                  # VPM output gain
     "sI_thal": (0.0, 1.5),                 # gIthal = g_thal * sI_thal (reticular)
+    "sI_thalPOm": (0.0, 1.5),              # gIthalPOm = g_thal * sI_thalPOm (reticular of POm)
     "g_thalPOm": (0.0, 5.0),               # POm output gain
     "thal_EtoE": (0.0, 20.0),              # thal_connect[0], VPM -> VPM
     "thal_EtoI": (0.0, 20.0),              # thal_connect[1], VPM -> reticular
     "thal_ItoE": (0.0, 20.0),              # thal_connect[2], reticular -> VPM
     "thal_ItoI": (0.0, 20.0),              # thal_connect[3], reticular -> reticular
-    "thal_POmtoI": (0.0, 20.0),            # thal_connect[4], POm -> reticular
+    "thal_POmtoI": (0.0, 20.0),            # thal_connect[4], tPOmI (code: reticular -> POm)
+    "thal_IPOm": (0.0, 20.0),              # thal_connect[5], tIPOm, POm -> reticular
     # synaptic time constants (ms)
     "e3b_tau": (2.0, 10.0),
     "e1_tau": (2.0, 10.0),
@@ -131,7 +133,7 @@ PARAM_RANGES = {
 
 # thal_connect is a list in the parameter file, so its entries get their own scalar
 # sweep names and are folded back into the list before the model sees them.
-THAL_CONNECT_NAMES = ("thal_EtoE", "thal_EtoI", "thal_ItoE", "thal_ItoI", "thal_POmtoI")
+THAL_CONNECT_NAMES = ("thal_EtoE", "thal_EtoI", "thal_ItoE", "thal_ItoI", "thal_POmtoI", "thal_IPOm")
 
 # The 2-D slices taken by `grid` mode. Each pair puts two parameters that interact
 # mechanistically on the two axes; everything else stays at the reference point.
@@ -198,7 +200,7 @@ def parse_center(specs, path=None):
 def expand_theta(theta, base_params):
     """Turn a {sweep name: value} dict into the kwargs SomatoModel.apply_params takes.
 
-    The only translation needed is thal_connect: its five entries are swept as
+    The only translation needed is thal_connect: its six entries are swept as
     separate scalars but the model reads them as one list.
     """
     params = {k: v for k, v in theta.items() if k not in THAL_CONNECT_NAMES}
@@ -287,7 +289,7 @@ def _get_model(base_params, subjects):
             # prime the forward-model cache once (~2 s), before the first timed run;
             # self.potential is already allocated by __init__, so no simulation is
             # needed to build the projections
-            _MODEL.compute_dipoles(list(subjects))
+            _MODEL.compute_dipoles()
         _MODEL_KEY = key
     return _MODEL
 
@@ -307,7 +309,7 @@ def _simulate_signals(model, params, base_params, subjects, labels, seed=None):
     if subjects:
         # same grouping as SomatoModel._roi_dipoles: A3b, the four A1 layers, the four
         # S2 layers
-        sim_dip = model.compute_dipoles(list(subjects))
+        sim_dip = model.compute_dipoles()
         signals += [sim_dip[0], sim_dip[1:5].sum(axis=0), sim_dip[5:9].sum(axis=0)]
     return signals, model.rate.copy()
 

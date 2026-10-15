@@ -41,7 +41,7 @@ figure_dir = '/data/hu_mecozzi/Documents/SomatosensoryLaminarModel/'
 params = Parameter()
 population_names = ['E3b','PV3b','SST3b','VIP3b', 'E1','PV1','SST1','VIP1','E2','PV2','SST2','E3','PV3','SST3','E4','PV4','SST4',
                                           'E1S2','PV1S2','SST1S2','VIP1S2','E2S2','PV2S2','SST2S2','E3S2','PV3S2','SST3S2','E4S2','PV4S2','SST4S2']
-all_pops = np.concatenate((population_names,['ThalE', 'ThalI', 'POm', 'B', 'Ext', 'Mod']))
+all_pops = np.concatenate((population_names,['ThalE', 'ThalI', 'POm', 'POmI', 'B', 'Ext', 'Mod']))
 # Synaptic strengths
 S = np.abs(params.get_connectStrength())
 df_S = pd.DataFrame(S, index=population_names[4:], columns=population_names[4:])
@@ -58,7 +58,8 @@ sI_thal = 0.5
 gEthal = g_thal
 gIthal = g_thal * sI_thal
 gPOmthal = 1
-thal_connect = [0, 0, 0, 0, 0]  # tEE, tEI, tIE, tII, tPOmI (tPOmI added with the POm population)
+gIthalPOm = g_thal * 0.5
+thal_connect = [0, 0, 0, 0, 0, 0]  # tEE, tEI, tIE, tII, tPOmI, tIPOm
 gE, gI = [1, 1]
 area = 'all'
 extI_cellcounts = 1
@@ -66,10 +67,11 @@ bI_cellcounts = 1
 thalE_cellcount = 500  # VPM; it is 230 in Jiang et al. 2023 but for us might differ!
 thalI_cellcount = 500  # reticular nucleus
 pom_cellcount = 500    # POm
+pomI_cellcount = 500   # reticular population of POm
 mI_cellcounts = 1       # modulatory input (frontal areas -> VIP)
-W = params.get_connectivity(g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, thal_connect,
+W = params.get_connectivity(g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, gIthalPOm, thal_connect,
                             extI_cellcounts, bI_cellcounts, thalE_cellcount, thalI_cellcount,
-                            pom_cellcount, mI_cellcounts, area=area)
+                            pom_cellcount, pomI_cellcount, mI_cellcounts, area=area)
 df_W = pd.DataFrame(W, index=all_pops[:-3], columns=all_pops)
 
 # %% Plot Synaptic strengths
