@@ -3,7 +3,7 @@
   "strength_I": 1,
   "g_intercortical": 1,
   "g_thalPOm": 1,
-  "Ib_strength": 50,
+  "Ib_strength": 20,
   "Ib_ratio_PV": 0.7,
   "Ib_ratio_SST": 1,
   "Ib_ratio_VIP": 0.5,
@@ -14,6 +14,7 @@
   "delay_factor": 0.004,
   "p_2PVE": 37.4,
   "p_4PVE": 39.6,
+  "f_intra": 2,
   "Iext_strength": 10,
   "Iext_duration": 0.005
 }

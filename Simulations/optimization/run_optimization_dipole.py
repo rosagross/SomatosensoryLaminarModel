@@ -100,13 +100,7 @@ FIXED = {}                             # values carried over from a resumed run 
 # ── optional dynamic parameters ────────────────────────────────────────────────
 # kind "param": model parameter, "path": factor on a block of W [rows, cols] (1 = unchanged).
 # bounds: "rel" = factor on the warm start value, "abs" = absolute; "clip" limits the result.
-A3B, A1, S2, POM = slice(0, 4), slice(4, 17), slice(17, 30), 32
-PATHWAYS = {
-    "ff_A3b_A1": (A1, A3B), "ff_A1_S2": (S2, A1), "ff_A3b_S2": (S2, A3B),
-    "fb_A3b_A1": (A3B, A1), "fb_A1_S2": (A1, S2), "fb_A3b_S2": (A3B, S2),
-    "POm_drive_A3b": (POM, A3B), "POm_drive_A1": (POM, A1), "POm_drive_S2": (POM, S2),
-    "POm_tgt_A3b": (A3B, POM), "POm_tgt_A1": (A1, POM), "POm_tgt_S2": (S2, POM),
-}
+PATHWAYS = sm.PATHWAYS                  # shared with simulation_main.py (somato_model.py)
 _PATH_B = dict(kind="path", abs=(0.5, 2.0))
 OPTIONAL = {
     # ranked by the scouting scan (raw and profiled error range), see the plan

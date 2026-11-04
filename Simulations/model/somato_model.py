@@ -240,6 +240,61 @@ def load_optimized_params(opt_run, overrides=None):
 
     return params
 
+# Pathway scale factors of run_optimization_dipole.py: factor on a block of W [rows, cols]
+# (1 = unchanged), applied after the model has built W.
+_A3B, _A1, _S2, _POM = slice(0, 4), slice(4, 17), slice(17, 30), 32
+PATHWAYS = {
+    "ff_A3b_A1": (_A1, _A3B), "ff_A1_S2": (_S2, _A1), "ff_A3b_S2": (_S2, _A3B),
+    "fb_A3b_A1": (_A3B, _A1), "fb_A1_S2": (_A1, _S2), "fb_A3b_S2": (_A3B, _S2),
+    "POm_drive_A3b": (_POM, _A3B), "POm_drive_A1": (_POM, _A1), "POm_drive_S2": (_POM, _S2),
+    "POm_tgt_A3b": (_A3B, _POM), "POm_tgt_A1": (_A1, _POM), "POm_tgt_S2": (_S2, _POM),
+}
+# dipole layer factors of the finetune run: used for the dipole file only, not model parameters
+DIPOLE_GENE_NAMES = ("F_L5", "F_L6")
+
+
+def apply_pathway_scales(model, scales):
+    """Multiply the W blocks of `scales` (dict PATHWAYS name -> factor) on a freshly built model.
+
+    W is rebuilt by apply_params, so call this after it (and before initialize_state / simulate)."""
+    for k, f in (scales or {}).items():
+        rows, cols = PATHWAYS[k]
+        model.W[rows, cols] = model.W[rows, cols] * float(f)
+
+
+def load_finetuned_params(ft_run):
+    """Searched parameters of a run_optimization_dipole.py session.
+
+    The session only stores what it searched; everything else was the simulation_main.py value at
+    the time (the warm start, saved as run_config.json["warm_start"]). So this returns overrides to
+    apply on top of the simulation_main.py parameters, not a full parameter dict.
+
+    Parameters
+    ----------
+    ft_run : str
+        Session folder (path) or folder name under SIMDIR/optimization_finetune/,
+        e.g. "ft_20261014_182908_ga-16p".
+
+    Returns
+    -------
+    (overrides, pathway_scales) : model parameters to params.update(...) (including
+    `dipole_params_file`, the session's fitted dipole file), and the dict of W block factors
+    to pass to apply_pathway_scales after building the model.
+    """
+    run_dir = ft_run if os.path.isdir(ft_run) else os.path.join(SIMDIR, 'optimization_finetune', ft_run)
+    with open(os.path.join(run_dir, 'optimization_summary.json'), 'r') as f:
+        summary = json.load(f)
+    best = summary.get('best_params_full', summary['best_params'])
+    dipole_file = os.path.join(run_dir, 'dipole_parameters_finetuned.json')
+    if not os.path.isfile(dipole_file):
+        raise FileNotFoundError(dipole_file)
+
+    scales = {k: float(v) for k, v in best.items() if k in PATHWAYS}
+    overrides = {k: float(v) for k, v in best.items() if k not in PATHWAYS and k not in DIPOLE_GENE_NAMES}
+    overrides['dipole_params_file'] = dipole_file
+    return overrides, scales
+
+
 def read_analysis_params():
     analysis_params = hf.load_parameters(WDDIR)
     return analysis_params
@@ -1008,7 +1063,8 @@ class SomatoModel():
         # read the dipole geometry; read_dipole_params flattens the per-source-region /
         # layer / cell type nesting of the file into vectors over the 34 source
         # populations, in get_population_labels() order
-        dipole_params = read_dipole_params(
+        # dipole_params_file (params key, e.g. from load_finetuned_params) selects another file
+        dipole_params = read_dipole_params(getattr(self, 'dipole_params_file', None) or
             os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters_flippedPVSST.json'))
 
         dipole_length = dipole_params['dipole_lengths']

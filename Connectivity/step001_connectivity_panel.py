@@ -280,9 +280,9 @@ def make_figure(W, outdir):
     L_D = W[I_POM:I_POMI + 1, I_POM:I_POMI + 1]
     norm = make_norm(A, M_C, L_C, M_B, M_D, L_D)
 
-    fig = plt.figure(figsize=(7.5, 10.5))
-    gs = fig.add_gridspec(3, 2, left=0.08, right=0.90, top=0.96, bottom=0.05,
-                          height_ratios=[1, 1.3, 1.3], wspace=0.35, hspace=0.30)
+    fig = plt.figure(figsize=(14, 8))
+    gs = fig.add_gridspec(2, 3, left=0.05, right=0.93, top=0.95, bottom=0.07,
+                          width_ratios=[1, 1.1, 1.05], wspace=0.22, hspace=0.30)
 
     # A) A1 connectivity matrix
     axA = fig.add_subplot(gs[0, 0])
@@ -292,7 +292,7 @@ def make_figure(W, outdir):
     axA.set_title('BA1', fontsize=8, pad=3)
 
     # C) VPM projection matrix
-    gsC = gs[0, 1].subgridspec(2, 2, height_ratios=[3, 2], width_ratios=[1, 1], hspace=1.2, wspace=0.6)
+    gsC = gs[1, 0].subgridspec(2, 2, height_ratios=[3, 2], width_ratios=[1, 1], hspace=1.2, wspace=0.6)
     axC = fig.add_subplot(gsC[0, :])
     matrix_panel(axC, M_C, clab, ['VPM → ctx', 'ctx → VPM', 'ctx → TRN'], norm, xlabel='', ylabel='', fs=4)
     for b in (3.5, 16.5):
@@ -304,10 +304,9 @@ def make_figure(W, outdir):
     axL.set_title('Thalamic loop', fontsize=7, pad=2)
 
     # B) inter-area graph + matrix
-    gsB = gs[1, :].subgridspec(1, 2, width_ratios=[1, 1.05], wspace=0.12)
-    axB = fig.add_subplot(gsB[0, 0])
+    axB = fig.add_subplot(gs[0, 1])
     panel_B(axB, W)
-    axBm = fig.add_subplot(gsB[0, 1])
+    axBm = fig.add_subplot(gs[0, 2])
     cmap = plt.get_cmap(CMAP).copy(); cmap.set_bad('0.92')
     matrix_panel(axBm, M_B, clab, clab, norm, fs=4, cmap=cmap)
     for b in (3.5, 16.5):
@@ -315,28 +314,29 @@ def make_figure(W, outdir):
     area_labels(axBm, fs=6, left=True)
 
     # D) POm graph + matrix
-    gsD = gs[2, :].subgridspec(1, 3, width_ratios=[1.45, 0.55, 0.9], wspace=0.25)
-    axD = fig.add_subplot(gsD[0, 0])
+    axD = fig.add_subplot(gs[1, 1])
+    gsD = gs[1, 2].subgridspec(1, 2, width_ratios=[0.8, 1], wspace=0.9)
     panel_D(axD, W)
-    axDm = fig.add_subplot(gsD[0, 1])
+    axDm = fig.add_subplot(gsD[0, 0])
     matrix_panel(axDm, M_D, ['POm → ctx', 'ctx → POm', 'ctx → TRN'], clab, norm, xlabel='', ylabel='', fs=4)
     axDm.set_aspect('auto')
     for b in (3.5, 16.5):
         axDm.axhline(b, color='k', lw=0.4)
     axDm.tick_params(axis='x', labelsize=5)
-    gsDl = gsD[0, 2].subgridspec(3, 1, height_ratios=[1, 1.2, 1], hspace=0.3)
+    gsDl = gsD[0, 1].subgridspec(3, 1, height_ratios=[1, 1.2, 1], hspace=0.3)
     axDl = fig.add_subplot(gsDl[1])
     matrix_panel(axDl, L_D, ['POm', 'TRN'], ['POm', 'TRN'], norm, fs=6)
     annotate(axDl, L_D)
     axDl.set_title('POm - TRN loop', fontsize=7, pad=2)
 
     # one shared colour bar
-    cax = fig.add_axes([0.925, 0.05, 0.015, 0.91])
+    cax = fig.add_axes([0.955, 0.07, 0.01, 0.88])
     cb = add_cbar(fig, imA, None, cax=cax)
 
     # panel letters in figure coordinates
-    for letter, x, y in (('A', 0.036, 0.975), ('C', 0.52, 0.975), ('B', 0.036, 0.645), ('D', 0.036, 0.325)):
-        fig.text(x, y, letter, fontsize=12, weight='bold', va='center')
+    for letter, cell in (('A', gs[0, 0]), ('B', gs[0, 1]), ('C', gs[1, 0]), ('D', gs[1, 1])):
+        pos = cell.get_position(fig)
+        fig.text(pos.x0 - (0.035 if letter in 'AC' else 0.01), pos.y1 + 0.005, letter, fontsize=12, weight='bold', va='center')
     os.makedirs(outdir, exist_ok=True)
     for ext in ('pdf', 'png'):
         fig.savefig(os.path.join(outdir, f'connectivity_panel.{ext}'), dpi=300)

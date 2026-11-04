@@ -9,15 +9,18 @@ import numpy as np
 tau1 = 0.2
 tau2 = 0.3
 tau3 = 0.4
-H = 2
+tau4 = 0.2
+H = 1
 t = np.arange(0, 2, 0.01)
 alpha_kernel1 = H * t/tau1 * np.exp(-t/tau1)
 alpha_kernel2 = H * t/tau2 * np.exp(-t/tau2)
 alpha_kernel3 = H * t/tau3 * np.exp(-t/tau3)
+alpha_kernel4 = H * t/tau4 * np.exp(-t/tau4)
 
 plt.plot(t, alpha_kernel1, label="1")
 plt.plot(t, alpha_kernel2, label="2")
 plt.plot(t, alpha_kernel3, label="3")
+plt.plot(t, alpha_kernel4, label="4")
 plt.legend()
 plt.show()
 

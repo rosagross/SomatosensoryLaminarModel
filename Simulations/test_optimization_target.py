@@ -121,7 +121,8 @@ opt_paths = [os.path.join(OPTDIR, d) for d in [
     "opt_20260826_120040_ps_roi-A1",
     "opt_20260827_153421_tc_roi-A1",
     "opt_20260918_183022_tc_roi-A1",
-    "opt_20260930_210433_tc_roi-A1"
+    "opt_20260930_210433_tc_roi-A1",
+    "opt_20261001_131042_tc_roi-A1"
 ]]
 roi = "A1"
 
