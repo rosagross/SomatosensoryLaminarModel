@@ -90,7 +90,7 @@ class Parameter():
         tauS2 = np.tile(np.array([e2_tau,pv_tau,20,15,e2_tau,pv_tau,20,e2_tau,pv_tau,20,e2_tau,pv_tau,20,3,3,3,3])*1e-3, (nPopTotal,1)) # sec
         tau = np.hstack((tauA3b,tauS1,tauS2))
 
-        
+        """
         # add delay to short range connections
         # delay between A3b  A1
         # from A3b to A1
@@ -123,8 +123,10 @@ class Parameter():
         # delay from thalamus (first order and higher order) to S1 and S2 
         # explicit indices: ThalE = 30, POm = 32 (the reticular populations 31 and 33 stay local)
         n_cortical = nPopA3b + nPopS1 + nPopS2
+
         tau[:n_cortical, n_cortical] += thal_delay_factor
         tau[:n_cortical, n_cortical + 2] += thal_delay_factor
+        """
 
         # Alternative, old values for tau
         # E1, E2, E3, E4, PV1, PV2, PV3, PV4, SOM1, SOM2, SOM3, SOM4, VIP1

@@ -588,6 +588,52 @@ class SomatoModel():
         Simulation loop
         '''
 
+
+        # set up connection specific delay matrix
+        self.delay_matrix = np.zeros((self.nPop, self.nPop))
+
+        # short range cortical connections: delay between A3b  A1
+        # from A3b to A1
+        self.delay_matrix[4:17, 0:4] = self.delay_factor_short
+        # from A1 to A3b
+        self.delay_matrix[0:4, 4:17] = self.delay_factor_short
+        
+        # add delay to long range connections only connecting E in Layer 2/3 and 5
+        # from S2 to A3b  
+        self.delay_matrix[0, 0+4+13] = self.delay_factor
+        self.delay_matrix[0, 7+4+13] = self.delay_factor
+        # from A3b to S2
+        self.delay_matrix[0+4+13, 0] = self.delay_factor
+        self.delay_matrix[4+4+13, 0] = self.delay_factor
+        self.delay_matrix[7+4+13, 0] = self.delay_factor
+        # from S2 to S1
+        self.delay_matrix[0+4, 0+4+13] = self.delay_factor
+        self.delay_matrix[0+4, 7+4+13] = self.delay_factor
+        self.delay_matrix[7+4, 0+4+13] = self.delay_factor
+        self.delay_matrix[7+4, 7+4+13] = self.delay_factor
+        # from S1 to S2
+        self.delay_matrix[0+4+13, 0+4] = self.delay_factor
+        self.delay_matrix[0+4+13, 7+4] = self.delay_factor
+        self.delay_matrix[4+4+13, 0+4] = self.delay_factor # layer 4 in S2
+        self.delay_matrix[4+4+13, 7+4] = self.delay_factor # layer 4
+        self.delay_matrix[7+4+13, 0+4] = self.delay_factor
+        self.delay_matrix[7+4+13, 7+4] = self.delay_factor
+
+        # thalamic connections to cortical areas
+        n_cortical = self.nPop -4
+        self.delay_matrix[:n_cortical, n_cortical] = self.thal_delay_factor
+        self.delay_matrix[:n_cortical, n_cortical+2] = self.thal_delay_factor
+
+        # convert delay into simulation time step to know until when we need to memorize the rates
+        self.delay_steps = np.rint(
+            self.delay_matrix / self.step_size
+        ).astype(int)
+        self.max_delay = np.max(self.delay_steps)
+
+        # depending on the different delay our memory has to keep several steps from the past
+        self.memory_rates = np.zeros((self.nPop, self.max_delay + 1))
+
+
         last_step = self.steps[-1] 
 
         for timestep, _ in enumerate(self.steps):
@@ -596,8 +642,12 @@ class SomatoModel():
             self.potential[:, :, timestep] = self.v_current.copy()
             self.rate_current = self.compute_rates()
             self.rate[:, timestep] = self.rate_current
-            self.v_current = self.compute_potentials(timestep)
 
+            # I need to store the computed rates in the memory matrix
+            memory_idx = timestep % (self.max_delay + 1)
+            self.memory_rates[:, memory_idx] = self.rate_current
+
+            self.v_current = self.compute_potentials(timestep)
 
     def compute_rates(self):
         """
@@ -619,6 +669,9 @@ class SomatoModel():
         The last three synapse columns of W / v_current / u_t are the input synapses:
         -3 background (Wb), -2 external (Wext), -1 modulatory (Wm).
         """
+        
+        # this matrix we need for retreiving the delayed firing rate from our memory array
+        rows, cols = np.indices((self.nPop, self.nPop))
 
         pop_slice = slice(0, self.nPop)
 
@@ -635,7 +688,20 @@ class SomatoModel():
         )
 
         # synaptic drive
-        drive = self.W[:, pop_slice] * self.rate_current
+        # here we need to take care of the delays, but not all populations have the same delay
+        # pop_slice determines the weight from the source population
+        
+        # we first need a matrix that checks in which connection we need to update the potentials now
+        # in the beginning the difference is negative as the delay goes back to before the simulation
+        # started; use the rate of the first step (resting state) instead of zero
+        source_times = np.maximum(timestep - self.delay_steps, 0)
+        source_indices = source_times % (self.max_delay + 1)
+
+        # here we use paried indexing to find the right population and the correct timestep
+        delayed_rates = self.memory_rates[cols, source_indices]
+
+        # instead of the current rates, take the matrix with the delayed rates based on the connection specific delay
+        drive = self.W[:, pop_slice] * delayed_rates
 
         u_dot = (
             (self.H[:, pop_slice] / self.tau[:, pop_slice]) * drive
