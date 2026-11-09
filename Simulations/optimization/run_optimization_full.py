@@ -86,60 +86,60 @@ tc_data_path = os.path.join(_roi_dir, "group_roi_timecourse_pooled_ses-elec_prep
 # ── parameters that can be fitted ────────────────────────────────────────────────
 PARAMETER_DICT = {
     # DELAYS
-    "thal_delay_factor":       dict(enabled=True, kind="param", abs=(0.003, 0.01)),
-    "delay_factor":            dict(enabled=True, kind="param", abs=(0.005, 0.015)),
-    "delay_factor_short":      dict(enabled=True, kind="param", abs=(0.001, 0.006)),
-    "receptor_thalamus_delay": dict(enabled=False, kind="param", abs=(0.005, 0.025)),
+    "thal_delay_factor":       dict(enabled=True, abs=(0.003, 0.01), default=0.005),
+    "delay_factor":            dict(enabled=True, abs=(0.005, 0.015), default=0.01),
+    "delay_factor_short":      dict(enabled=True, abs=(0.001, 0.006), default=0.002),
+    "receptor_thalamus_delay": dict(enabled=False, abs=(0.005, 0.025), default=0.01),
     
     # CONNECTIVITY & COUPLING 
-    "coupling_strength":       dict(enabled=False, kind="param", abs=(0.5, 10)), 
-    "strength_I":              dict(enabled=False, kind="param", abs=(0.5, 1.5)), 
-    "g_intercortical":         dict(enabled=False, kind="param", abs=(0.5, 5)),
+    "coupling_strength":       dict(enabled=False, abs=(0.5, 10), default=1), 
+    "strength_I":              dict(enabled=False, abs=(0.5, 1.5), default=1), 
+    "g_intercortical":         dict(enabled=False, abs=(0.5, 5), default=1),
     # intra-cortical
-    "f_intra_S2":              dict(enabled=False, kind="param", abs=(0.5, 3.0)),
-    "f_intra":                 dict(enabled=True, kind="param", abs=(0.5, 3.0)),
-    "p_2PVE":                  dict(enabled=False, kind="param", abs=(37.4, 37.4), default=37.4),
-    "p_4PVE":                  dict(enabled=False, kind="param", abs=(39.6, 39.6), default=39.6),
+    "f_intra_S2":              dict(enabled=False, abs=(0.5, 3.0), default=1),
+    "f_intra":                 dict(enabled=True, abs=(0.5, 3.0), default=1),
+    "p_2PVE":                  dict(enabled=False, abs=(37.4, 37.4), default=37.4),
+    "p_4PVE":                  dict(enabled=False, abs=(39.6, 39.6), default=39.6),
     # feedforward
-    "ff_A1_S2":                dict(enabled=True, kind="path", abs=(0.5, 2.0)),
-    "ff_A3b_S2":               dict(enabled=False, kind="path", abs=(0.5, 2.0)),
-    "ff_A3b_A1":               dict(enabled=True, kind="path", abs=(0.5, 2.0)),
+    "ff_A1_S2":                dict(enabled=True, abs=(0.5, 2.0), default=1),
+    "ff_A3b_S2":               dict(enabled=False, abs=(0.5, 2.0), default=1),
+    "ff_A3b_A1":               dict(enabled=True, abs=(0.5, 2.0), default=1),
     # feedback
-    "fb_A1_S2":                dict(enabled=True, kind="path", abs=(0.5, 2.0)),
-    "fb_A3b_A1":               dict(enabled=True, kind="path", abs=(0.5, 2.0)),
-    "fb_A3b_S2":               dict(enabled=True, kind="path", abs=(0.5, 2.0)),
+    "fb_A1_S2":                dict(enabled=True, abs=(0.5, 2.0), default=1),
+    "fb_A3b_A1":               dict(enabled=True, abs=(0.5, 2.0), default=1),
+    "fb_A3b_S2":               dict(enabled=True, abs=(0.5, 2.0), default=1),
     # thalamus
-    "g_thalPOm":               dict(enabled=False, kind="param", abs=(0.5, 3.0)),
-    "g_thal":                  dict(enabled=False, kind="param", abs=(0.5, 3.0)),
-    "POm_drive_A3b":           dict(enabled=False, kind="path", abs=(0.5, 2.0)),
-    "POm_drive_A1":            dict(enabled=True, kind="path", abs=(0.5, 2.0)),
-    "POm_drive_S2":            dict(enabled=True, kind="path", abs=(0.5, 2.0)),
-    "POm_tgt_A3b":             dict(enabled=False, kind="path", abs=(0.5, 2.0)),
-    "POm_tgt_A1":              dict(enabled=False, kind="path", abs=(0.5, 2.0)),
-    "POm_tgt_S2":              dict(enabled=False, kind="path", abs=(0.5, 2.0)),
+    "g_thalPOm":               dict(enabled=False, abs=(0.5, 3.0), default=1),
+    "g_thal":                  dict(enabled=False, abs=(0.5, 3.0), default=1),
+    "POm_drive_A3b":           dict(enabled=False, abs=(0.5, 2.0), default=1),
+    "POm_drive_A1":            dict(enabled=True, abs=(0.5, 2.0), default=1),
+    "POm_drive_S2":            dict(enabled=True, abs=(0.5, 2.0), default=1),
+    "POm_tgt_A3b":             dict(enabled=False, abs=(0.5, 2.0), default=1),
+    "POm_tgt_A1":              dict(enabled=False, abs=(0.5, 2.0), default=1),
+    "POm_tgt_S2":              dict(enabled=False, abs=(0.5, 2.0), default=1),
     
     # TIME CONSTANTS
-    "e3b_tau":                 dict(enabled=True, kind="param", abs=(4.0, 6.0)),
-    "e1_tau":                  dict(enabled=True, kind="param", abs=(4.0, 6.0)),
-    "e2_tau":                  dict(enabled=True, kind="param", abs=(4.0, 6.0)),
+    "e3b_tau":                 dict(enabled=True, abs=(4.0, 8.0), default=6),
+    "e1_tau":                  dict(enabled=True, abs=(4.0, 8.0), default=6),
+    "e2_tau":                  dict(enabled=True, abs=(4.0, 8.0), default=6),
 
     # INPUTS 
-    "Ib_strength":             dict(enabled=False, kind="param", abs=(1, 60)),
-    "Iext_strength":           dict(enabled=False, kind="param", abs=(1, 100)),
-    "Iext_duration":           dict(enabled=False, kind="param", abs=(0.005, 0.02)),
-    "Im_strength":             dict(enabled=False, kind="param", abs=(0, 10)),
-    "Ib_noise_std":            dict(enabled=False, kind="param", abs=(0.5, 2)),
-    "Ib_ratio_E":              dict(enabled=False, kind="param", abs=(1, 1), default=1),
-    "Ib_ratio_PV":             dict(enabled=False, kind="param", abs=(0.6, 0.9), default=0.7),
-    "Ib_ratio_SST":            dict(enabled=False, kind="param", abs=(0.7, 1.2), default=1),
-    "Ib_ratio_VIP":            dict(enabled=False, kind="param", abs=(0.4, 0.7), default=0.6),
-    "scaling_factor":          dict(enabled=False, kind="param", abs=(1, 1), default=1),
+    "Ib_strength":             dict(enabled=False, abs=(1, 60), default=5),
+    "Iext_strength":           dict(enabled=False, abs=(1, 100), default=10),
+    "Iext_duration":           dict(enabled=False, abs=(0.005, 0.02), default=0.01),
+    "Im_strength":             dict(enabled=False, abs=(0, 10), default=0),
+    "Ib_noise_std":            dict(enabled=False, abs=(0.5, 2), default=0.5),
+    "Ib_ratio_E":              dict(enabled=False, abs=(1, 1), default=1),
+    "Ib_ratio_PV":             dict(enabled=False, abs=(0.6, 0.9), default=0.7),
+    "Ib_ratio_SST":            dict(enabled=False, abs=(0.7, 1.2), default=1),
+    "Ib_ratio_VIP":            dict(enabled=False, abs=(0.4, 0.7), default=0.6),
+    "scaling_factor":          dict(enabled=False, abs=(1, 1), default=1),
 
     # DIPOLE LENGTHS
-    "F_L5": dict(enabled=True, abs=(dp.F_L5_MIN, 10.0)),
-    "F_L6": dict(enabled=True, abs=(1.0, 10.0)),
-
+    "F_L5": dict(enabled=True, abs=(dp.F_L5_MIN, 10.0), default=5),
+    "F_L6": dict(enabled=True, abs=(1.0, 10.0), default=5),
 }
+
 fitted_params = [p for p in PARAMETER_DICT]
 parameter_vals = [PARAMETER_DICT[p] for p in fitted_params]
 bounds = [p['abs'] for p in parameter_vals]
@@ -152,7 +152,7 @@ def objective(**params):
     """
 
     model.apply_params(params)
-    
+
     model.initialize_state()
     model.simulate()
     sim_dip = model.compute_dipoles()
