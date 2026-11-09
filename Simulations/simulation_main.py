@@ -55,7 +55,8 @@ ps_target_path = os.path.join(
 # add model to datapath
 sys.path.append(os.path.join(WDDIR, 'Simulations', 'model'))
 sys.path.append(os.path.join(WDDIR, 'EEGSimulation'))
-from somato_model import SomatoModel, read_simulation_params, load_optimized_params
+from somato_model import (SomatoModel, read_simulation_params, load_optimized_params,
+                          load_finetuned_params, apply_pathway_scales)
 #from somato_model_pyrates_no_conn_operators_complete_pycobi import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 # how the EEG-scale dipole is built out of the laminar potentials; the same functions
@@ -94,11 +95,6 @@ epoch_fif = os.path.join(sub_dir,
     f"sub-0{subID}_ses-{modality}_task-NT_"
     f"lfreqori-{l_freq_orig}_lfreq-{l_freq}_hfreq-{h_freq}_epochs{suffix}.fif")
 
-# electrical-modality subjects; compute_dipoles reads each one's forward model
-# (same list as Analysis/SourceReconstruction/step002_inverse_solution_multisub_epochswise.py)
-subID_elec = [15] #, 16, 17, 18, 23, 24, 25, 26, 27, 28, 29, 34, 35, 36, 37, 38, 39, 40,
-              #42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52]
-
 # needed for rh.BA3b.label lookup inside simulate_eeg()
 data_path_labels = sample.data_path()
 
@@ -129,21 +125,21 @@ if not os.path.exists(filedir):
 # They are overrides on top of the simulation_parameter.json defaults loaded above,
 # and are only applied in the `if not use_opt:` branch below - with use_opt = True
 # the whole block is unused and the parameters come from load_optimized_params().
-coupling_strengths = [3] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
+coupling_strengths = [5] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
 strength_Is = [1] #np.arange(0.6, 1.1, 0.1) #[0.4133] # [0.8499] #[0.76131] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
 backgrndI_strengths = [1] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
 Ib_noise_std = 0.5
 Ib_ratio_E = 1.0    
 Ib_ratio_PV = 0.74 # default 0.7
 Ib_ratio_SST = 1 # default 0.9
-Ib_ratio_VIP = 0.66 #5 # default 0.4    
+Ib_ratio_VIP = 0.4#5 # default 0.4    
 modulI_strengths = [0] #[0, 5, 10]
 input_durations = [0.005] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
 input_strengths = [30] # np.arange(0,50,10)
 ginters = [1] #np.arange(0.4, 1.4, 0.1) #[0.7994] #[1.418] #np.arange(0,2,0.2)
 g_thalPOms = [1] #np.arange(0.76, 1.4, 0.1) #[0.325] # [0.2097] # [0.2766] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
-delay_factor = 0.008 # 4 #0.00565 #0.00637 #0.00615
-delay_factor_short = 0.001 #0.00352 # 0.00472 # 0.004
+delay_factor = 0.001 # 4 #0.00565 #0.00637 #0.00615
+delay_factor_short = 0.005 #0.00352 # 0.00472 # 0.004
 receptor_thalamus_delay = 0.01 # from periphery to thal
 thal_delay_factor = 0.005 # 0.00426 # 0.00426 #0.00498 # from thal to cortex delay
 e3b_tau = 5.2# 6.925 # 2.247 #4.814 
@@ -160,8 +156,16 @@ resistance_factor = 1
 area = 'all'
 pyrates = False
 use_opt = False
+# result of optimization/run_optimization_dipole.py ($SIMDIR/optimization_finetune/<folder>): its searched
+# model parameters, pathway scale factors and fitted dipole file, applied on top of the module-level values
+# above (the run's warm start - keep them as they were during the run, see its run_config.json "warm_start").
+# Exclusive with use_opt.
+use_finetune = False
+finetune_run = "ft_20261105_113045_ga-16p"
+pathway_scales = {}
 save_connectivity = False
-plot_dipole_computation = False
+plot_dipole_computation = True
+assert not (use_opt and use_finetune), "use_opt and use_finetune are exclusive"
 
 if use_opt:
     # option to read file from optimization run: simulation_parameter.json base params
@@ -177,7 +181,11 @@ if use_opt:
     params = load_optimized_params(opt_run) #, overrides={'Im_strength' : modulI_strengths, 'Ib_noise_std': Ib_noise_std, 'delay_factor_short': 0})
     #params = load_optimized_params(opt_run, overrides={'Ib_ratio_PV' : Ib_ratio_PV, 'Ib_ratio_SST': Ib_ratio_SST, 'Ib_ratio_VIP': Ib_ratio_VIP})
 
-   
+if use_finetune:
+    # only the searched parameters; the rest is the module-level block above (what the optimizer
+    # used as its warm start), applied in the loop below, then these on top
+    finetune_overrides, pathway_scales = load_finetuned_params(finetune_run)
+
 for ginter in ginters:
     #print("ginter", np.round(ginter, 3))
     for g_thalPOm in g_thalPOms:
@@ -196,7 +204,7 @@ for ginter in ginters:
                         for Im in modulI_strengths:
                             
                             if not use_opt:
-                                
+
                                 params['g_intercortical'] = np.round(ginter, 4)
                                 params['coupling_strength'] = g 
                                 params['strength_I'] = np.round(sI, 4)
@@ -226,6 +234,9 @@ for ginter in ginters:
                                 params['f_intra'] = f_intra
                                 params['f_intra_S2'] = f_intra_S2
 
+                                if use_finetune:
+                                    params.update(finetune_overrides)
+
 
                             # run several iterations when noise is present
                             if Ib_noise_std > 0:
@@ -247,6 +258,10 @@ for ginter in ginters:
                                     model = SomatoModelPyrates(params)
                                 else:
                                     model = SomatoModel(params)
+                                    if pathway_scales:
+                                        # the optimizer scales W blocks after building the model
+                                        apply_pathway_scales(model, pathway_scales)
+                                        model.initialize_state()
 
                                 # save the connectivity heatmap into this run's directory
                                 if save_connectivity and not pyrates:

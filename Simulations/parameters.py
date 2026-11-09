@@ -432,9 +432,10 @@ class Parameter():
         # ... between area a1 and 3b
         # implement manually
         W_S1A3b = np.zeros((13, 4)) #np.zeros(W_S1A3b.shape)
-        W_S1A3b[0,0] = 60 * g_intercortical # to E in layer 2/3 from E in A3b
-        W_S1A3b[4,0] = 500 * g_intercortical # to E in layer 4 from E in A3b
-        W_S1A3b[7,0] = 60 * g_intercortical # to E in layer 5 from E in A3b
+        W_S1A3b[0,0] = 60 * g_intercortical * ff_A3b_to_A1 # to E in layer 2/3 from E in A3b
+        W_S1A3b[4,0] = 500 * g_intercortical * ff_A3b_to_A1 # to E in layer 4 from E in A3b
+        W_S1A3b[7,0] = 60 * g_intercortical * ff_A3b_to_A1 # to E in layer 5 from E in A3b
+                
         W_A3bS1 = np.zeros((4,13)) 
         W_A3bS1[0,0] = 50 * g_intercortical # to E3b from E in layer 2/3 in A1
         W_A3bS1[1,0] = 100 * g_intercortical # to PV3b from E in layer 2/3 in A1
@@ -463,8 +464,8 @@ class Parameter():
         # feedforward S1 to S2
         W0[idx_S1_E[0]+13,idx_S1_E[0]] = 40 * g_intercortical # S1 layer 2/3 E to S2 layer 2/3 E
         W0[idx_S1_E[0]+13,idx_S1_E[2]] = 20 * g_intercortical # S1 layer 5 E to S2 layer 2/3 E
-        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 60 #500 #60 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
-        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 60 #500 #60 * g_intercortical # S1 layer 5 E to S2 layer 4 E
+        W0[idx_S1_E[1]+13,idx_S1_E[0]] = 60 * g_intercortical # S1 layer 2/3 E to S2 layer 4 E
+        W0[idx_S1_E[1]+13,idx_S1_E[2]] = 60 * g_intercortical # S1 layer 5 E to S2 layer 4 E
         W0[idx_S1_E[2]+13,idx_S1_E[0]] = 40 * g_intercortical # S1 layer 2/3 E to S2 layer 5 E
         W0[idx_S1_E[2]+13,idx_S1_E[2]] = 20 * g_intercortical # S1 layer 5 E to S2 layer 5 E
         
@@ -587,6 +588,7 @@ class Parameter():
 
         # join area 3b, S1 and S2 input arrays
         W_from_thal = np.hstack((W_A3bThal.T, W_from_thal_A1, W_from_thal_S2))
+
         # add within thalamus (E and I) connectivity 
         thal_connect = list(thal_connect) + [0] * (6 - len(thal_connect))
         tEE, tEI, tIE, tII, tPOmI, tIPOm = thal_connect
@@ -617,7 +619,6 @@ class Parameter():
         # modulatory external background input (from frontal areas) targeting only VIP neurons
         Wm = np.zeros((W_from_thal.shape[1], 1))
         Wm[classes == "VIP", 0] = 1 * mI_cellcount   # VIP3b, VIP1 (S1), VIP1S2 (S2)
-
 
         return W0, W_to_thal, W_from_thal, Wb, Wext, Wm
 

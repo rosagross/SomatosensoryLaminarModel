@@ -37,13 +37,11 @@ import copy
 import json
 import os
 import sys
-
 import numpy as np
 
 WDDIR = os.getenv("WDDIR", "/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel")
 SIM_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, SIM_DIR)
-sys.path.append(os.path.join(SIM_DIR, "model"))
 from somato_model import read_dipole_params, DIPOLE_SOURCE_PATHS, DIPOLE_TARGET_LAYERS   # noqa: E402
 
 REFERENCE_JSON = os.path.join(WDDIR, "EEGSimulation", "dipole_parameters_flippedPVSST.json")

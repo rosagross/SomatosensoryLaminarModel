@@ -469,7 +469,7 @@ class SomatoModel():
             self.mI_cellcounts,
             area=self.area,
             bI_ratios=self.bI_ratios(),
-        )
+        )        
 
 
     def create_Iext(self):
@@ -1141,6 +1141,35 @@ class SomatoModel():
         cellcounts = self.p.get_cellcounts(return_A3b=True)
 
         return dipole_length, dipole_orientation, resistance_factor, cellcounts
+
+
+    def load_dipole_params_parameterized(self):
+        """
+        Drop-in for load_dipole_params(): the dipole lengths come from the 10 parameters of
+        dipole_parameterization.py instead of the JSON file. Orientation is still read from
+        the file. self.dipole_length_params (optional dict) overrides the module-level values.
+        """
+        # imported here because dipole_parameterization imports this module
+        import dipole_parameterization as dp
+
+        p = {**dp.current_params(), **(getattr(self, 'dipole_length_params', None) or {})}
+        dp._validate(p)
+
+        # (9, 34): rows A3b, A1 L2/3-L6, S2 L2/3-L6 -> same layout as read_dipole_params
+        m = dp.length_matrix(p)
+        dipole_length = {'A3b': m[0].tolist(), 'A1': m[1:5].tolist(), 'S2': m[5:9].tolist()}
+
+        dipole_params = read_dipole_params(getattr(self, 'dipole_params_file', None) or
+            os.path.join(WDDIR, 'EEGSimulation', 'dipole_parameters_flippedPVSST.json'))
+        dipole_orientation = dipole_params['dipole_orientation']
+        resistance_factor = self.resistance_factor
+
+        cellcounts = self.p.get_cellcounts(return_A3b=True)
+
+        return dipole_length, dipole_orientation, resistance_factor, cellcounts
+
+        
+
 
     def get_population_mapping(self):
         """

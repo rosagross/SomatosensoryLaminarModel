@@ -11,7 +11,7 @@ Two parts:
 1. Dipole lengths (10 parameters of dipole_parameterization.py: L_BASE, F_L5, F_L6, F_L4_A1, F_L4_S2, L_THALE_CTX,
    L_THALPOM_CTX, L_THALE_A3B, L_THALPOM_A3B, L_A3B_CORT). The dipole is linear in the simulated PSPs:
    dip_r(t) = sum_s w[r, s] * P[r, s](t)  with w = length * orientation * relative E count, and the length matrix is built
-   from the 10 parameters (layer of the target, source population, source cell type). For fixed F_L5 and F_L6 it is linear in
+   from the 10 parameters (layer of/data/p_02989/Modelling/grossmannr_wd/SomatosensoryLaminarModel/Simulations/optimization/run_optimization_dipole.py the target, source population, source cell type). For fixed F_L5 and F_L6 it is linear in
    8 lengths (L_BASE, L_L4_A1 = L_BASE*F_L4_A1, L_L4_S2, L_THALE_CTX, L_THALPOM_CTX, L_THALE_A3B, L_THALPOM_A3B, L_A3B_CORT).
    Windowing, decimation and baseline subtraction are linear as well, so after one simulation the ROI traces are
    sum_g c_g * X_g(t) with X_g computed once, and the 8 lengths follow from a bounded linear least squares problem (post-stimulus
@@ -87,9 +87,9 @@ model = ro.model
 ROIS = ("A3b", "A1", "S2")
 
 # ── settings ───────────────────────────────────────────────────────────────────
-N1, N2, N3, N_ITER = 50, 80, 80, 5     # GA: initial population, crossover / mutation offspring, iterations
+N1, N2, N3, N_ITER = 10, 20, 20, 10     # GA: initial population, crossover / mutation offspring, iterations
 PENALTY = 5.0                          # objective value of a failed / non-finite evaluation
-R_MAX = 4.0                            # upper bound of a dipole length, in units of its warm value (after the scale of pass 1)
+R_MAX = 10                            # upper bound of a dipole length, in units of its warm value (after the scale of pass 1)
 LO_CORTEX = 0.25                       # lower bound of L_BASE and L_A3B_CORT (same units); the other lengths may go to 0.
                                        # Without it the fit can switch the main cortical dipoles off entirely.
 POLISH = True                          # polish the weights on the exact error (pre + post, global peak) in the final outputs
