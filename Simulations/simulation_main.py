@@ -56,7 +56,7 @@ ps_target_path = os.path.join(
 sys.path.append(os.path.join(WDDIR, 'Simulations', 'model'))
 sys.path.append(os.path.join(WDDIR, 'EEGSimulation'))
 from somato_model import (SomatoModel, read_simulation_params, load_optimized_params,
-                          load_finetuned_params, apply_pathway_scales)
+                          load_finetuned_params)
 #from somato_model_pyrates_no_conn_operators_complete_pycobi import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 # how the EEG-scale dipole is built out of the laminar potentials; the same functions
@@ -162,7 +162,6 @@ use_opt = False
 # Exclusive with use_opt.
 use_finetune = False
 finetune_run = "ft_20261105_113045_ga-16p"
-pathway_scales = {}
 save_connectivity = False
 plot_dipole_computation = True
 assert not (use_opt and use_finetune), "use_opt and use_finetune are exclusive"
@@ -184,7 +183,7 @@ if use_opt:
 if use_finetune:
     # only the searched parameters; the rest is the module-level block above (what the optimizer
     # used as its warm start), applied in the loop below, then these on top
-    finetune_overrides, pathway_scales = load_finetuned_params(finetune_run)
+    finetune_overrides = load_finetuned_params(finetune_run)
 
 for ginter in ginters:
     #print("ginter", np.round(ginter, 3))
@@ -258,10 +257,6 @@ for ginter in ginters:
                                     model = SomatoModelPyrates(params)
                                 else:
                                     model = SomatoModel(params)
-                                    if pathway_scales:
-                                        # the optimizer scales W blocks after building the model
-                                        apply_pathway_scales(model, pathway_scales)
-                                        model.initialize_state()
 
                                 # save the connectivity heatmap into this run's directory
                                 if save_connectivity and not pyrates:

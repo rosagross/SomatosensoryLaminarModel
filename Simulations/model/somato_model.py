@@ -10,7 +10,7 @@ import seaborn as sns
 import pandas as pd
 import mne
 import parameters
-from parameters import Parameter
+from parameters import Parameter, PATHWAY_NAMES
 
 location = "mpi"
 if location == "laptop":
@@ -100,6 +100,8 @@ REQUIRED_PARAMS = (
     'Ib_ratio_E', 'Ib_ratio_PV', 'Ib_ratio_SST', 'Ib_ratio_VIP',
     # gains
     'coupling_strength', 'strength_I', 'g_thal', 'sI_thal', 'sI_thalPOm', 'g_thalPOm', 'g_intercortical',
+    # inter-area pathway scale factors (1 = unchanged), see parameters.PATHWAY_NAMES
+    *PATHWAY_NAMES,
     # delays / time constants / connection probabilities (passed to Parameter)
     'delay_factor_short', 'delay_factor', 'thal_delay_factor', 'receptor_thalamus_delay',
     'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE', 'f_intra', 'f_intra_S2',
@@ -240,26 +242,8 @@ def load_optimized_params(opt_run, overrides=None):
 
     return params
 
-# Pathway scale factors of run_optimization_dipole.py: factor on a block of W [rows, cols]
-# (1 = unchanged), applied after the model has built W.
-_A3B, _A1, _S2, _POM = slice(0, 4), slice(4, 17), slice(17, 30), 32
-PATHWAYS = {
-    "ff_A3b_A1": (_A1, _A3B), "ff_A1_S2": (_S2, _A1), "ff_A3b_S2": (_S2, _A3B),
-    "fb_A3b_A1": (_A3B, _A1), "fb_A1_S2": (_A1, _S2), "fb_A3b_S2": (_A3B, _S2),
-    "POm_drive_A3b": (_POM, _A3B), "POm_drive_A1": (_POM, _A1), "POm_drive_S2": (_POM, _S2),
-    "POm_tgt_A3b": (_A3B, _POM), "POm_tgt_A1": (_A1, _POM), "POm_tgt_S2": (_S2, _POM),
-}
 # dipole layer factors of the finetune run: used for the dipole file only, not model parameters
 DIPOLE_GENE_NAMES = ("F_L5", "F_L6")
-
-
-def apply_pathway_scales(model, scales):
-    """Multiply the W blocks of `scales` (dict PATHWAYS name -> factor) on a freshly built model.
-
-    W is rebuilt by apply_params, so call this after it (and before initialize_state / simulate)."""
-    for k, f in (scales or {}).items():
-        rows, cols = PATHWAYS[k]
-        model.W[rows, cols] = model.W[rows, cols] * float(f)
 
 
 def load_finetuned_params(ft_run):
@@ -277,9 +261,9 @@ def load_finetuned_params(ft_run):
 
     Returns
     -------
-    (overrides, pathway_scales) : model parameters to params.update(...) (including
-    `dipole_params_file`, the session's fitted dipole file), and the dict of W block factors
-    to pass to apply_pathway_scales after building the model.
+    overrides : model parameters to params.update(...), including the pathway scale factors
+    (ordinary model parameters, see parameters.PATHWAY_NAMES) and `dipole_params_file`, the
+    session's fitted dipole file.
     """
     run_dir = ft_run if os.path.isdir(ft_run) else os.path.join(SIMDIR, 'optimization_finetune', ft_run)
     with open(os.path.join(run_dir, 'optimization_summary.json'), 'r') as f:
@@ -289,10 +273,9 @@ def load_finetuned_params(ft_run):
     if not os.path.isfile(dipole_file):
         raise FileNotFoundError(dipole_file)
 
-    scales = {k: float(v) for k, v in best.items() if k in PATHWAYS}
-    overrides = {k: float(v) for k, v in best.items() if k not in PATHWAYS and k not in DIPOLE_GENE_NAMES}
+    overrides = {k: float(v) for k, v in best.items() if k not in DIPOLE_GENE_NAMES}
     overrides['dipole_params_file'] = dipole_file
-    return overrides, scales
+    return overrides
 
 
 def read_analysis_params():
@@ -395,7 +378,7 @@ class SomatoModel():
         self.t = 0.0
 
         # Weight matrix [to x from]
-        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios())
+        self.W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios(), **self.pathway_scales())
 
 
 
@@ -469,7 +452,8 @@ class SomatoModel():
             self.mI_cellcounts,
             area=self.area,
             bI_ratios=self.bI_ratios(),
-        )        
+            **self.pathway_scales(),
+        )
 
 
     def create_Iext(self):
@@ -533,7 +517,7 @@ class SomatoModel():
         S = self.p.get_connectStrength()
         P = self.p.get_connectProb()
         C = self.p.get_cellcounts()
-        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, bI_ratios=self.bI_ratios())
+        W = self.p.get_connectivity(self.g_intercortical,self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, bI_ratios=self.bI_ratios(), **self.pathway_scales())
 
         # Convert numpy arrays to lists
         parameters = {
@@ -562,7 +546,7 @@ class SomatoModel():
                 is only drawn, not saved.
         """
         pop_names = self.get_population_labels()
-        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios())
+        W = self.p.get_connectivity(self.g_intercortical, self.gE, self.gI, self.gEthal, self.gIthal, self.gPOmthal, self.gIthalPOm, self.thal_connect, self.extI_cellcounts, self.bI_cellcounts, self.thalE_cellcounts, self.thalI_cellcounts, self.pom_cellcounts, self.pomI_cellcounts, self.mI_cellcounts, area=self.area, bI_ratios=self.bI_ratios(), **self.pathway_scales())
         # drop the background (B) and external (Ext) input columns so the matrix is square
         W_df = pd.DataFrame(W[:, :-3], index=pop_names, columns=pop_names)
 
@@ -787,6 +771,13 @@ class SomatoModel():
 
     def compute_ecds():
         raise NotImplementedError
+
+    def pathway_scales(self):
+        """Inter-area pathway scale factors as {name: factor}, passed on to get_connectivity.
+
+        Collected here, like bI_ratios, so every get_connectivity call site gets the same set.
+        """
+        return {name: getattr(self, name) for name in PATHWAY_NAMES}
 
     def bI_ratios(self):
         """Background-input strength per cell class, as {class: ratio}.

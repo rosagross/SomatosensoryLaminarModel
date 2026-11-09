@@ -23,6 +23,17 @@ POPULATION_LABELS = np.array([
 # the cell classes a per-class parameter can address
 POPULATION_CLASSES = ("E", "PV", "SST", "VIP")
 
+# Scale factors (1 = unchanged) of the inter-area pathways, accepted by get_raw_connectivity /
+# get_connectivity as keyword arguments. Between cortical areas the name gives the two areas
+# and the prefix the direction: ff_A3b_A1 = feedforward A3b -> A1, fb_A3b_A1 = feedback
+# A1 -> A3b. POm_drive_<area> = area -> POm, POm_tgt_<area> = POm -> area.
+PATHWAY_NAMES = (
+    "ff_A3b_A1", "ff_A1_S2", "ff_A3b_S2",
+    "fb_A3b_A1", "fb_A1_S2", "fb_A3b_S2",
+    "POm_drive_A3b", "POm_drive_A1", "POm_drive_S2",
+    "POm_tgt_A3b", "POm_tgt_A1", "POm_tgt_S2",
+)
+
 
 def population_classes():
     """Cell class of every population, in connectivity row order.
@@ -325,7 +336,7 @@ class Parameter():
 
         return C 
 
-    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, bI_ratios=None):
+    def get_raw_connectivity(self, g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, bI_ratios=None, **pathways):
         """Put together the connevtivity matrix (not yet scaled by coupling strength and EI-balance parameter)
 
         Args:
@@ -345,15 +356,23 @@ class Parameter():
                        how strongly it lands on each class, so a class's mean drive and its
                        OU noise scale together. None (or a missing class) means 1.0, which
                        reproduces the uniform background the model used to have.
+            **pathways: scale factors of the inter-area pathways, any of PATHWAY_NAMES
+                        (default 1.0 = unchanged). Any other keyword raises a TypeError.
 
-        Returns: 
-            W0 (2D numpy array): connectivity matrix of only cortical populations (no thalamus)! 
+        Returns:
+            W0 (2D numpy array): connectivity matrix of only cortical populations (no thalamus)!
             W_to_thal (2D numpy array): 
             W_from_thal (2D numpy array):
             Wb (1D numpy array): background input array
             Wext (1D numpy array): external input array
             Wm (1D numpy array): modulatory input array (nonzero on the VIP rows only)
         """
+
+        # pathway scale factors: unknown keywords are typos, fail instead of ignoring them
+        scales = {name: float(pathways.pop(name, 1.0)) for name in PATHWAY_NAMES}
+        if pathways:
+            raise TypeError(f"get_raw_connectivity got unexpected keyword arguments {sorted(pathways)}; "
+                            f"pathway factors must be in PATHWAY_NAMES")
 
         S = self.get_connectStrength()
         # f_intra is left out here on purpose: the area 3b connectivity below is collapsed
@@ -432,9 +451,9 @@ class Parameter():
         # ... between area a1 and 3b
         # implement manually
         W_S1A3b = np.zeros((13, 4)) #np.zeros(W_S1A3b.shape)
-        W_S1A3b[0,0] = 60 * g_intercortical * ff_A3b_to_A1 # to E in layer 2/3 from E in A3b
-        W_S1A3b[4,0] = 500 * g_intercortical * ff_A3b_to_A1 # to E in layer 4 from E in A3b
-        W_S1A3b[7,0] = 60 * g_intercortical * ff_A3b_to_A1 # to E in layer 5 from E in A3b
+        W_S1A3b[0,0] = 60 * g_intercortical # to E in layer 2/3 from E in A3b
+        W_S1A3b[4,0] = 500 * g_intercortical # to E in layer 4 from E in A3b
+        W_S1A3b[7,0] = 60 * g_intercortical # to E in layer 5 from E in A3b
                 
         W_A3bS1 = np.zeros((4,13)) 
         W_A3bS1[0,0] = 50 * g_intercortical # to E3b from E in layer 2/3 in A1
@@ -481,8 +500,18 @@ class Parameter():
         W0[idx_S1_E[2],idx_S1_E[0]+13] = 20 * g_intercortical # S2 layer 2 E to S1 layer 5 E
         W0[idx_S1_E[2],idx_S1_E[2]+13] = 110 * g_intercortical # S2 layer 5 E to S1 layer 5 E
 
+        # inter-area pathway scale factors (rows = target, columns = source). The whole block is
+        # scaled, so the factor multiplies every connection of the pathway. They are applied here,
+        # before the coupling strengths gE/gI scale the columns, which gives the same W as scaling
+        # the finished matrix because both are plain multiplications.
+        W_S1A3b *= scales["ff_A3b_A1"]      # A3b -> A1
+        W_S2A3b *= scales["ff_A3b_S2"]      # A3b -> S2
+        W_A3bS1 *= scales["fb_A3b_A1"]      # A1 -> A3b
+        W_A3bS2 *= scales["fb_A3b_S2"]      # S2 -> A3b
+        W0[13:26, 0:13] *= scales["ff_A1_S2"]   # A1 -> S2
+        W0[0:13, 13:26] *= scales["fb_A1_S2"]   # S2 -> A1
 
-        # stack the matrices together 
+        # stack the matrices together
         W0 = np.vstack((np.hstack((W_A3bS1, W_A3bS2)), W0))
         W0 = np.hstack((np.vstack((W_A3bA3b, W_S1A3b, W_S2A3b)), W0))
 
@@ -566,6 +595,10 @@ class Parameter():
         a3b_C = np.array([np.sum(C[idx_S1_E]), np.sum(C[idx_S1_P]), np.sum(C[idx_S1_S]), np.sum(C[idx_S1_V])])
         C_all = np.concatenate((a3b_C, C))
         W_to_thal = np.multiply(PS_to_thal, C_all)
+        # POm_drive_<area>: scale the cortex -> POm connections (row 2 = POm) per source area
+        W_to_thal[2, 0:4] *= scales["POm_drive_A3b"]
+        W_to_thal[2, 4:17] *= scales["POm_drive_A1"]
+        W_to_thal[2, 17:30] *= scales["POm_drive_S2"]
 
         # thalamus input to S1 connectivity  
         PS_from_thal_A3b = np.multiply(P_thalToA3b, S_thalToA3b)
@@ -588,6 +621,10 @@ class Parameter():
 
         # join area 3b, S1 and S2 input arrays
         W_from_thal = np.hstack((W_A3bThal.T, W_from_thal_A1, W_from_thal_S2))
+        # POm_tgt_<area>: scale the POm -> cortex connections (row 2 = POm) per target area
+        W_from_thal[2, 0:4] *= scales["POm_tgt_A3b"]
+        W_from_thal[2, 4:17] *= scales["POm_tgt_A1"]
+        W_from_thal[2, 17:30] *= scales["POm_tgt_S2"]
 
         # add within thalamus (E and I) connectivity 
         thal_connect = list(thal_connect) + [0] * (6 - len(thal_connect))
@@ -623,7 +660,7 @@ class Parameter():
         return W0, W_to_thal, W_from_thal, Wb, Wext, Wm
 
 
-    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, gIthalPOm, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, area='all', bI_ratios=None):
+    def get_connectivity(self, g_intercortical, gE, gI, gEthal, gIthal, gPOmthal, gIthalPOm, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, area='all', bI_ratios=None, **pathways):
         """Apply coupling strength parameter and compute the final connectivity matrix.
 
         Args:
@@ -637,6 +674,8 @@ class Parameter():
             bI_cellcount (int): number of background input neurons (from other cortical areas)
             bI_ratios (dict): background-input strength per cell class relative to E; see
                               get_raw_connectivity. None keeps the uniform background.
+            **pathways: inter-area pathway scale factors (any of PATHWAY_NAMES, default 1.0); see
+                        get_raw_connectivity.
             thalE_cellcount (int): number of thalamic excitatory (VPM) neurons connecting to the somatosensory area
             thalI_cellcount (int): number of thalamic inhibitory (reticular nucleus) neurons
             pom_cellcount (int): number of POm neurons
@@ -653,7 +692,7 @@ class Parameter():
         """
         
 
-        W0, W_to_thal, W_from_thal, Wb, Wext, Wm = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, bI_ratios=bI_ratios)
+        W0, W_to_thal, W_from_thal, Wb, Wext, Wm = self.get_raw_connectivity(g_intercortical, thal_connect, extI_cellcount, bI_cellcount, thalE_cellcount, thalI_cellcount, pom_cellcount, pomI_cellcount, mI_cellcount, bI_ratios=bI_ratios, **pathways)
 
         # make inhibitory connections negative and apply weights gI and gE respectively
         idx_I_A3b = np.array([1,2,3])
