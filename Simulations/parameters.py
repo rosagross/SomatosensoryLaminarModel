@@ -68,20 +68,25 @@ def class_ratio_vector(ratios, default=1.0):
 class Parameter():
     
     def __init__(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6,
-                 p_2PVE=15, p_4PVE=20, f_intra=1.0, f_intra_S2=1.0):
+                 p_2PVE=15, p_4PVE=20, f_intra=1.0, f_intra_S2=1.0,
+                 nmda_tau_E=10e-3, nmda_tau_PV=5e-3, nmda_tau_SST=25e-3, nmda_tau_VIP=20e-3):
         # kept on the instance because get_raw_connectivity() and save_to_yaml() call
         # get_connectProb() without arguments, and they must see these values
         self.p_2PVE = p_2PVE
         self.p_4PVE = p_4PVE
         self.f_intra = f_intra
         self.f_intra_S2 = f_intra_S2
-        self.tau, self.nPop = self.get_params(delay_factor_short=delay_factor_short, delay_factor=delay_factor, thal_delay_factor=thal_delay_factor, e3b_tau=e3b_tau, e1_tau=e1_tau, e2_tau=e2_tau)
+        self.tau, self.nPop = self.get_params(delay_factor_short=delay_factor_short, delay_factor=delay_factor, thal_delay_factor=thal_delay_factor, e3b_tau=e3b_tau, e1_tau=e1_tau, e2_tau=e2_tau,
+                                          nmda_tau=dict(E=nmda_tau_E, PV=nmda_tau_PV, SST=nmda_tau_SST, VIP=nmda_tau_VIP))
         self.S = self.get_connectStrength()
         self.P = self.get_connectProb()
         self.C = self.get_cellcounts()
         self.sigmoid_params = self.get_sigmoid()
 
-    def get_params(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6, nmda_tau=[10e-3, 5e-3, 25e-3, 20e-3]):
+    def get_params(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6, nmda_tau=None):
+        # NMDA time constant (s) by postsynaptic cell class
+        if nmda_tau is None:
+            nmda_tau = dict(E=10e-3, PV=5e-3, SST=25e-3, VIP=20e-3)
 
         # nr. of populations
         nPopA3b = 4 # E, PV, SST, VIP

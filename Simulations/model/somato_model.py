@@ -104,7 +104,7 @@ REQUIRED_PARAMS = (
     *PATHWAY_NAMES,
     # delays / time constants / connection probabilities (passed to Parameter)
     'delay_factor_short', 'delay_factor', 'thal_delay_factor', 'receptor_thalamus_delay',
-    'e3b_tau', 'e1_tau', 'e2_tau', 'p_2PVE', 'p_4PVE', 'f_intra', 'f_intra_S2',
+    'e3b_tau', 'e1_tau', 'e2_tau', 'nmda_tau_E', 'nmda_tau_PV', 'nmda_tau_SST', 'nmda_tau_VIP', 'p_2PVE', 'p_4PVE', 'f_intra', 'f_intra_S2',
     # structure
     'area', 'thal_connect', 'extI_cellcounts', 'bI_cellcounts',
     'thalE_cellcounts', 'thalI_cellcounts', 'pom_cellcounts', 'pomI_cellcounts', 'mI_cellcounts',
@@ -318,7 +318,9 @@ class SomatoModel():
         self.p = Parameter(delay_factor_short=self.delay_factor_short, delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
                            p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE, f_intra=self.f_intra,
-                           f_intra_S2=self.f_intra_S2)
+                           f_intra_S2=self.f_intra_S2,
+                           nmda_tau_E=self.nmda_tau_E, nmda_tau_PV=self.nmda_tau_PV,
+                           nmda_tau_SST=self.nmda_tau_SST, nmda_tau_VIP=self.nmda_tau_VIP)
         self.tau = self.p.tau
         self.tau_external = 0.003 # fixed, was always 3 ms but I took it from the thalamus time constant, this is cleaner
         self.nPop = self.p.nPop
@@ -405,7 +407,7 @@ class SomatoModel():
 
         # rebuild the Parameter tables so the params baked into them take effect on
         # every update: the tau/delay-shaping ones (delay_factor_short, delay_factor,
-        # thal_delay_factor, e3b_tau, e1_tau, e2_tau) and the connection probabilities
+        # thal_delay_factor, e3b_tau, e1_tau, e2_tau, nmda_tau_*) and the connection probabilities
         # (p_2PVE, p_4PVE, f_intra, f_intra_S2), which self.W below is then recomputed from.
         # delay_factor_short used to be left out here, so it silently reverted to the
         # Parameter default (3 ms) on every update - a sweep over it would have
@@ -414,7 +416,9 @@ class SomatoModel():
                            delay_factor=self.delay_factor, thal_delay_factor=self.thal_delay_factor,
                            e3b_tau=self.e3b_tau, e1_tau=self.e1_tau, e2_tau=self.e2_tau,
                            p_2PVE=self.p_2PVE, p_4PVE=self.p_4PVE, f_intra=self.f_intra,
-                           f_intra_S2=self.f_intra_S2)
+                           f_intra_S2=self.f_intra_S2,
+                           nmda_tau_E=self.nmda_tau_E, nmda_tau_PV=self.nmda_tau_PV,
+                           nmda_tau_SST=self.nmda_tau_SST, nmda_tau_VIP=self.nmda_tau_VIP)
         self.tau = self.p.tau
 
         # recompute inputs and gains
@@ -2255,8 +2259,8 @@ class SomatoModel():
             # a lower amplitude compared to the ERP
             error_sim_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak - np.mean(sims_pre[roi] / global_sim_peak)) ** 2)))
             error_target_pre = float(np.sqrt(np.mean((tgts_pre[roi]/ global_target_peak - np.mean(tgts_pre[roi]/global_target_peak)) ** 2)))
-            error_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak) ** 2)))**2
-            #((error_sim_pre - error_target_pre)/error_target_pre)**2
+            #error_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak) ** 2)))**2
+            error_pre = ((error_sim_pre - error_target_pre)/error_target_pre)**2
             #print('ROI', roi)
             #print('Error pre', error_pre)
             #print('Error post', error_post)

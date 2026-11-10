@@ -124,9 +124,9 @@ if not os.path.exists(filedir):
 # They are overrides on top of the simulation_parameter.json defaults loaded above,
 # and are only applied in the `if not use_opt:` branch below - with use_opt = True
 # the whole block is unused and the parameters come from load_optimized_params().
-coupling_strengths = [5] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
+coupling_strengths = [1] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
 strength_Is = [1] #np.arange(0.6, 1.1, 0.1) #[0.4133] # [0.8499] #[0.76131] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-backgrndI_strengths = [10] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+backgrndI_strengths = [50] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
 Ib_noise_std = 0.5
 Ib_ratio_E = 1.0    
 Ib_ratio_PV = 0.74 # default 0.7
@@ -134,7 +134,7 @@ Ib_ratio_SST = 1 # default 0.9
 Ib_ratio_VIP = 0.4#5 # default 0.4    
 modulI_strengths = [0] #[0, 5, 10]
 input_durations = [0.005] # np.arange(0, 0.02, 0.004)# [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7]
-input_strengths = [30] # np.arange(0,50,10)
+input_strengths = [50] # np.arange(0,50,10)
 ginters = [1] #np.arange(0.4, 1.4, 0.1) #[0.7994] #[1.418] #np.arange(0,2,0.2)
 g_thalPOms = [1] #np.arange(0.76, 1.4, 0.1) #[0.325] # [0.2097] # [0.2766] #np.arange(0.1,1.01,0.1) # scales the POm population's output connectivity
 delay_factor = 0.001 # 4 #0.00565 #0.00637 #0.00615
@@ -144,6 +144,11 @@ thal_delay_factor = 0.005 # 0.00426 # 0.00426 #0.00498 # from thal to cortex del
 e3b_tau = 5.2# 6.925 # 2.247 #4.814 
 e1_tau = 5.4 #9.351 #4.8 #8.682 #7.126 #4.132 
 e2_tau = 4.8 #4.445 #2.55 #4.15 #4.712
+# NMDA decay (s) of E -> cell class connections, by postsynaptic class
+nmda_tau_E = 10e-3
+nmda_tau_PV = 5e-3
+nmda_tau_SST = 10e-3
+nmda_tau_VIP = 15e-3
 p_2PVE = 37.4 #25.95 # 22.51 #21.65 # 31.1 # L4 PV <- E connection probability (S1 and S2); original value 37.4
 p_4PVE = 39.6 #12.35 #28.4 #38.41 # L6 PV <- E connection probability (S1 and S2); original value 39.6
 f_intra = 1.3 # A1 layer 4 E -> layer 2/3 E and layer 5 E connection probability, factor on the original (1 = original)
@@ -162,7 +167,7 @@ use_opt = False
 use_finetune = False
 finetune_run = "ft_20261105_113045_ga-16p"
 save_connectivity = False
-plot_dipole_computation = True
+plot_dipole_computation = False
 assert not (use_opt and use_finetune), "use_opt and use_finetune are exclusive"
 
 if use_opt:
@@ -227,6 +232,10 @@ for ginter in ginters:
                                 params['e3b_tau'] = e3b_tau
                                 params['e1_tau'] = e1_tau
                                 params['e2_tau'] = e2_tau
+                                params['nmda_tau_E'] = nmda_tau_E
+                                params['nmda_tau_PV'] = nmda_tau_PV
+                                params['nmda_tau_SST'] = nmda_tau_SST
+                                params['nmda_tau_VIP'] = nmda_tau_VIP
                                 params['p_2PVE'] = p_2PVE
                                 params['p_4PVE'] = p_4PVE
                                 params['f_intra'] = f_intra

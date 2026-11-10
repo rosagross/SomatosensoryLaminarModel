@@ -14,11 +14,14 @@ in which they answer the questions about a run, and saved to <session>/diagnosti
   03b_dipole_parameters_10.png      the 10 dipole parameters inside their search bounds
   04_dipole_computation_<area>.png  how the best fit's membrane potentials become the dipole (S2, A1, A3b)
   04b_layer_interneuron_contributions_<area>.png  which source populations (E/PV/SST/VIP) build each layer's dipole
-  single_simulations/all_potentials_*.pdf  04c: per-synapse potentials of every population (A3b+thalamus, S1, S2)
+  04c_dipole_length_by_celltype.png dipole length of each input cell type onto the E of every layer (all areas)
+  single_simulations/all_potentials_*.pdf  04d: per-synapse potentials of every population (A3b+thalamus, S1, S2)
   05_connectivity_neural.png        connectivity between the 34 populations of the best fit
   06_connectivity_inputs.png        weights of the background / external / modulatory input
+  07_saturation.png                 baseline firing rate and post-stimulus range of every population relative to its maximum rate
+  07b_sigmoid_operating_points.png  sigmoid of every population with the visited drive, to see whether it sits on a flat part
 
-Figure 01 only reads the files of the run. 02-06 re-simulate the best parameter set; the
+Figure 01 only reads the files of the run. 02-07 re-simulate the best parameter set; the
 re-simulated error must match the best error in evaluations.csv, otherwise the script stops.
 
 Files read from the session folder: run_config.json, evaluations.csv and, once the run has
@@ -44,7 +47,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # ── settings ───────────────────────────────────────────────────────────────────
-OPT_RUN_ID = "optfull_20261110_013733_roi-all"         # session folder name (or path); empty = newest optfull_* session
+OPT_RUN_ID = "optfull_20261110_125739_roi-all"    # session folder name (or path); empty = newest optfull_* session
 CHECK_TOL = 1e-6        # allowed difference between the re-simulated and the logged best error
 
 # ── paths ──────────────────────────────────────────────────────────────────────
@@ -63,7 +66,8 @@ import dipole_parameterization as dp
 import somato_model as sm
 import plotting_functions as pf
 from plot_dipole_computation import (plot_dipole_computation_area, plot_dipole_parameters_clean,
-                                    plot_layer_interneuron_contributions)
+                                    plot_layer_interneuron_contributions, _source_population_table,
+                                    _SOURCE_AREA_COLORS)
 
 # time axis of the ROI time courses: 2 ms samples, stimulus onset at sample 250 (as in compute_error_timecourse)
 ONSET_SAMPLE, DT_MS = 250, 2
@@ -299,7 +303,52 @@ def plot_dipole_parameter_values(run, dipole_params):
     return fig
 
 
-# ── 4c: per-synapse potentials ─────────────────────────────────────────────────
+# ── 4c: dipole length per input cell type ──────────────────────────────────────
+def plot_dipole_length_by_celltype(model):
+    """Dipole length (mm) of every input cell type onto the E population of each layer, all areas in one figure.
+
+    Rows A3b / S1 / S2, columns the target layers (A3b is unlaminated: one panel). In a panel every source
+    population is a dot at its length, coloured by source area, on the x position of its cell type; the tick
+    marks the largest length of the cell type. Only the length parameter is shown: no orientation, cell count
+    or potential. The lengths are those the model uses (model.load_dipole_params)."""
+    lengths = model.load_dipole_params()[0]
+    sources = _source_population_table(model)
+    cell_types = ("E", "PV", "SST", "VIP")
+    layer_names = ("L2/3", "L4", "L5", "L6")
+    AREA_OFFSET = {"A3b": -0.21, "S1": -0.07, "S2": 0.07, "Thalamus": 0.21}    # dots of one cell type side by side
+    rows = (("A3b", "A3b"), ("A1", "S1"), ("S2", "S2"))
+
+    fig, axes = plt.subplots(len(rows), 4, figsize=(11, 8), sharey="row", squeeze=False, constrained_layout=True)
+    for r, (key, display) in enumerate(rows):
+        mat = np.atleast_2d(np.asarray(lengths[key], dtype=float))      # (n_layers, 34)
+        for c in range(4):
+            ax = axes[r, c]
+            if c >= mat.shape[0]:
+                ax.axis("off")
+                continue
+            for x, ct in enumerate(cell_types):
+                members = [(j, rec) for j, rec in enumerate(sources) if rec[3] == ct]
+                vals = [mat[c, j] for j, _ in members]
+                for (j, rec), v in zip(members, vals):
+                    ax.plot(x + AREA_OFFSET[rec[1]], v, "o", color=_SOURCE_AREA_COLORS[rec[1]],
+                            markersize=6, markeredgecolor="k", markeredgewidth=0.4, alpha=0.9)
+                ax.hlines(max(vals), x - 0.3, x + 0.3, color="k", linewidth=1.5)
+            ax.axhline(0, color="0.6", linewidth=0.6)
+            ax.set_xticks(range(len(cell_types)))
+            ax.set_xticklabels(cell_types)
+            ax.set_xlim(-0.6, len(cell_types) - 0.4)
+            ax.set_title(f"{display} E" if mat.shape[0] == 1 else f"{display} {layer_names[c]} E", fontsize=10)
+            if c == 0:
+                ax.set_ylabel("dipole length (mm)")
+    handles = [plt.Line2D([0], [0], marker="o", linestyle="", color=col, markeredgecolor="k", label=f"source {name}")
+               for name, col in _SOURCE_AREA_COLORS.items()]
+    handles.append(plt.Line2D([0], [0], color="k", linewidth=1.5, label="largest length of the cell type"))
+    fig.legend(handles=handles, loc="outside lower center", ncol=5, frameon=False, fontsize=8)
+    fig.suptitle("dipole length of each input cell type onto the E population of each layer (best fit)")
+    return fig
+
+
+# ── 4d: per-synapse potentials ─────────────────────────────────────────────────
 def plot_full_potentials(model, out_dir, before_s=0.2, after_s=0.3):
     """Per-synapse potential decomposition of every population (pf.plot_all_potentials, as in simulation_main.py).
 
@@ -364,6 +413,144 @@ def plot_connectivity_inputs(model):
     return fig
 
 
+# ── 7: saturation of the population firing rates ───────────────────────────────
+def _roi_windows(model):
+    """Sample slices (pre-stimulus 500 ms, post-stimulus 250 ms) of the ROI time axis of compute_timecourse."""
+    stim_idx = round(model.input_onset / model.step_size) - 1
+    delay = round(model.receptor_thalamus_delay / model.step_size)
+    return slice(stim_idx - 500 - delay, stim_idx - delay), slice(stim_idx - delay, stim_idx + 251 - delay)
+
+
+def saturation_table(model):
+    """Operating point of every population on its sigmoid (firing rate = r_max / (1 + exp(slope * (v_thr - v)))).
+
+    v is the summed potential of all synapses of the population, as in model.compute_rates. Returns a dict of
+    (34,) arrays: slope, v_thr, r_max, and for the pre-stimulus window the mean v, drive x = slope * (v - v_thr)
+    and rate fraction r / r_max, and for the post-stimulus window the minimum / maximum of x and of the rate
+    fraction. x = 0 is the half-maximum point, |x| > 2.94 means the rate is below 5% or above 95% of r_max."""
+    pre, post = _roi_windows(model)
+    slope, v_thr, r_max = (np.asarray(model.sigm[:, k], dtype=float) for k in range(3))
+    v = model.potential.sum(axis=1)                                   # (34, n_samples)
+    x = slope[:, None] * (v - v_thr[:, None])
+    frac = model.rate / r_max[:, None]
+    return {"slope": slope, "v_thr": v_thr, "r_max": r_max,
+            "v_pre": v[:, pre].mean(axis=1), "x_pre": x[:, pre].mean(axis=1), "frac_pre": frac[:, pre].mean(axis=1),
+            "x_post_min": x[:, post].min(axis=1), "x_post_max": x[:, post].max(axis=1),
+            "frac_post_min": frac[:, post].min(axis=1), "frac_post_max": frac[:, post].max(axis=1),
+            "v": v[:, pre.start:post.stop], "x": x[:, pre.start:post.stop], "frac": frac[:, pre.start:post.stop],
+            "n_pre": pre.stop - pre.start}
+
+
+def plot_saturation(model):
+    """Firing-rate saturation of all 34 populations, grouped by area (best fit).
+
+    Rows: (1) pre-stimulus rate as a fraction of the population's maximum rate, with the min-max range
+    during the 250 ms after the stimulus as a line; (2) the same on the sigmoid input axis x = slope * (v - v_thr)
+    (symmetric log axis, dotted lines at x = +-2.94 = 5% / 95% of the maximum rate); (3) how much of the rate range
+    the stimulus uses (max - min of the rate fraction after the stimulus). Bars are red when the baseline rate is
+    above 95% of the maximum, blue below 5%, grey otherwise. Populations with a swing close to 0 do not
+    respond to anything but their own external input."""
+    tab = saturation_table(model)
+    labels = list(model.get_population_labels())
+    n = len(labels)
+    xs = np.arange(n)
+    sat_x = float(np.log(0.95 / 0.05))
+    colors = np.where(tab["frac_pre"] > 0.95, "C3", np.where(tab["frac_pre"] < 0.05, "C0", "0.6"))
+
+    fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True, constrained_layout=True)
+
+    ax = axes[0]
+    ax.bar(xs, tab["frac_pre"], color=colors)
+    ax.vlines(xs, tab["frac_post_min"], tab["frac_post_max"], color="k", linewidth=1.8)
+    ax.axhline(0.95, color="0.3", linestyle=":", linewidth=0.9)
+    ax.axhline(0.05, color="0.3", linestyle=":", linewidth=0.9)
+    ax.set_ylim(0, 1.05)
+    ax.set_ylabel("rate / maximum rate")
+    ax.set_title("baseline firing rate (bars) and its range 0-250 ms after the stimulus (black lines)")
+    for i in xs:
+        ax.text(i, 1.015, f"{tab['r_max'][i]:.0f}", ha="center", va="bottom", fontsize=5.5, color="0.35")
+    ax.text(-0.02, 1.015, "r_max (Hz):", transform=ax.get_yaxis_transform(), ha="right", va="bottom", fontsize=6, color="0.35")
+
+    ax = axes[1]
+    ax.axhspan(-sat_x, sat_x, color="0.92", zorder=0)
+    ax.bar(xs, tab["x_pre"], color=colors)
+    ax.vlines(xs, tab["x_post_min"], tab["x_post_max"], color="k", linewidth=1.8)
+    ax.axhline(0, color="0.3", linewidth=0.6)
+    ax.set_yscale("symlog", linthresh=sat_x)
+    y_lim = max(float(np.max(np.abs([tab["x_post_min"], tab["x_post_max"], tab["x_pre"]]))) * 1.3, 2 * sat_x)
+    ax.set_ylim(-y_lim, y_lim)
+    ticks = [t for t in (-1000, -100, -10, -sat_x, 0, sat_x, 10, 100, 1000) if abs(t) <= y_lim]
+    ax.set_yticks(ticks)
+    ax.set_yticklabels([f"{t:.2g}" for t in ticks])
+    ax.minorticks_off()
+    ax.set_ylabel("drive x = slope * (v - v_thr)")
+    ax.set_title("position on the sigmoid (grey band: rate between 5% and 95% of the maximum)")
+
+    ax = axes[2]
+    swing = tab["frac_post_max"] - tab["frac_post_min"]
+    ax.bar(xs, swing, color="C2")
+    ax.set_ylabel("swing after stimulus\n(fraction of max rate)")
+    ax.set_title("how much of its rate range each population uses in response to the stimulus")
+    ax.set_xticks(xs)
+    ax.set_xticklabels(labels, rotation=90, fontsize=8)
+
+    for ax in axes:
+        for _, start, _ in BLOCKS[1:]:
+            ax.axvline(start - 0.5, color="k", linewidth=0.8)
+        ax.set_xlim(-0.6, n - 0.4)
+    for name, start, stop in BLOCKS:
+        axes[2].text((start + stop - 1) / 2, 0.97, name, ha="center", va="top", fontsize=10, fontweight="bold",
+                     transform=axes[2].get_xaxis_transform())
+    n_high, n_low = int(np.sum(tab["frac_pre"] > 0.95)), int(np.sum(tab["frac_pre"] < 0.05))
+    fig.suptitle(f"saturation of the population firing rates, best fit: {n_high} of {n} populations above 95% and "
+                 f"{n_low} below 5% of their maximum rate at baseline")
+    print(f"saturation: {n_high} populations above 95% of r_max at baseline: "
+          f"{[labels[i] for i in np.where(tab['frac_pre'] > 0.95)[0]]}")
+    print(f"saturation: {n_low} populations below 5% of r_max at baseline: "
+          f"{[labels[i] for i in np.where(tab['frac_pre'] < 0.05)[0]]}")
+    return fig
+
+
+def plot_sigmoid_operating_points(model):
+    """Sigmoid of each of the 34 populations with the trajectory of its drive over -500..+250 ms (best fit).
+
+    x axis: drive x = slope * (v - v_thr) on a symmetric log axis, so potentials far outside the steep part of
+    the sigmoid stay visible; y axis: rate / maximum rate. Black line: sigmoid. Red line: the (x, rate) pairs
+    visited from 500 ms before to 250 ms after the stimulus, circle: mean over the pre-stimulus part. A trajectory
+    that sits on the flat part of the sigmoid cannot transmit changes of its input."""
+    tab = saturation_table(model)
+    labels = list(model.get_population_labels())
+    n = len(labels)
+    n_cols = 6
+    n_rows = int(np.ceil(n / n_cols))
+    lim = max(8.0, float(np.max(np.abs(tab["x"]))) * 1.3)
+    grid = np.concatenate([-np.logspace(np.log10(lim), -2, 300), [0], np.logspace(-2, np.log10(lim), 300)])
+    curve = 1 / (1 + np.exp(-grid))
+
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(2.6 * n_cols, 2.0 * n_rows), sharey=True, constrained_layout=True)
+    for i, ax in enumerate(axes.ravel()):
+        if i >= n:
+            ax.axis("off")
+            continue
+        ax.plot(grid, curve, color="k", linewidth=1.0)
+        ax.plot(tab["x"][i], tab["frac"][i], color="C3", linewidth=1.6)
+        ax.plot(tab["x_pre"][i], tab["frac_pre"][i], "o", color="C3", markeredgecolor="k", markersize=5, zorder=5)
+        ax.set_xscale("symlog", linthresh=1.0)
+        ax.set_xlim(-lim, lim)
+        ax.set_xticks([t for t in (-1000, -100, -10, -1, 0, 1, 10, 100, 1000) if abs(t) <= lim])
+        ax.set_xticklabels([f"{t:g}" for t in (-1000, -100, -10, -1, 0, 1, 10, 100, 1000) if abs(t) <= lim])
+        ax.minorticks_off()
+        ax.set_ylim(-0.05, 1.05)
+        ax.set_title(f"{labels[i]}  (r_max {tab['r_max'][i]:.0f} Hz)", fontsize=8)
+        ax.tick_params(labelsize=6)
+        if i // n_cols == n_rows - 1 or i + n_cols >= n:
+            ax.set_xlabel("drive x", fontsize=7)
+        if i % n_cols == 0:
+            ax.set_ylabel("rate / max", fontsize=7)
+    fig.suptitle("sigmoid operating points of all populations, best fit (red: -500..+250 ms, circle: baseline)")
+    return fig
+
+
 # ── main ───────────────────────────────────────────────────────────────────────
 def save(fig, out_dir, name):
     path = os.path.join(out_dir, name)
@@ -403,12 +590,19 @@ def main(run_name=None):
         save(plot_layer_interneuron_contributions(model, sim_dip, area), out_dir,
              f"04b_layer_interneuron_contributions_{area}.png")
 
-    # 4c: per-synapse potentials of all populations
+    # 4c: dipole length per input cell type
+    save(plot_dipole_length_by_celltype(model), out_dir, "04c_dipole_length_by_celltype.png")
+
+    # 4d: per-synapse potentials of all populations
     plot_full_potentials(model, out_dir)
 
     # 5/6: network structure
     save(plot_connectivity_neural(model), out_dir, "05_connectivity_neural.png")
     save(plot_connectivity_inputs(model), out_dir, "06_connectivity_inputs.png")
+
+    # 7: are the populations saturated (do they respond to input at all)
+    save(plot_saturation(model), out_dir, "07_saturation.png")
+    save(plot_sigmoid_operating_points(model), out_dir, "07b_sigmoid_operating_points.png")
 
 
 if __name__ == "__main__":

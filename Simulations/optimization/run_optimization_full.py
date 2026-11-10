@@ -86,47 +86,52 @@ tc_data_path = os.path.join(_roi_dir, "group_roi_timecourse_pooled_ses-elec_prep
 # ── parameters that can be fitted ────────────────────────────────────────────────
 PARAMETER_DICT = {
     # DELAYS
-    "thal_delay_factor":       dict(enabled=True, abs=(0.003, 0.01), default=0.005),
-    "delay_factor":            dict(enabled=True, abs=(0.005, 0.015), default=0.01),
-    "delay_factor_short":      dict(enabled=True, abs=(0.001, 0.006), default=0.002),
+    "thal_delay_factor":       dict(enabled=False, abs=(0.005, 0.01), default=0.007),
+    "delay_factor":            dict(enabled=True, abs=(0.005, 0.015), default=0.011),
+    "delay_factor_short":      dict(enabled=True, abs=(0.001, 0.006), default=0.004),
     "receptor_thalamus_delay": dict(enabled=False, abs=(0.005, 0.025), default=0.01),
     
     # CONNECTIVITY & COUPLING 
-    "coupling_strength":       dict(enabled=True, abs=(0.5, 10), default=1), 
+    "coupling_strength":       dict(enabled=True, abs=(0.5, 5), default=1), 
     "strength_I":              dict(enabled=True, abs=(0.5, 1.5), default=1), 
-    "g_intercortical":         dict(enabled=True, abs=(0.5, 5), default=1),
+    "g_intercortical":         dict(enabled=True, abs=(0.2, 3), default=1),
     # intra-cortical
-    "f_intra_S2":              dict(enabled=True, abs=(0.5, 3.0), default=1),
+    "f_intra_S2":              dict(enabled=True, abs=(1, 5.0), default=1),
     "f_intra":                 dict(enabled=True, abs=(0.5, 3.0), default=1),
     "p_2PVE":                  dict(enabled=False, abs=(37.4, 37.4), default=37.6),
     "p_4PVE":                  dict(enabled=False, abs=(39.6, 39.6), default=39.4),
     # feedforward
-    "ff_A1_S2":                dict(enabled=True, abs=(0.5, 2.0), default=1),
-    "ff_A3b_S2":               dict(enabled=False, abs=(0.5, 2.0), default=1),
+    "ff_A1_S2":                dict(enabled=True, abs=(0.5, 5.0), default=1),
+    "ff_A3b_S2":               dict(enabled=True, abs=(0.5, 2.0), default=1),
     "ff_A3b_A1":               dict(enabled=True, abs=(0.5, 2.0), default=1),
     # feedback
-    "fb_A1_S2":                dict(enabled=True, abs=(0.5, 2.0), default=1),
-    "fb_A3b_A1":               dict(enabled=True, abs=(0.5, 2.0), default=1),
-    "fb_A3b_S2":               dict(enabled=True, abs=(0.5, 2.0), default=1),
+    "fb_A1_S2":                dict(enabled=True, abs=(0.2, 5.0), default=1),
+    "fb_A3b_A1":               dict(enabled=True, abs=(0.5, 5.0), default=1),
+    "fb_A3b_S2":               dict(enabled=True, abs=(0.5, 5.0), default=1),
     # thalamus
     "g_thalPOm":               dict(enabled=False, abs=(0.5, 3.0), default=1),
     "g_thal":                  dict(enabled=False, abs=(0.5, 3.0), default=2),
     "POm_drive_A3b":           dict(enabled=False, abs=(0.5, 2.0), default=1),
-    "POm_drive_A1":            dict(enabled=True, abs=(0.5, 2.0), default=1),
+    "POm_drive_A1":            dict(enabled=False, abs=(0.5, 5.0), default=1),
     "POm_drive_S2":            dict(enabled=True, abs=(0.5, 2.0), default=1),
     "POm_tgt_A3b":             dict(enabled=False, abs=(0.5, 2.0), default=1),
     "POm_tgt_A1":              dict(enabled=False, abs=(0.5, 2.0), default=1),
-    "POm_tgt_S2":              dict(enabled=True, abs=(0.5, 2.0), default=1),
+    "POm_tgt_S2":              dict(enabled=False, abs=(0.5, 5.0), default=1),
     
     # TIME CONSTANTS
-    "e3b_tau":                 dict(enabled=True, abs=(4.0, 8.0), default=6),
-    "e1_tau":                  dict(enabled=True, abs=(4.0, 8.0), default=6),
-    "e2_tau":                  dict(enabled=True, abs=(4.0, 8.0), default=6),
+    "e3b_tau":                 dict(enabled=True, abs=(4.0, 10), default=6),
+    "e1_tau":                  dict(enabled=True, abs=(4.0, 10), default=6),
+    "e2_tau":                  dict(enabled=True, abs=(4.0, 10), default=6),
+    # NMDA decay (s) of E -> cell class connections, by postsynaptic class
+    "nmda_tau_E":              dict(enabled=True, abs=(5e-3, 50e-3), default=10e-3),
+    "nmda_tau_PV":             dict(enabled=True, abs=(2e-3, 11e-3), default=5e-3),
+    "nmda_tau_SST":            dict(enabled=True, abs=(5e-3, 50e-3), default=25e-3),
+    "nmda_tau_VIP":            dict(enabled=True, abs=(5e-3, 50e-3), default=20e-3),
 
     # INPUTS 
-    "Ib_strength":             dict(enabled=True, abs=(1, 60), default=5),
-    "Iext_strength":           dict(enabled=True, abs=(1, 100), default=10),
-    "Iext_duration":           dict(enabled=True, abs=(0.005, 0.02), default=0.01),
+    "Ib_strength":             dict(enabled=True, abs=(1, 20), default=10),
+    "Iext_strength":           dict(enabled=False, abs=(1, 40), default=35),
+    "Iext_duration":           dict(enabled=False, abs=(0.005, 0.02), default=0.013),
     "Im_strength":             dict(enabled=False, abs=(0, 10), default=0),
     "Ib_noise_std":            dict(enabled=False, abs=(0.5, 2), default=0.5),
     "Ib_ratio_E":              dict(enabled=False, abs=(1, 1), default=1),
@@ -136,19 +141,16 @@ PARAMETER_DICT = {
     "scaling_factor":          dict(enabled=False, abs=(1, 1), default=1),
 
     # DIPOLE LENGTHS
-    "F_L5": dict(enabled=True, abs=(dp.F_L5_MIN, 10.0), default=5),
-    "F_L6": dict(enabled=True, abs=(1.0, 10.0), default=5),
-    # lengths in mm (F_L4_*: factor on L_BASE); defaults = the values of dipole_parameterization.py,
-    # bounds as in run_optimization_dipole.py: up to 10 x warm, lower bound 0.25 x warm for L_BASE and
-    # L_A3B_CORT (so the main cortical dipoles cannot be switched off), 0 for the others
-    "L_BASE":        dict(enabled=True, abs=(0.5, 20.0), default=dp.L_BASE),
-    "F_L4_A1":       dict(enabled=False, abs=(0.0, 0.5),  default=dp.F_L4_A1),
-    "F_L4_S2":       dict(enabled=False, abs=(0.0, 0.5),  default=dp.F_L4_S2),
-    "L_THALE_CTX":   dict(enabled=False, abs=(0.0, 10.0), default=dp.L_THALE_CTX),
-    "L_THALPOM_CTX": dict(enabled=False, abs=(0.0, 20.0), default=dp.L_THALPOM_CTX),
-    "L_THALE_A3B":   dict(enabled=False, abs=(0.0, 1.0),  default=dp.L_THALE_A3B),
-    "L_THALPOM_A3B": dict(enabled=False, abs=(0.0, 20.0), default=dp.L_THALPOM_A3B),
-    "L_A3B_CORT":    dict(enabled=False, abs=(0.5, 20.0), default=dp.L_A3B_CORT),
+    "F_L5": dict(enabled=False, abs=(dp.F_L5_MIN, 20.0), default=13),
+    "F_L6": dict(enabled=False, abs=(1.0, 10.0), default=9),
+    "L_BASE":        dict(enabled=False, abs=(0.5, 15.0), default=2),
+    "F_L4_A1":       dict(enabled=True, abs=(0.01, 0.5),  default=dp.F_L4_A1),
+    "F_L4_S2":       dict(enabled=True, abs=(0.01, 0.5),  default=dp.F_L4_S2),
+    "L_THALE_CTX":   dict(enabled=True, abs=(0.5, 10.0), default=dp.L_THALE_CTX),
+    "L_THALPOM_CTX": dict(enabled=True, abs=(0.5, 20.0), default=dp.L_THALPOM_CTX),
+    "L_THALE_A3B":   dict(enabled=True, abs=(0.02, 1.0),  default=dp.L_THALE_A3B),
+    "L_THALPOM_A3B": dict(enabled=False, abs=(0.5, 20.0), default=4),
+    "L_A3B_CORT":    dict(enabled=True, abs=(0.5, 20.0), default=dp.L_A3B_CORT),
 }
 
 # the 10 parameters of the dipole parameterization are not model parameters: they go into
@@ -225,10 +227,10 @@ opt_config = {
     "reference":  0.0,
     "simulation": objective,
     "op":         -1,    # minimise
-    "N1":         30,    # initial population size
+    "N1":         60,    # initial population size
     "N2":         80,        # crossover offspring per iteration
     "N3":         80,       # mutation offspring per iteration
-    "n_iter":     5,
+    "n_iter":     20,
     # Gradient-search tolerance (conf['gTol']): gauss_newton_slow quits once the cost improves
     # by less than this between inner loops. The cost is err**2, and a scored "ps" err is
     # ~0.013..0.049, i.e. a cost of ~2e-4..2e-3 — far below the old 0.05, so every gradient
@@ -265,10 +267,6 @@ base_params = {
     "pom_cellcounts": 500,
     "pomI_cellcounts": 500,
     "resistance_factor": 1,
-    # the following parameters are only place holders for the rest of the required ones, 
-    # we'll use the defaults defined above 
-    
-     
 }
 
 # initialize the model
@@ -281,12 +279,91 @@ _unknown = [n for n in PARAMETER_DICT if n not in DIPOLE_PARAMS + ("scaling_fact
 if _unknown:
     raise ValueError(f"PARAMETER_DICT entries that are not model parameters: {_unknown}")
 
+# ── start from an earlier run ──────────────────────────────────────────────────
+# Session folder name (or path) under diag_dir, e.g. "optfull_20261110_013709_roi-all"; empty = random start.
+# The environment variable START_FROM overrides it. The old run must have the same full parameter set
+# (the keys of PARAMETER_DICT); which of them it optimized and which it held fixed may differ.
+START_FROM = "optfull_20261110_174017_roi-all" # "optfull_20261110_123724_roi-all"
+START_FROM_OPT_RUN = START_FROM #os.getenv("START_FROM", "")
+
+
+def load_start_params(run, names, bounds):
+    """Seed {parameter: value} for the searched `names` from the finished or interrupted run `run`.
+
+    Hard errors (SystemExit): missing folder or files, an old parameter set that differs from
+    PARAMETER_DICT, a seed value outside `bounds`. A parameter the old run searched takes its best
+    value (optimization_summary.json, else the best row of evaluations.csv); one it held fixed takes
+    its fixed value."""
+    run_dir = run if os.path.isdir(run) else os.path.join(diag_dir, run)
+    cfg_path = os.path.join(run_dir, "run_config.json")
+    if not os.path.isfile(cfg_path):
+        raise SystemExit(f"START_FROM: {cfg_path} not found")
+    with open(cfg_path) as f:
+        old_cfg = json.load(f)
+
+    old_all = set(old_cfg["optimized_parameters"]) | set(old_cfg["fixed_params"])
+    missing, extra = sorted(set(PARAMETER_DICT) - old_all), sorted(old_all - set(PARAMETER_DICT))
+    if missing or extra:
+        raise SystemExit(f"START_FROM={run}: its parameter set differs from PARAMETER_DICT "
+                         f"(not in the old run: {missing}; not in PARAMETER_DICT: {extra})")
+
+    summary_path = os.path.join(run_dir, "optimization_summary.json")
+    if os.path.isfile(summary_path):
+        with open(summary_path) as f:
+            old_best = json.load(f)["best_params"]
+        source = "optimization_summary.json"
+    else:
+        eval_path = os.path.join(run_dir, "evaluations.csv")
+        if not os.path.isfile(eval_path):
+            raise SystemExit(f"START_FROM={run}: neither optimization_summary.json nor evaluations.csv found")
+        ev = pd.read_csv(eval_path)
+        best_row = ev.loc[ev["err_tc"].idxmin()]
+        old_best = {n: float(best_row[n]) for n in old_cfg["optimized_parameters"]}
+        source = f"best of {len(ev)} evaluations in evaluations.csv (no summary: run unfinished), error {best_row['err_tc']:.6f}"
+
+    seed = {n: float(old_best[n] if n in old_best else old_cfg["fixed_params"][n]) for n in names}
+
+    outside = [f"{n}={v:.6g} not in [{lo:g}, {hi:g}]" for (n, v), (lo, hi) in zip(seed.items(), bounds)
+               if not lo <= v <= hi]
+    if outside:
+        raise SystemExit(f"START_FROM={run}: seed outside the current bounds: " + "; ".join(outside))
+
+    print(f"Starting from {run}: {source}")
+    for n, v in seed.items():
+        print(f"  {n} = {v:.6g}" + ("" if n in old_best else "  (fixed in the old run)"))
+    return seed
+
+
+initial_params = None
+if START_FROM_OPT_RUN:
+    _seed = load_start_params(START_FROM_OPT_RUN, fitted_params, bounds)
+    opt_config["initial_population"] = np.array([[_seed[n] for n in fitted_params]], dtype=float)
+    initial_params = {"source": START_FROM_OPT_RUN, "values": _seed}
 
 # FUNCTIONS
 
 
-#def plot_best_fit(model, best_params, outdir):
-#    #TODO: to be implemented
+def plot_best_fit(model, best_params, outdir):
+    """Re-simulate the best parameters like objective() and save the fit against the measured time courses.
+
+    Writes best_tc_comparison.png (simulated vs measured per ROI, normalised as in the error) and
+    best_tc_comparison.hdf5 (the traces and the error) to outdir. Returns the time-course error."""
+    all_params = {**fixed_params, **best_params}
+    dipole_params = {k: all_params.pop(k) for k in DIPOLE_PARAMS}
+    scaling_factor = all_params.pop("scaling_factor")
+    model.apply_params(all_params)
+    model.dipole_length_params = dipole_params
+    model.initialize_state()
+    model.simulate()
+    sim_dip = model.compute_dipoles()
+
+    # scored on FIT_ROIS as in the GA; the figure shows all three ROIs
+    err_tc, tc_sim, tc_target = model.compute_error_timecourse(
+        tc_data_path, sim_dip, scaling_factor=scaling_factor, target_dip=None, rois=FIT_ROIS)
+    model.plot_timecourse_comparison(tc_sim, tc_target, global_peak_rois=FIT_ROIS,
+                                     save_path=os.path.join(outdir, "best_tc_comparison.png"))
+    model.save_timecourse_comparison(outdir, tc_sim, tc_target, err_tc, filename="best_tc_comparison")
+    return err_tc
 
 
 # ── run ────────────────────────────────────────────────────────────────────────
@@ -315,7 +392,7 @@ def main():
         "base_params": base_params,   # simulation settings the model was built with (needed to re-simulate the run)
         "ga": {k: opt_config[k] for k in ("N1", "N2", "N3", "n_iter", "tolerance", "op", "reference")},
         "target_csv": tc_data_path,
-        #"initial_params": initial_params, # TODO: only those with a hardcoded "init" value
+        "initial_params": initial_params,
     }
     with open(os.path.join(session_dir, "run_config.json"), "w") as f:
         json.dump(run_config, f, indent=2)
@@ -332,13 +409,12 @@ def main():
     dp.build_params_json(os.path.join(session_dir, "dipole_parameters_finetuned.json"), best_dipole)
 
     print("\n── Optimised parameters ──")
-    err_tf, err_tc, err_ps = plot_best_fit(model, best_params, session_dir)
+    err_tc = plot_best_fit(model, best_params, session_dir)
     print(f"  Best error: {ga.errors[-1]}")
 
     # diagnostics of the optimisation itself
     ga.plot_fit()
 
-    # TODO: plot fitting diagnostics
 
     # write a summary of the run
     summary = {
@@ -348,9 +424,7 @@ def main():
         "best_combined_error": float(np.sqrt(ga.errors[-1])),
         "cost_per_iteration": [float(e) for e in ga.errors],   # GA cost = err**2
         "error_per_iteration": [float(np.sqrt(e)) for e in ga.errors],
-        "best_fit_err_tf": float(err_tf),
         "best_fit_err_tc": float(err_tc),
-        "best_fit_err_ps": float(err_ps),
     }
 
     with open(os.path.join(session_dir, "optimization_summary.json"), "w") as f:
