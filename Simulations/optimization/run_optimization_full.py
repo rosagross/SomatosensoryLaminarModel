@@ -92,14 +92,14 @@ PARAMETER_DICT = {
     "receptor_thalamus_delay": dict(enabled=False, abs=(0.005, 0.025), default=0.01),
     
     # CONNECTIVITY & COUPLING 
-    "coupling_strength":       dict(enabled=False, abs=(0.5, 10), default=1), 
-    "strength_I":              dict(enabled=False, abs=(0.5, 1.5), default=1), 
-    "g_intercortical":         dict(enabled=False, abs=(0.5, 5), default=1),
+    "coupling_strength":       dict(enabled=True, abs=(0.5, 10), default=1), 
+    "strength_I":              dict(enabled=True, abs=(0.5, 1.5), default=1), 
+    "g_intercortical":         dict(enabled=True, abs=(0.5, 5), default=1),
     # intra-cortical
-    "f_intra_S2":              dict(enabled=False, abs=(0.5, 3.0), default=1),
+    "f_intra_S2":              dict(enabled=True, abs=(0.5, 3.0), default=1),
     "f_intra":                 dict(enabled=True, abs=(0.5, 3.0), default=1),
-    "p_2PVE":                  dict(enabled=False, abs=(37.4, 37.4), default=37.4),
-    "p_4PVE":                  dict(enabled=False, abs=(39.6, 39.6), default=39.6),
+    "p_2PVE":                  dict(enabled=False, abs=(37.4, 37.4), default=37.6),
+    "p_4PVE":                  dict(enabled=False, abs=(39.6, 39.6), default=39.4),
     # feedforward
     "ff_A1_S2":                dict(enabled=True, abs=(0.5, 2.0), default=1),
     "ff_A3b_S2":               dict(enabled=False, abs=(0.5, 2.0), default=1),
@@ -110,13 +110,13 @@ PARAMETER_DICT = {
     "fb_A3b_S2":               dict(enabled=True, abs=(0.5, 2.0), default=1),
     # thalamus
     "g_thalPOm":               dict(enabled=False, abs=(0.5, 3.0), default=1),
-    "g_thal":                  dict(enabled=False, abs=(0.5, 3.0), default=1),
+    "g_thal":                  dict(enabled=False, abs=(0.5, 3.0), default=2),
     "POm_drive_A3b":           dict(enabled=False, abs=(0.5, 2.0), default=1),
     "POm_drive_A1":            dict(enabled=True, abs=(0.5, 2.0), default=1),
     "POm_drive_S2":            dict(enabled=True, abs=(0.5, 2.0), default=1),
     "POm_tgt_A3b":             dict(enabled=False, abs=(0.5, 2.0), default=1),
     "POm_tgt_A1":              dict(enabled=False, abs=(0.5, 2.0), default=1),
-    "POm_tgt_S2":              dict(enabled=False, abs=(0.5, 2.0), default=1),
+    "POm_tgt_S2":              dict(enabled=True, abs=(0.5, 2.0), default=1),
     
     # TIME CONSTANTS
     "e3b_tau":                 dict(enabled=True, abs=(4.0, 8.0), default=6),
@@ -124,25 +124,72 @@ PARAMETER_DICT = {
     "e2_tau":                  dict(enabled=True, abs=(4.0, 8.0), default=6),
 
     # INPUTS 
-    "Ib_strength":             dict(enabled=False, abs=(1, 60), default=5),
-    "Iext_strength":           dict(enabled=False, abs=(1, 100), default=10),
-    "Iext_duration":           dict(enabled=False, abs=(0.005, 0.02), default=0.01),
+    "Ib_strength":             dict(enabled=True, abs=(1, 60), default=5),
+    "Iext_strength":           dict(enabled=True, abs=(1, 100), default=10),
+    "Iext_duration":           dict(enabled=True, abs=(0.005, 0.02), default=0.01),
     "Im_strength":             dict(enabled=False, abs=(0, 10), default=0),
     "Ib_noise_std":            dict(enabled=False, abs=(0.5, 2), default=0.5),
     "Ib_ratio_E":              dict(enabled=False, abs=(1, 1), default=1),
     "Ib_ratio_PV":             dict(enabled=False, abs=(0.6, 0.9), default=0.7),
     "Ib_ratio_SST":            dict(enabled=False, abs=(0.7, 1.2), default=1),
-    "Ib_ratio_VIP":            dict(enabled=False, abs=(0.4, 0.7), default=0.6),
+    "Ib_ratio_VIP":            dict(enabled=False, abs=(0.4, 0.7), default=0.4),
     "scaling_factor":          dict(enabled=False, abs=(1, 1), default=1),
 
     # DIPOLE LENGTHS
     "F_L5": dict(enabled=True, abs=(dp.F_L5_MIN, 10.0), default=5),
     "F_L6": dict(enabled=True, abs=(1.0, 10.0), default=5),
+    # lengths in mm (F_L4_*: factor on L_BASE); defaults = the values of dipole_parameterization.py,
+    # bounds as in run_optimization_dipole.py: up to 10 x warm, lower bound 0.25 x warm for L_BASE and
+    # L_A3B_CORT (so the main cortical dipoles cannot be switched off), 0 for the others
+    "L_BASE":        dict(enabled=True, abs=(0.5, 20.0), default=dp.L_BASE),
+    "F_L4_A1":       dict(enabled=False, abs=(0.0, 0.5),  default=dp.F_L4_A1),
+    "F_L4_S2":       dict(enabled=False, abs=(0.0, 0.5),  default=dp.F_L4_S2),
+    "L_THALE_CTX":   dict(enabled=False, abs=(0.0, 10.0), default=dp.L_THALE_CTX),
+    "L_THALPOM_CTX": dict(enabled=False, abs=(0.0, 20.0), default=dp.L_THALPOM_CTX),
+    "L_THALE_A3B":   dict(enabled=False, abs=(0.0, 1.0),  default=dp.L_THALE_A3B),
+    "L_THALPOM_A3B": dict(enabled=False, abs=(0.0, 20.0), default=dp.L_THALPOM_A3B),
+    "L_A3B_CORT":    dict(enabled=False, abs=(0.5, 20.0), default=dp.L_A3B_CORT),
 }
 
-fitted_params = [p for p in PARAMETER_DICT]
-parameter_vals = [PARAMETER_DICT[p] for p in fitted_params]
-bounds = [p['abs'] for p in parameter_vals]
+# the 10 parameters of the dipole parameterization are not model parameters: they go into
+# the dipole lengths (model.dipole_length_params), see objective()
+DIPOLE_PARAMS = tuple(dp.PARAM_NAMES)
+_missing = [n for n in DIPOLE_PARAMS if n not in PARAMETER_DICT]
+if _missing:
+    raise ValueError(f"dipole parameters missing in PARAMETER_DICT: {_missing}")
+
+# every entry needs bounds and a default; fail up front instead of inside the GA
+for _n, _s in PARAMETER_DICT.items():
+    if "abs" not in _s or "default" not in _s:
+        raise ValueError(f"PARAMETER_DICT[{_n!r}] needs 'abs' and 'default'")
+
+# genes = enabled entries only; these are the parameters the GA searches
+fitted_params = [n for n, s in PARAMETER_DICT.items() if s["enabled"]]
+bounds = [PARAMETER_DICT[n]["abs"] for n in fitted_params]
+for _n in fitted_params:
+    _lo, _hi = PARAMETER_DICT[_n]["abs"]
+    if not _lo < _hi:
+        raise ValueError(f"{_n}: enabled but its bounds are degenerate {(_lo, _hi)}")
+
+# everything not searched is held at its default in every objective call
+fixed_params = {n: s["default"] for n, s in PARAMETER_DICT.items() if not s["enabled"]}
+
+
+# ── evaluation log ──────────────────
+# main() sets the path of this run's evaluations.csv; every objective call appends one row.
+# A crash inside the simulation is not caught here: it stops the run instead of being logged as a result.
+EVAL_LOG_PATH = None
+_n_eval = 0
+
+
+def log_evaluation(params, dipole_params, err_tc, seconds):
+    """Append one row (eval number, searched values, the 10 effective dipole parameters, error) to evaluations.csv."""
+    global _n_eval
+    _n_eval += 1
+    if EVAL_LOG_PATH is None:
+        return
+    row = {"eval": _n_eval, **params, **dipole_params, "err_tc": err_tc, "seconds": round(seconds, 2)}
+    pd.DataFrame([row]).to_csv(EVAL_LOG_PATH, mode="a", header=not os.path.exists(EVAL_LOG_PATH), index=False)
 
 
 # ── Objective Function ──────────────
@@ -151,20 +198,27 @@ def objective(**params):
     Run one full simulation and return the error. 
     """
 
-    model.apply_params(params)
+    t0 = time.time()
+    # searched values override the fixed ones; the dipole genes are not model parameters
+    all_params = {**fixed_params, **params}
+    dipole_params = {k: all_params.pop(k) for k in DIPOLE_PARAMS}
+    # scaling_factor belongs to the error computation, not to the model
+    scaling_factor = all_params.pop("scaling_factor")
+    model.apply_params(all_params)
+    model.dipole_length_params = dipole_params
 
     model.initialize_state()
     model.simulate()
     sim_dip = model.compute_dipoles()
-    err_tf = err_tc = err_ps = 0.0
+    err_tc = 0.0
 
-    err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip, target_dip=None, rois=FIT_ROIS)
+    err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip, scaling_factor=scaling_factor, target_dip=None, rois=FIT_ROIS)
 
+    log_evaluation(params, dipole_params, err_tc, time.time() - t0)
     return err_tc
 
 
 # ── optimization settings ───────────────────────────────────────────────────────────────────
-N1, N2, N3, N_ITER = 10, 20, 20, 1     # GA: initial population, crossover / mutation offspring, iterations
 opt_config = {
     "model_parameters": fitted_params,
     "bounds": np.array(bounds, dtype=float),
@@ -174,7 +228,7 @@ opt_config = {
     "N1":         30,    # initial population size
     "N2":         80,        # crossover offspring per iteration
     "N3":         80,       # mutation offspring per iteration
-    "n_iter":     1,
+    "n_iter":     5,
     # Gradient-search tolerance (conf['gTol']): gauss_newton_slow quits once the cost improves
     # by less than this between inner loops. The cost is err**2, and a scored "ps" err is
     # ~0.013..0.049, i.e. a cost of ~2e-4..2e-3 — far below the old 0.05, so every gradient
@@ -219,6 +273,13 @@ base_params = {
 
 # initialize the model
 model = sm.SomatoModel(base_params)
+# dipole lengths from the 10-parameter parameterization (the 10 dipole parameters are in PARAMETER_DICT) instead of the JSON file
+model.load_dipole_params = model.load_dipole_params_parameterized
+# every searched or fixed model parameter must exist on the model, otherwise apply_params
+# would only create an unused attribute (typo in PARAMETER_DICT)
+_unknown = [n for n in PARAMETER_DICT if n not in DIPOLE_PARAMS + ("scaling_factor",) and not hasattr(model, n)]
+if _unknown:
+    raise ValueError(f"PARAMETER_DICT entries that are not model parameters: {_unknown}")
 
 
 # FUNCTIONS
@@ -235,6 +296,8 @@ def main():
     run_id = datetime.now().strftime("%Y%m%d_%H%M%S")
     session_dir = os.path.join(diag_dir, f"optfull_{run_id}_roi-{roi_tag}")
     os.makedirs(session_dir, exist_ok=True)
+    global EVAL_LOG_PATH
+    EVAL_LOG_PATH = os.path.join(session_dir, "evaluations.csv")
     print(f"Optimization session: {session_dir}")
     print(f"Fitting ROIs: {', '.join(FIT_ROIS)}  (ROI={_roi_env!r})")
 
@@ -247,6 +310,9 @@ def main():
         "fit_rois": list(FIT_ROIS),
         "optimized_parameters": opt_config["model_parameters"],
         "bounds": np.asarray(opt_config["bounds"]).tolist(),
+        "fixed_params": fixed_params,
+        "parameter_defaults": {n: sp["default"] for n, sp in PARAMETER_DICT.items()},
+        "base_params": base_params,   # simulation settings the model was built with (needed to re-simulate the run)
         "ga": {k: opt_config[k] for k in ("N1", "N2", "N3", "n_iter", "tolerance", "op", "reference")},
         "target_csv": tc_data_path,
         #"initial_params": initial_params, # TODO: only those with a hardcoded "init" value
@@ -259,6 +325,12 @@ def main():
     ga.run()
 
     best_params = dict(zip(opt_config["model_parameters"], ga.optimum))
+
+    # dipole file of the best parameters: the 10 dipole parameters (searched ones from the optimum,
+    # the others at their fixed value), in the schema the model reads (dipole_params_file)
+    best_dipole = {k: float(best_params.get(k, fixed_params.get(k))) for k in DIPOLE_PARAMS}
+    dp.build_params_json(os.path.join(session_dir, "dipole_parameters_finetuned.json"), best_dipole)
+
     print("\n── Optimised parameters ──")
     err_tf, err_tc, err_ps = plot_best_fit(model, best_params, session_dir)
     print(f"  Best error: {ga.errors[-1]}")
@@ -272,6 +344,7 @@ def main():
     summary = {
         "fit_rois": list(FIT_ROIS),
         "best_params": {k: float(v) for k, v in best_params.items()},
+        "dipole_parameters": best_dipole,   # the 10 dipole parameters of the best fit (as in the ft_* summaries)
         "best_combined_error": float(np.sqrt(ga.errors[-1])),
         "cost_per_iteration": [float(e) for e in ga.errors],   # GA cost = err**2
         "error_per_iteration": [float(np.sqrt(e)) for e in ga.errors],

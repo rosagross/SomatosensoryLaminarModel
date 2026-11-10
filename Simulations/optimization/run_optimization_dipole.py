@@ -98,9 +98,9 @@ POLISH_MAXFEV = 300
 FIXED = {}                             # values carried over from a resumed run for parameters that are not searched now
 
 # ── optional dynamic parameters ────────────────────────────────────────────────
-# kind "param": model parameter, "path": factor on a block of W [rows, cols] (1 = unchanged).
+# kind "param": model parameter, "path": inter-area pathway scale factor (1 = unchanged; a model parameter
+# like any other, see parameters.PATHWAY_NAMES).
 # bounds: "rel" = factor on the warm start value, "abs" = absolute; "clip" limits the result.
-PATHWAYS = sm.PATHWAYS                  # shared with simulation_main.py (somato_model.py)
 _PATH_B = dict(kind="path", abs=(0.5, 2.0))
 OPTIONAL = {
     # ranked by the scouting scan (raw and profiled error range), see the plan
@@ -219,21 +219,14 @@ def search_space(warm):
 
 # ── simulation ─────────────────────────────────────────────────────────────────
 def simulate(warm, searched=None, use_fixed=True):
-    """Apply warm start + FIXED (resumed run) + searched values (model parameters and W block scales) and simulate."""
+    """Apply warm start + FIXED (resumed run) + searched values (model parameters, incl. pathway scale factors) and simulate."""
     searched = {**(FIXED if use_fixed else {}), **(searched or {})}
     p = dict(warm)
-    scales = {}
     for k, v in searched.items():
         if k in DIPOLE_GENES:
             continue                        # used by the dipole solve, not by the model
-        if k in PATHWAYS:
-            scales[k] = float(v)
-        else:
-            p[k] = float(v)
-    model.apply_params(p)                   # rebuilds W, so the block scales never accumulate
-    for k, f in scales.items():
-        rows, cols = PATHWAYS[k]
-        model.W[rows, cols] = model.W[rows, cols] * f
+        p[k] = float(v)
+    model.apply_params(p)                   # rebuilds W with the pathway factors included
     model.initialize_state()
     model.simulate()
 

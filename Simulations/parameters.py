@@ -81,7 +81,7 @@ class Parameter():
         self.C = self.get_cellcounts()
         self.sigmoid_params = self.get_sigmoid()
 
-    def get_params(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6):
+    def get_params(self, delay_factor_short=3e-3, delay_factor=5e-3, thal_delay_factor=3e-3, e3b_tau=6, e1_tau=6, e2_tau=6, nmda_tau=[10e-3, 5e-3, 25e-3, 20e-3]):
 
         # nr. of populations
         nPopA3b = 4 # E, PV, SST, VIP
@@ -146,6 +146,32 @@ class Parameter():
 
         # TODO: MEMBRANE CONSTANT (NOTE: this value depends on post-synaptic neuron whereas the synaptic decay depends on the pre-synapse)
         
+        # NMDA time constant for E -> I/E connections
+        # this depends on the PRE-synaptic cell (since only E neurons release glutamate)
+        # for PV we use a relatively lower time constant since it is mostly fast reacting to E input
+
+        # cell-type layout per cortical area: (first index, offsets of E, PV, SST, VIP within the area)
+        # A3b: E, PV, SST, VIP; S1 and S2: E1, PV1, SST1, VIP1, E2, PV2, SST2, E3, PV3, SST3, E4, PV4, SST4
+        areas = [
+            (0,  dict(E=[0], PV=[1], SST=[2], VIP=[3])),
+            (4,  dict(E=[0, 4, 7, 10], PV=[1, 5, 8, 11], SST=[2, 6, 9, 12], VIP=[3])),
+            (17, dict(E=[0, 4, 7, 10], PV=[1, 5, 8, 11], SST=[2, 6, 9, 12], VIP=[3])),
+        ]
+        pre_E = []
+        post_idx = {'E': [], 'PV': [], 'SST': [], 'VIP': []}
+        for start, layout in areas:
+            for cell_type, offsets in layout.items():
+                post_idx[cell_type] += [start + o for o in offsets]
+            pre_E += [start + o for o in layout['E']]
+        # thalamic E populations (ThalE = 30, POm = 32) also release glutamate
+        n_cortical = nPopA3b + nPopS1 + nPopS2
+        pre_E += [n_cortical, n_cortical + 2]
+
+        # tau[post, pre]: only columns of E pre-synaptic populations are changed
+        # thalamic post-synaptic rows (reticular populations etc.) are left unchanged
+        for cell_type, rows in post_idx.items():
+            tau[np.ix_(rows, pre_E)] = nmda_tau[cell_type]
+
         return tau, nPopTotal
 
     def get_connectProb(self, p_2PVE=None, p_4PVE=None, f_intra=None, f_intra_S2=None):

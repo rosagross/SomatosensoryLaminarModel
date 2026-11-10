@@ -2283,7 +2283,7 @@ class SomatoModel():
         return float(np.mean(errors)), tc_sim, tc_target
 
 
-    def plot_timecourse_comparison(self, tc_sim, tc_target, scaling_factor=None, show=False):
+    def plot_timecourse_comparison(self, tc_sim, tc_target, scaling_factor=None, show=False, save_path=None, global_peak_rois=None):
         """
         Plot simulated vs. measured ROI time courses (peak-normalized) per ROI.
 
@@ -2291,7 +2291,11 @@ class SomatoModel():
         (compute_error_timecourse): with a `scaling_factor` all areas share that one
         scalar (cross-area ratios visible); without it each area is normalized by its
         own peak over the -200..+250 ms window (per-area shape comparison).
-        Saves to ./Figures/tc_comparison_g-<g>_sI-<sI>_area-<area>.png.
+        `global_peak_rois` (e.g. the fitted ROIs) selects the normalization of the optimizer's
+        error: simulated and measured traces are each divided by one peak taken over the
+        post-stimulus part of those ROIs, so cross-area amplitude ratios are kept.
+        Saves to ./Figures/tc_comparison_g-<g>_sI-<sI>_area-<area>.png, or to `save_path`
+        if given.
         """
         rois = ("A3b", "A1", "S2")
         eps  = 1e-10
@@ -2309,7 +2313,13 @@ class SomatoModel():
         )
 
 
-        if scaling_factor:
+        if global_peak_rois:
+            # same as compute_error_timecourse: one post-stimulus peak over the given ROIs, for sim and target
+            gs = max(np.max(np.abs(tc_sim[r][250:])) for r in global_peak_rois) + eps
+            gt = max(np.max(np.abs(tc_target[r][250:])) for r in global_peak_rois) + eps
+            sim_peak = {roi: gs for roi in rois}
+            tgt_peak = {roi: gt for roi in rois}
+        elif scaling_factor:
             # one shared scalar across all areas -> preserves cross-area ratios
             sim_peak = {roi: scaling_factor for roi in rois}
             tgt_peak = {roi: 1 for roi in rois}
@@ -2329,7 +2339,8 @@ class SomatoModel():
             ax.set_title(roi)
             ax.set_xlabel("Time (ms)")
             if ax is axes[0]:
-                ax.set_ylabel("Amplitude (shared-scalar normalized)" if scaling_factor
+                ax.set_ylabel("Amplitude (global-peak normalized)" if global_peak_rois
+                              else "Amplitude (shared-scalar normalized)" if scaling_factor
                               else "Amplitude (per-area peak normalized)")
             ax.legend(frameon=False, fontsize=8)
 
@@ -2339,7 +2350,7 @@ class SomatoModel():
             f"_sI-{self.strength_I}"
             f"_area-{self.area}.png"
         )
-        fig.savefig(os.path.join(figuredir, fname), dpi=300, bbox_inches="tight")
+        fig.savefig(save_path if save_path else os.path.join(figuredir, fname), dpi=300, bbox_inches="tight")
         if show:
             plt.show()
         else:

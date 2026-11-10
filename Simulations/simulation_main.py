@@ -55,8 +55,7 @@ ps_target_path = os.path.join(
 # add model to datapath
 sys.path.append(os.path.join(WDDIR, 'Simulations', 'model'))
 sys.path.append(os.path.join(WDDIR, 'EEGSimulation'))
-from somato_model import (SomatoModel, read_simulation_params, load_optimized_params,
-                          load_finetuned_params)
+from somato_model import (SomatoModel, read_simulation_params, load_optimized_params,load_finetuned_params)
 #from somato_model_pyrates_no_conn_operators_complete_pycobi import SomatoModelPyrates, read_simulation_params
 import plotting_functions as pf
 # how the EEG-scale dipole is built out of the laminar potentials; the same functions
@@ -127,7 +126,7 @@ if not os.path.exists(filedir):
 # the whole block is unused and the parameters come from load_optimized_params().
 coupling_strengths = [5] #np.arange(0.8, 1.6, 0.02) #[11.25] #[11.07] #[3.42] # [9.137]  # np.arange(0,20,1)#[100, 120, 140, 160]
 strength_Is = [1] #np.arange(0.6, 1.1, 0.1) #[0.4133] # [0.8499] #[0.76131] # np.arange(0.68,0.76,0.005)#, 0.25, 0.26, 0.36]
-backgrndI_strengths = [1] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
+backgrndI_strengths = [10] #[40, 60, 80, 100] #[19.76] #[10.69] # [18.26] # np.arange(4,10,1)#[40, 60, 80] #,6,7]
 Ib_noise_std = 0.5
 Ib_ratio_E = 1.0    
 Ib_ratio_PV = 0.74 # default 0.7
