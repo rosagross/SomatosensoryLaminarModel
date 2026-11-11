@@ -200,6 +200,10 @@ def objective(**params):
     Run one full simulation and return the error. 
     """
 
+    # de-normalize parameters
+    params = denormalize_params(params, bounds)
+
+
     t0 = time.time()
     # searched values override the fixed ones; the dipole genes are not model parameters
     all_params = {**fixed_params, **params}
@@ -366,6 +370,32 @@ def plot_best_fit(model, best_params, outdir):
     return err_tc
 
 
+def normalize_params(params, bounds):
+    """Physical parameter values -> [0, 1] per parameter (column).
+
+    `params` is one vector (n_params,) or a population (n_pop, n_params); `bounds` is (n_params, 2).
+    Values outside the bounds are clipped."""
+    bounds = np.asarray(bounds, dtype=float)
+    lo, hi = bounds[:, 0], bounds[:, 1]
+    return np.clip((np.asarray(params, dtype=float) - lo) / (hi - lo), 0.0, 1.0)
+
+
+def denormalize_params(params, bounds):
+    """Normalised values of the GA -> physical values.
+
+    `params` is a dict {name: value in [0, 1]} in the order of fitted_params (the order the GA passes
+    the keyword arguments in), which is the order of `bounds`; returns a new dict of physical values."""
+    if len(params) != len(bounds):
+        raise ValueError(f"{len(params)} parameters but {len(bounds)} bounds")
+    return {name: v * (hi - lo) + lo for (name, v), (lo, hi) in zip(params.items(), bounds)}
+
+
+def denormalize_vector(vec, bounds):
+    """Same as denormalize_params for a vector (n_params,) in the order of `bounds`."""
+    bounds = np.asarray(bounds, dtype=float)
+    return np.asarray(vec, dtype=float) * (bounds[:, 1] - bounds[:, 0]) + bounds[:, 0]
+
+
 # ── run ────────────────────────────────────────────────────────────────────────
 def main():
     # Each optimization run gets its own timestamped session folder so runs no
@@ -393,15 +423,24 @@ def main():
         "ga": {k: opt_config[k] for k in ("N1", "N2", "N3", "n_iter", "tolerance", "op", "reference")},
         "target_csv": tc_data_path,
         "initial_params": initial_params,
+        "search_space": "normalized",   # the GA works on [0, 1]; evaluations.csv and the summary are in physical units
     }
     with open(os.path.join(session_dir, "run_config.json"), "w") as f:
         json.dump(run_config, f, indent=2)
+
+
+    # the GA searches normalised values (0 to 1 for every parameter); objective() converts them back
+    # to physical values with the bounds in `bounds`
+    opt_config["bounds"] = np.repeat([[0.0, 1.0]], len(fitted_params), axis=0)
+    if "initial_population" in opt_config:      # seed from START_FROM (physical values) -> normalised
+        opt_config["initial_population"] = normalize_params(opt_config["initial_population"], bounds)
 
     # run GA
     ga = GA(opt_config)
     ga.run()
 
-    best_params = dict(zip(opt_config["model_parameters"], ga.optimum))
+    # ga.optimum is normalised: convert to physical values for the model, the dipole file and the summary
+    best_params = dict(zip(opt_config["model_parameters"], denormalize_vector(ga.optimum, bounds)))
 
     # dipole file of the best parameters: the 10 dipole parameters (searched ones from the optimum,
     # the others at their fixed value), in the schema the model reads (dipole_params_file)

@@ -8,6 +8,7 @@ Description: Diagnostic plots for a session folder written by run_optimization_f
 in which they answer the questions about a run, and saved to <session>/diagnostics/:
 
   01_parameter_evolution.png        did the optimization converge, which parameters sit at a bound
+  01b_parameter_error_correlation.png  Spearman and Pearson correlation of every parameter with the error (all evaluations, best 5%)
   02_roi_errors.png                 how well does the best fit match the measured time courses, per ROI
   02b_timecourse_comparison.png     model.plot_timecourse_comparison: simulated vs measured, global-peak normalised as in the error
   03_dipole_parameters_best.png     dipole length x orientation per population (best fit)
@@ -47,8 +48,9 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 # ── settings ───────────────────────────────────────────────────────────────────
-OPT_RUN_ID = "optfull_20261110_125739_roi-all"    # session folder name (or path); empty = newest optfull_* session
+OPT_RUN_ID = "optfull_20261110_174017_roi-all" #optfull_20261110_233754_roi-all"    # session folder name (or path); empty = newest optfull_* session
 CHECK_TOL = 1e-6        # allowed difference between the re-simulated and the logged best error
+PARAM_TOL = 0.01       # two evaluations count as the same point if no parameter differs by more than this fraction of its search range (correlation figure)
 
 # ── paths ──────────────────────────────────────────────────────────────────────
 WDDIR = os.getenv("WDDIR")      # .../SomatosensoryLaminarModel
@@ -205,6 +207,80 @@ def plot_parameter_evolution(run):
     return fig
 
 
+# ── 1b: correlation of the parameters with the error ───────────────────────────
+def correlation_with_error(values, err, method):
+    """Correlation of each column of values (DataFrame) with err (array); method is "spearman" or "pearson".
+
+    Spearman uses ranks: robust to the skewed error (a few evaluations are far above the median) and to
+    monotonic non-linearity. Pearson is linear and is dominated by the large errors; it also misses
+    U-shaped dependencies. A constant column gives NaN."""
+    if method == "spearman":
+        values, err = values.rank(), pd.Series(err, index=values.index).rank()
+    elif method == "pearson":
+        err = pd.Series(err, index=values.index)
+    else:
+        raise ValueError(f"unknown correlation method: {method}")
+    return values.apply(lambda col: col.corr(err))
+
+
+def distinct_evaluations(ev, names, bounds, tol):
+    """Row positions of ev that are distinct in parameter space, ordered by increasing error.
+
+    Every parameter is scaled to its search bounds (0..1) and cut into bins of width tol. Evaluations in
+    the same bin in ALL parameters count as the same point; the one with the lowest error is kept. Two
+    evaluations are therefore distinct when at least one parameter differs by about more than tol of its
+    range (bin edges make this approximate)."""
+    bounds = np.asarray(bounds, dtype=float)
+    scaled = (ev[names].to_numpy(dtype=float) - bounds[:, 0]) / (bounds[:, 1] - bounds[:, 0])
+    cells = pd.DataFrame(np.floor(scaled / tol).astype(np.int64))
+    order = np.argsort(ev["err_tc"].to_numpy(dtype=float), kind="stable")
+    keep = ~cells.iloc[order].duplicated().to_numpy()
+    return order[keep]
+
+
+def plot_parameter_error_correlation(run, best_fraction=0.05, tol=PARAM_TOL):
+    """Spearman (top row) and Pearson (bottom row) correlation of every searched parameter with the error,
+    over all evaluations (left) and over the best_fraction of the distinct evaluations with the lowest error (right).
+
+    The left column is dominated by the bad regions the optimizer left early on; it tells which parameters
+    the error depends on at all. The right column only contains the region the optimizer settled in; it
+    tells which parameters still matter there. Parameters are sorted by |Spearman rho| over all
+    evaluations in every panel. A missing bar means the parameter is constant in that subset (correlation
+    undefined). Positive: a larger value goes with a larger error.
+
+    Distinct means: not in the same bin as a better evaluation in every parameter, with bins of width
+    tol (fraction of the search range, see distinct_evaluations). Without this the best 5% are mostly
+    near-copies from the final refinement, whose correlations reflect the order of the steps."""
+    ev, names = run["evaluations"], run["config"]["optimized_parameters"]
+    err = ev["err_tc"].to_numpy(dtype=float)
+    distinct = distinct_evaluations(ev, names, run["config"]["bounds"], tol)    # ordered by error
+    n_best = int(np.ceil(best_fraction * len(distinct)))
+    best_idx = distinct[:n_best]
+    print(f"correlation figure: {len(distinct)} of {len(ev)} evaluations are distinct (tol {tol:g} of the range), "
+          f"best {100 * best_fraction:g}% = {n_best}")
+
+    fig, axes = plt.subplots(2, 2, figsize=(11, 2 * (0.28 * len(names) + 1.2)), sharey=True,
+                             constrained_layout=True)
+    order = correlation_with_error(ev[names], err, "spearman").abs().sort_values(ascending=False).index.tolist()
+    y = np.arange(len(order))
+    subsets = ((ev[names], err, f"all {len(ev)} evaluations"),
+               (ev[names].iloc[best_idx], err[best_idx], f"lowest {100 * best_fraction:g}% of {len(distinct)} distinct (n={n_best})"))
+    for row, (method, label) in enumerate((("spearman", "Spearman rho"), ("pearson", "Pearson r"))):
+        for col, (values, e, title) in enumerate(subsets):
+            ax = axes[row, col]
+            vals = correlation_with_error(values, e, method)[order].to_numpy(dtype=float)
+            ax.barh(y, vals, color=np.where(vals >= 0, "C3", "C0"))
+            ax.axvline(0, color="k", linewidth=0.8)
+            ax.set_xlim(-1, 1)
+            ax.set_title(f"{label}: {title}", fontsize=9)
+            ax.set_xlabel(f"{label} (parameter, error)")
+    for row in range(2):
+        axes[row, 0].set_yticks(y)
+        axes[row, 0].set_yticklabels(order, fontsize=8)
+    axes[0, 0].invert_yaxis()
+    return fig
+
+
 # ── 2: per-ROI error ───────────────────────────────────────────────────────────
 def roi_error_terms(tc_sim, tc_target, fit_rois):
     """Pre- and post-stimulus error term per ROI, with the formulas of compute_error_timecourse.
@@ -213,6 +289,7 @@ def roi_error_terms(tc_sim, tc_target, fit_rois):
     normalised by the peak of the post-stimulus part over fit_rois."""
     eps = 1e-10
     rois = ("A3b", "A1", "S2")
+    tgt_pre = {r: tc_target[r][:ONSET_SAMPLE] for r in rois}
     tgt_post = {r: tc_target[r][ONSET_SAMPLE:] for r in rois}
     sim_post = {r: tc_sim[r][ONSET_SAMPLE:][:tgt_post[r].shape[0]] for r in rois}
     sim_peak = max(np.max(np.abs(sim_post[r])) for r in fit_rois) + eps
@@ -220,9 +297,16 @@ def roi_error_terms(tc_sim, tc_target, fit_rois):
     terms = {}
     for r in rois:
         post = float(np.sqrt(np.mean((sim_post[r] / sim_peak - tgt_post[r] / tgt_peak) ** 2)))
+        #pre_tgt = float(np.sqrt(np.mean((tgt_pre[r][:ONSET_SAMPLE] / tgt_peak -  np.mean(tgt_pre[r][:ONSET_SAMPLE] / tgt_peak)) ** 2)))
+        #pre_sim = float(np.sqrt(np.mean((tc_sim[r][:ONSET_SAMPLE] / sim_peak -  np.mean(tc_sim[r][:ONSET_SAMPLE] / sim_peak)) ** 2)))
+        #pre = ((pre_sim - pre_tgt)/pre_tgt)**2
+        
+        # classical error: favors no fluctuations
         pre = float(np.mean((tc_sim[r][:ONSET_SAMPLE] / sim_peak) ** 2))
         terms[r] = (pre, post)
     return terms, sim_peak, tgt_peak
+
+
 
 
 def plot_roi_errors(run, err, tc_sim, tc_target):
@@ -568,6 +652,7 @@ def main(run_name=None):
 
     # 1: convergence (files only)
     save(plot_parameter_evolution(run), out_dir, "01_parameter_evolution.png")
+    save(plot_parameter_error_correlation(run), out_dir, "01b_parameter_error_correlation.png")
 
     # the following need the best fit simulated again
     model, sim_dip, err, tc_sim, tc_target, dipole_params = resimulate_best(run)
