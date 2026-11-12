@@ -88,12 +88,12 @@ PARAMETER_DICT = {
     # DELAYS
     "thal_delay_factor":       dict(enabled=False, abs=(0.005, 0.01), default=0.007),
     "delay_factor":            dict(enabled=True, abs=(0.005, 0.015), default=0.011),
-    "delay_factor_short":      dict(enabled=True, abs=(0.001, 0.006), default=0.004),
+    "delay_factor_short":      dict(enabled=False, abs=(0.001, 0.006), default=0.0015),
     "receptor_thalamus_delay": dict(enabled=False, abs=(0.005, 0.025), default=0.01),
     
     # CONNECTIVITY & COUPLING 
-    "coupling_strength":       dict(enabled=True, abs=(0.5, 5), default=1), 
-    "strength_I":              dict(enabled=True, abs=(0.5, 1.5), default=1), 
+    "coupling_strength":       dict(enabled=True, abs=(0.5, 8), default=1), 
+    "strength_I":              dict(enabled=True, abs=(0.5, 1.4), default=1), 
     "g_intercortical":         dict(enabled=True, abs=(0.2, 3), default=1),
     # intra-cortical
     "f_intra_S2":              dict(enabled=True, abs=(1, 5.0), default=1),
@@ -123,14 +123,14 @@ PARAMETER_DICT = {
     "e1_tau":                  dict(enabled=True, abs=(4.0, 10), default=6),
     "e2_tau":                  dict(enabled=True, abs=(4.0, 10), default=6),
     # NMDA decay (s) of E -> cell class connections, by postsynaptic class
-    "nmda_tau_E":              dict(enabled=True, abs=(5e-3, 50e-3), default=10e-3),
+    "nmda_tau_E":              dict(enabled=True, abs=(5e-3, 20e-3), default=10e-3),
     "nmda_tau_PV":             dict(enabled=True, abs=(2e-3, 11e-3), default=5e-3),
-    "nmda_tau_SST":            dict(enabled=True, abs=(5e-3, 50e-3), default=25e-3),
-    "nmda_tau_VIP":            dict(enabled=True, abs=(5e-3, 50e-3), default=20e-3),
+    "nmda_tau_SST":            dict(enabled=False, abs=(5e-3, 40e-3), default=15e-3),
+    "nmda_tau_VIP":            dict(enabled=False, abs=(5e-3, 40e-3), default=10e-3),
 
     # INPUTS 
-    "Ib_strength":             dict(enabled=True, abs=(1, 20), default=10),
-    "Iext_strength":           dict(enabled=False, abs=(1, 40), default=35),
+    "Ib_strength":             dict(enabled=True, abs=(5, 15), default=10),
+    "Iext_strength":           dict(enabled=True, abs=(1, 40), default=35),
     "Iext_duration":           dict(enabled=False, abs=(0.005, 0.02), default=0.013),
     "Im_strength":             dict(enabled=False, abs=(0, 10), default=0),
     "Ib_noise_std":            dict(enabled=False, abs=(0.5, 2), default=0.5),
@@ -144,13 +144,13 @@ PARAMETER_DICT = {
     "F_L5": dict(enabled=False, abs=(dp.F_L5_MIN, 20.0), default=13),
     "F_L6": dict(enabled=False, abs=(1.0, 10.0), default=9),
     "L_BASE":        dict(enabled=False, abs=(0.5, 15.0), default=2),
-    "F_L4_A1":       dict(enabled=True, abs=(0.01, 0.5),  default=dp.F_L4_A1),
-    "F_L4_S2":       dict(enabled=True, abs=(0.01, 0.5),  default=dp.F_L4_S2),
-    "L_THALE_CTX":   dict(enabled=True, abs=(0.5, 10.0), default=dp.L_THALE_CTX),
-    "L_THALPOM_CTX": dict(enabled=True, abs=(0.5, 20.0), default=dp.L_THALPOM_CTX),
-    "L_THALE_A3B":   dict(enabled=True, abs=(0.02, 1.0),  default=dp.L_THALE_A3B),
+    "F_L4_A1":       dict(enabled=False, abs=(0.01, 0.5),  default=dp.F_L4_A1),
+    "F_L4_S2":       dict(enabled=False, abs=(0.01, 0.5),  default=dp.F_L4_S2),
+    "L_THALE_CTX":   dict(enabled=False, abs=(0.5, 10.0), default=dp.L_THALE_CTX),
+    "L_THALPOM_CTX": dict(enabled=False, abs=(0.5, 20.0), default=dp.L_THALPOM_CTX),
+    "L_THALE_A3B":   dict(enabled=False, abs=(0.02, 1.0),  default=dp.L_THALE_A3B),
     "L_THALPOM_A3B": dict(enabled=False, abs=(0.5, 20.0), default=4),
-    "L_A3B_CORT":    dict(enabled=True, abs=(0.5, 20.0), default=dp.L_A3B_CORT),
+    "L_A3B_CORT":    dict(enabled=False, abs=(0.5, 20.0), default=dp.L_A3B_CORT),
 }
 
 # the 10 parameters of the dipole parameterization are not model parameters: they go into
@@ -215,13 +215,27 @@ def objective(**params):
 
     model.initialize_state()
     model.simulate()
+
+    mid_rate_error = 0
+    if MID_FIRING_RATE:
+        # evaluate how far the firing rates are from their midpoint during baseline
+        stimulation_start = model.input_onset / model.step_size 
+        prestim_rates = model.rates[:,:stimulation_start]
+        firing_rate_bounds = model.p.get_sigmoids
+        # TODO: implement error increaseth
+        
+
+
+
+
     sim_dip = model.compute_dipoles()
     err_tc = 0.0
 
     err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip, scaling_factor=scaling_factor, target_dip=None, rois=FIT_ROIS)
+    error = err_tc + mid_rate_error
 
-    log_evaluation(params, dipole_params, err_tc, time.time() - t0)
-    return err_tc
+    log_evaluation(params, dipole_params, error, time.time() - t0)
+    return error
 
 
 # ── optimization settings ───────────────────────────────────────────────────────────────────
@@ -287,7 +301,7 @@ if _unknown:
 # Session folder name (or path) under diag_dir, e.g. "optfull_20261110_013709_roi-all"; empty = random start.
 # The environment variable START_FROM overrides it. The old run must have the same full parameter set
 # (the keys of PARAMETER_DICT); which of them it optimized and which it held fixed may differ.
-START_FROM = "optfull_20261110_174017_roi-all" # "optfull_20261110_123724_roi-all"
+START_FROM = "optfull_20261110_174017_roi-all_UNSATURATED" # "optfull_20261110_123724_roi-all"
 START_FROM_OPT_RUN = START_FROM #os.getenv("START_FROM", "")
 
 
