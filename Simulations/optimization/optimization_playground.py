@@ -13,6 +13,7 @@ import os
 import sys
 
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 
 # the helper functions of the diagnostics script (also puts the model folders on sys.path)
@@ -22,32 +23,32 @@ import somato_model as sm
 from plot_dipole_computation import plot_layer_interneuron_contributions
 
 # Run to check out
-OPT_RUN_ID = "optfull_20261110_162957_roi-all" 
+OPT_RUN_ID = "optfull_20261110_174017_roi-all_UNSATURATED" 
 
 # All parameters
 PARAMETER_DICT = {
     # DELAYS
-    "thal_delay_factor":       dict(overwrite=False, value=0.015),
+    "thal_delay_factor":       dict(overwrite=False, value=0.008),
     "delay_factor":            dict(overwrite=False, value=0.011),
     "delay_factor_short":      dict(overwrite=False, value=0.004),
     "receptor_thalamus_delay": dict(overwrite=False, value=0.01),
     
     # CONNECTIVITY & COUPLING 
-    "coupling_strength":       dict(overwrite=True, value =1),
-    "strength_I":              dict(overwrite=True, value =1),
-    "g_intercortical":         dict(overwrite=True, value=1),
+    "coupling_strength":       dict(overwrite=False, value =1),
+    "strength_I":              dict(overwrite=False, value =1),
+    "g_intercortical":         dict(overwrite=False, value =1),
     # intra-cortical
-    "f_intra_S2":              dict(overwrite=True, value=1),
-    "f_intra":                 dict(overwrite=True, value=1),
+    "f_intra_S2":              dict(overwrite=False, value=1),
+    "f_intra":                 dict(overwrite=False, value=1),
     "p_2PVE":                  dict(overwrite=False, value=37.6),
     "p_4PVE":                  dict(overwrite=False, value=39.4),
     # feedforward
     "ff_A1_S2":                dict(overwrite=False, value=1),
     "ff_A3b_S2":               dict(overwrite=False, value=1),
-    "ff_A3b_A1":               dict(overwrite=False, value=1),
+    "ff_A3b_A1":               dict(overwrite=False, value=2.5),
     # feedback
     "fb_A1_S2":                dict(overwrite=False, value=4),
-    "fb_A3b_A1":               dict(overwrite=False, value=4),
+    "fb_A3b_A1":               dict(overwrite=False, value=7),
     "fb_A3b_S2":               dict(overwrite=False, value=4),
     # thalamus
     "g_thalPOm":               dict(overwrite=False, value=1),
@@ -56,11 +57,11 @@ PARAMETER_DICT = {
     "POm_drive_A1":            dict(overwrite=False, value=1),
     "POm_drive_S2":            dict(overwrite=False, value=1),
     "POm_tgt_A3b":             dict(overwrite=False, value=1),
-    "POm_tgt_A1":              dict(overwrite=False, value=1),
-    "POm_tgt_S2":              dict(overwrite=False, value=1),
+    "POm_tgt_A1":              dict(overwrite=False, value=5),
+    "POm_tgt_S2":              dict(overwrite=False, value=1.5),
     
     # TIME CONSTANTS
-    "e3b_tau":                 dict(overwrite=False, value=6),
+    "e3b_tau":                 dict(overwrite=False, value=4),
     "e1_tau":                  dict(overwrite=False, value=6),
     "e2_tau":                  dict(overwrite=False, value=6),
     # NMDA decay (s) of E -> cell class connections, by postsynaptic class
@@ -70,8 +71,8 @@ PARAMETER_DICT = {
     "nmda_tau_VIP":            dict(overwrite=False, value=20e-3),
 
     # INPUTS 
-    "Ib_strength":             dict(overwrite=True, value=15),
-    "Iext_strength":           dict(overwrite=False, value=35),
+    "Ib_strength":             dict(overwrite=False, value=14),
+    "Iext_strength":           dict(overwrite=False, value=10),
     "Iext_duration":           dict(overwrite=False, value=0.013),
     "Im_strength":             dict(overwrite=False, value=0),
     "Ib_noise_std":            dict(overwrite=False, value=0.5),
@@ -82,16 +83,16 @@ PARAMETER_DICT = {
     "scaling_factor":          dict(overwrite=False, value=1),
 
     # DIPOLE LENGTHS
-    "F_L5": dict(overwrite=True, value=5),
-    "F_L6": dict(overwrite=True, value=5),
-    "L_BASE":        dict(overwrite=True, value=8),
-    "F_L4_A1":       dict(overwrite=False, value=0.05),
+    "F_L5": dict(overwrite=False, value=5),
+    "F_L6": dict(overwrite=False, value=5),
+    "L_BASE":        dict(overwrite=False, value=8),
+    "F_L4_A1":       dict(overwrite=False, value=0.1),
     "F_L4_S2":       dict(overwrite=False, value=0.05),
     "L_THALE_CTX":   dict(overwrite=False, value=1),
     "L_THALPOM_CTX": dict(overwrite=False, value=2),
-    "L_THALE_A3B":   dict(overwrite=False, value=0.1),
+    "L_THALE_A3B":   dict(overwrite=False, value=2),
     "L_THALPOM_A3B": dict(overwrite=False, value=2),
-    "L_A3B_CORT":    dict(overwrite=True, value=5),
+    "L_A3B_CORT":    dict(overwrite=False, value=5),
 }
 
 # SIMULATE WITH OPTIMIZED (or overwritten parameters)
@@ -128,10 +129,114 @@ print(f"time-course error: {err:.6f}" + ("" if overwritten else " (no overwrite:
 
 
 
+# spectrum of the pre-stimulus activity (own implementation, independent of the model and the diagnostics script)
+def plot_prestim_spectrum(model, sim_dip, fmin=1.0, fmax=40.0, seg_dur=1.0, overlap=0.5, settle_s=2.0):
+    """Power spectrum of the pre-stimulus activity of the three ROI dipoles (best fit).
+
+    ROI signals: A3b = sim_dip[0], A1 = sum of sim_dip[1:5], S2 = sum of sim_dip[5:9]. Welch estimate over the
+    settled pre-stimulus period (first settle_s seconds skipped): segments of seg_dur seconds with the given
+    overlap, the last one ending at stimulus onset; each segment has its mean removed and a Hann window, power is
+    |rfft|^2 / n^2, averaged over the segments. Row 1: linear axes, row 2: log-log axes. The strongest peak
+    between 5 and 15 Hz is marked."""
+    dt = model.step_size
+    stim_idx = round(model.input_onset / dt) - 1
+    n = round(seg_dur / dt)
+    hop = max(round(n * (1 - overlap)), 1)
+    first = round(settle_s / dt)
+    starts = []
+    s0 = stim_idx - n
+    while s0 >= first:
+        starts.append(s0)
+        s0 -= hop
+    if not starts:
+        raise ValueError(f"no {seg_dur} s segment fits between {settle_s} s and stimulus onset at {stim_idx * dt:.3f} s")
+    starts.sort()
+
+    sim_dip = np.asarray(sim_dip)
+    rois = {"A3b": sim_dip[0], "A1": sim_dip[1:5].sum(axis=0), "S2": sim_dip[5:9].sum(axis=0)}
+    win = np.hanning(n)
+    freqs = np.fft.rfftfreq(n, d=dt)
+    keep = (freqs >= fmin) & (freqs <= fmax)
+    band = (freqs[keep] >= 5) & (freqs[keep] <= 15)
+
+    fig, axes = plt.subplots(2, 3, figsize=(13, 7), constrained_layout=True)
+    for col, (roi, sig) in enumerate(rois.items()):
+        pre = sig[starts[0]:stim_idx]
+        if np.std(pre) <= 1e-9 * max(np.abs(np.mean(pre)), 1e-30):
+            print(f"prestim spectrum: WARNING the pre-stimulus signal of {roi} is flat, its spectrum is numerical residue")
+        psd = np.zeros(keep.sum())
+        for s0 in starts:
+            seg = sig[s0:s0 + n]
+            psd += (np.abs(np.fft.rfft((seg - seg.mean()) * win)) ** 2 / n ** 2)[keep]
+        psd /= len(starts)
+        f = freqs[keep]
+        i_pk = int(np.argmax(np.where(band, psd, -np.inf)))
+        for row, ax in enumerate(axes[:, col]):
+            ax.plot(f, psd, color="k", linewidth=1.4)
+            ax.plot(f[i_pk], psd[i_pk], "o", color="C3", markeredgecolor="k", zorder=5)
+            ax.set_xlabel("frequency (Hz)")
+            if row == 1:
+                ax.set_xscale("log")
+                ax.set_yscale("log")
+        axes[0, col].set_title(f"{roi}: peak {f[i_pk]:.1f} Hz (5-15 Hz)")
+        axes[0, col].set_ylabel("power")
+        axes[1, col].set_ylabel("power (log)")
+    fig.suptitle(f"pre-stimulus spectrum of the ROI dipoles, best fit: {len(starts)} segments of {seg_dur:g} s, "
+                 f"{overlap:.0%} overlap, ending at stimulus onset")
+    return fig
+
+
+def plot_2D_errorlandscape(run, param1, param2):
+    """Error (err_tc) over two optimized parameters: every evaluation as a point coloured by error (no interpolation),
+    the best fit as a star."""
+    ev = run["evaluations"]
+    best = ev.loc[ev["err_tc"].idxmin()]
+    data = ev[[param1, param2, "err_tc"]].astype(float).replace([np.inf, -np.inf], np.nan).dropna()
+
+    fig, ax = plt.subplots(figsize=(9, 7), constrained_layout=True)
+    sc = ax.scatter(data[param1], data[param2], c=data["err_tc"], cmap="viridis_r", s=14, alpha=0.7, zorder=3)
+    fig.colorbar(sc, ax=ax, label="error (err_tc)")
+    ax.scatter(best[param1], best[param2], marker="*", s=220, color="red", edgecolor="black", zorder=5,
+               label=f"best fit (error={best['err_tc']:.5f})")
+    bounds = dict(zip(run["config"]["optimized_parameters"], run["config"]["bounds"]))
+    for name, set_lim in ((param1, ax.set_xlim), (param2, ax.set_ylim)):
+        if name in bounds:
+            set_lim(*bounds[name])
+    ax.set_xlabel(param1)
+    ax.set_ylabel(param2)
+    ax.set_title(f"2D error landscape: {param1} vs {param2}")
+    return fig
+
+
+def plot_3D_errorlandscape(run, param1, param2, param3):
+    """Error (err_tc) over three optimized parameters: every evaluation as a point coloured by error, the best fit as a star."""
+    ev = run["evaluations"]
+    best = ev.loc[ev["err_tc"].idxmin()]
+    data = ev[[param1, param2, param3, "err_tc"]].astype(float).replace([np.inf, -np.inf], np.nan).dropna()
+
+    fig = plt.figure(figsize=(11, 9), constrained_layout=True)
+    ax = fig.add_subplot(111, projection="3d")
+    sc = ax.scatter(data[param1], data[param2], data[param3], c=data["err_tc"], cmap="viridis_r", s=18, alpha=0.35, edgecolors="none")
+    fig.colorbar(sc, ax=ax, shrink=0.65, pad=0.1, label="error (err_tc)")
+    ax.scatter(best[param1], best[param2], best[param3], marker="*", s=800, color="red", edgecolor="black",
+               linewidth=2.5, depthshade=False, zorder=100, label=f"best fit (error={best['err_tc']:.5f})")
+    bounds = dict(zip(run["config"]["optimized_parameters"], run["config"]["bounds"]))
+    for name, set_lim in ((param1, ax.set_xlim), (param2, ax.set_ylim), (param3, ax.set_zlim)):
+        if name in bounds:
+            set_lim(*bounds[name])
+    ax.set_xlabel(param1, labelpad=10)
+    ax.set_ylabel(param2, labelpad=10)
+    ax.set_zlabel(param3, labelpad=10)
+    ax.set_title(f"3D parameter space: {param1}, {param2}, {param3}")
+    return fig
+
+
 plot1 = True
 plot2 = False
 plot3 = False
-plot4 = True
+plot4 = False
+plot5 = True
+plot6 = False
 
 
 if plot1:
@@ -163,4 +268,15 @@ if plot4:
     viz.plot_sigmoid_operating_points(model)
     plt.show()
 
+if plot5:
+    # Plot 5 - spectrum of the pre-stimulus activity
+    # Welch spectrum of the three ROI dipoles over the settled period before the stimulus
+    plot_prestim_spectrum(model, sim_dip)
+    plt.show()
 
+if plot6:
+    # Plot 6 - error landscapes of the run: err_tc over two and over three optimized parameters
+    plot_2D_errorlandscape(run, "coupling_strength", "strength_I")
+    plt.show()
+    plot_3D_errorlandscape(run, "ff_A1_S2", "ff_A3b_A1", "ff_A3b_S2")
+    plt.show()

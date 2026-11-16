@@ -92,9 +92,9 @@ PARAMETER_DICT = {
     "receptor_thalamus_delay": dict(enabled=False, abs=(0.005, 0.025), default=0.01),
     
     # CONNECTIVITY & COUPLING 
-    "coupling_strength":       dict(enabled=False, abs=(0.5, 8), default=5), 
+    "coupling_strength":       dict(enabled=True, abs=(0.5, 8), default=6.85925), 
     "strength_I":              dict(enabled=True, abs=(0.5, 1.4), default=0.6), 
-    "g_intercortical":         dict(enabled=False, abs=(0.2, 3), default=1),
+    "g_intercortical":         dict(enabled=True, abs=(0.2, 3), default=1.75177),
     # intra-cortical
     "f_intra_S2":              dict(enabled=False, abs=(1, 5.0), default=1),
     "f_intra":                 dict(enabled=False, abs=(0.5, 3.0), default=1),
@@ -114,14 +114,14 @@ PARAMETER_DICT = {
     "POm_drive_A3b":           dict(enabled=False, abs=(0.5, 2.0), default=1),
     "POm_drive_A1":            dict(enabled=False, abs=(0.5, 5.0), default=1),
     "POm_drive_S2":            dict(enabled=False, abs=(0.5, 2.0), default=1),
-    "POm_tgt_A3b":             dict(enabled=False, abs=(0.5, 2.0), default=1),
-    "POm_tgt_A1":              dict(enabled=False, abs=(0.5, 2.0), default=1),
-    "POm_tgt_S2":              dict(enabled=False, abs=(0.5, 5.0), default=1),
+    "POm_tgt_A3b":             dict(enabled=True, abs=(0.5, 5.0), default=1),
+    "POm_tgt_A1":              dict(enabled=True, abs=(0.5, 5.0), default=1),
+    "POm_tgt_S2":              dict(enabled=True, abs=(0.5, 5.0), default=1),
     
     # TIME CONSTANTS
     "e3b_tau":                 dict(enabled=True, abs=(4.0, 10), default=6),
     "e1_tau":                  dict(enabled=True, abs=(4.0, 10), default=6),
-    "e2_tau":                  dict(enabled=False, abs=(4.0, 10), default=6),
+    "e2_tau":                  dict(enabled=False, abs=(4.0, 10), default=5.54064),
     # NMDA decay (s) of E -> cell class connections, by postsynaptic class
     "nmda_tau_E":              dict(enabled=True, abs=(5e-3, 20e-3), default=10e-3),
     "nmda_tau_PV":             dict(enabled=True, abs=(2e-3, 11e-3), default=5e-3),
@@ -129,26 +129,26 @@ PARAMETER_DICT = {
     "nmda_tau_VIP":            dict(enabled=False, abs=(5e-3, 40e-3), default=10e-3),
 
     # INPUTS 
-    "Ib_strength":             dict(enabled=False, abs=(5, 15), default=10),
+    "Ib_strength":             dict(enabled=True, abs=(5, 100), default=9.61432),
     "Iext_strength":           dict(enabled=True, abs=(1, 40), default=35),
     "Iext_duration":           dict(enabled=False, abs=(0.005, 0.02), default=0.013),
-    "Im_strength":             dict(enabled=False, abs=(0, 10), default=5),
+    "Im_strength":             dict(enabled=False, abs=(0, 10), default=7.35317),
     "Ib_noise_std":            dict(enabled=False, abs=(0.5, 2), default=0.5),
     "Ib_ratio_E":              dict(enabled=False, abs=(1, 1), default=1),
-    "Ib_ratio_PV":             dict(enabled=False, abs=(0.6, 0.9), default=0.63),
-    "Ib_ratio_SST":            dict(enabled=False, abs=(0.7, 1.2), default=0.85),
+    "Ib_ratio_PV":             dict(enabled=True, abs=(0.5, 1.2), default=0.845073),
+    "Ib_ratio_SST":            dict(enabled=True, abs=(0.5, 1.2), default=1.19679),
     "Ib_ratio_VIP":            dict(enabled=False, abs=(0.4, 0.7), default=0.4),
     "scaling_factor":          dict(enabled=False, abs=(1, 1), default=1),
 
     # DIPOLE LENGTHS
-    "F_L5": dict(enabled=False, abs=(dp.F_L5_MIN, 20.0), default=13),
-    "F_L6": dict(enabled=False, abs=(1.0, 10.0), default=9),
-    "L_BASE":        dict(enabled=False, abs=(0.5, 15.0), default=2),
-    "F_L4_A1":       dict(enabled=False, abs=(0.01, 0.5),  default=dp.F_L4_A1),
-    "F_L4_S2":       dict(enabled=False, abs=(0.01, 0.5),  default=dp.F_L4_S2),
+    "F_L5": dict(enabled=True, abs=(dp.F_L5_MIN, 20.0), default=13),
+    "F_L6": dict(enabled=True, abs=(1.0, 10.0), default=9),
+    "L_BASE":        dict(enabled=True, abs=(0.5, 15.0), default=2),
+    "F_L4_A1":       dict(enabled=True, abs=(0.01, 0.5),  default=dp.F_L4_A1),
+    "F_L4_S2":       dict(enabled=True, abs=(0.01, 0.5),  default=dp.F_L4_S2),
     "L_THALE_CTX":   dict(enabled=False, abs=(0.5, 10.0), default=dp.L_THALE_CTX),
     "L_THALPOM_CTX": dict(enabled=False, abs=(0.5, 20.0), default=dp.L_THALPOM_CTX),
-    "L_THALE_A3B":   dict(enabled=False, abs=(0.02, 1.0),  default=dp.L_THALE_A3B),
+    "L_THALE_A3B":   dict(enabled=True, abs=(0.02, 1.0),  default=dp.L_THALE_A3B),
     "L_THALPOM_A3B": dict(enabled=False, abs=(0.5, 20.0), default=4),
     "L_A3B_CORT":    dict(enabled=False, abs=(0.5, 20.0), default=dp.L_A3B_CORT),
 }
@@ -184,8 +184,8 @@ EVAL_LOG_PATH = None
 _n_eval = 0
 
 MID_FIRING_RATE = True   # penalise baseline rates away from the middle of the rate span
-MID_RATE_WEIGHT = 4.0    # error added when every population sits at floor or ceiling is 0.25 * weight
-
+MID_RATE_WEIGHT = 1    # error added when every population sits at floor or ceiling is 0.25 * weight
+MID_RATE_LEVEL = 0.3
 
 def log_evaluation(params, dipole_params, err_tc, seconds, mid_rate_error=0.0):
     """Append one row (eval number, searched values, the 10 effective dipole parameters, error) to evaluations.csv."""
@@ -220,17 +220,52 @@ def objective(**params):
     model.simulate()
 
     mid_rate_error = 0.0
+    saturation_error = 0.0
     if MID_FIRING_RATE:
         # mean squared distance of the baseline rate fraction (rate / r_max) from 0.5, 500 ms before the stimulus
         stim_idx = round(model.input_onset / model.step_size)
-        frac = model.rate[:, stim_idx - 500:stim_idx].mean(axis=1) / model.sigm[:, 2]
-        mid_rate_error = MID_RATE_WEIGHT * np.mean((frac - 0.5) ** 2)
+        # Time window: 500 ms before stimulus
+        # TODO: correct this! 
+        window =s round(500 / model.step_size)
+        baseline_rates = model.rate[:30, stim_idx - window:stim_idx]
+
+        # Normalize each neuron's firing rate by its maximum rate
+        max_rates = model.sigm[:30, 2, np.newaxis]
+        frac = baseline_rates / max_rates
+
+        # Mean normalized firing rate across neurons and time
+        average_fraction = np.mean(frac)
+
+        # Tolerable firing rate band
+        fraction_band = np.array([0.2, 0.6])
+
+        # Penalize deviations outside the tolerable band
+        mid_rate_error = MID_RATE_WEIGHT * np.mean(
+            np.maximum(fraction_band[0] - average_fraction, 0)**2
+            + np.maximum(average_fraction - fraction_band[1], 0)**2
+        )
+
+        # also penalize a saturation of the thalamus after the stimulus 
+        thalamus_idx = 30
+        stim_duration = round(model.Iext_duration / model.step_size)
+        stim_rates = model.rate[
+            thalamus_idx,
+            stim_idx:stim_idx + stim_duration
+        ]
+        thalamus_max_rate = model.sigm[thalamus_idx, 2]
+
+        stim_fraction = stim_rates / thalamus_max_rate
+
+        # Penalize saturated firing rates 
+        saturation_threshold = 0.95
+
+        saturation_error = np.mean(np.maximum(stim_fraction - saturation_threshold, 0)**2)
 
     sim_dip = model.compute_dipoles()
     err_tc = 0.0
 
     err_tc, _, _ = model.compute_error_timecourse(tc_data_path, sim_dip, scaling_factor=scaling_factor, target_dip=None, rois=FIT_ROIS)
-    error = err_tc + mid_rate_error
+    error = err_tc + mid_rate_error + saturation_error
 
     log_evaluation(params, dipole_params, error, time.time() - t0, mid_rate_error)
     return error
@@ -265,8 +300,8 @@ base_params = {
     "step_size": 0.001,
     "resolution_tstep": 0.001,
     "input_type": "step",
-    "input_onset": 4.001,
-    "simulation_dur": 6,
+    "input_onset": 2.001,
+    "simulation_dur": 3,
     "thal_connect": [
         0,
         1000,
@@ -299,7 +334,7 @@ if _unknown:
 # Session folder name (or path) under diag_dir, e.g. "optfull_20261110_013709_roi-all"; empty = random start.
 # The environment variable START_FROM overrides it. The old run must have the same full parameter set
 # (the keys of PARAMETER_DICT); which of them it optimized and which it held fixed may differ.
-START_FROM = "optfull_20261112_114855_roi-all" #"optfull_20261110_174017_roi-all_UNSATURATED" # "optfull_20261110_123724_roi-all"
+START_FROM = "optfull_20261110_174017_roi-all_UNSATURATED" #"optfull_20261110_174017_roi-all_UNSATURATED" # "optfull_20261110_123724_roi-all"
 START_FROM_OPT_RUN = START_FROM #os.getenv("START_FROM", "")
 
 
@@ -438,6 +473,7 @@ def main():
         "search_space": "normalized",   # the GA works on [0, 1]; evaluations.csv and the summary are in physical units
         "mid_rate_penalty": MID_FIRING_RATE,
         "mid_rate_penalty_weight": MID_RATE_WEIGHT,
+        "mid_rate_penalty_level": MID_RATE_LEVEL,
     }
     with open(os.path.join(session_dir, "run_config.json"), "w") as f:
         json.dump(run_config, f, indent=2)

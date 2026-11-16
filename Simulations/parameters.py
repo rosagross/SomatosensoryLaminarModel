@@ -861,7 +861,7 @@ class Parameter():
                                     [  0.14218422,  40.03107351, 166.82960408],
                                     [  0.07937015,  42.01276379,  56.95305832],
                                     [  0.1,  40,  30], # Thalamus E
-                                    [  0.1,  40,  30], # Thalamus E
+                                    [  0.1,  40,  30], # Thalamus I
                                     [  0.1,  40,  30], # Thalamus E POm
                                     [  0.1,  40,  30]] # Thalamus I (reticular) for POm
 

@@ -2257,10 +2257,10 @@ class SomatoModel():
             error_post = float(np.sqrt(np.mean((sims_post[roi] / global_sim_peak - tgts_post[roi] / global_target_peak) ** 2)))
             # I compute the amplitude of the simulated pre-stimulus signal and make sure it has 
             # a lower amplitude compared to the ERP
-            error_sim_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak - np.mean(sims_pre[roi] / global_sim_peak)) ** 2)))
-            error_target_pre = float(np.sqrt(np.mean((tgts_pre[roi]/ global_target_peak - np.mean(tgts_pre[roi]/global_target_peak)) ** 2)))
-            #error_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak) ** 2)))**2
-            error_pre = ((error_sim_pre - error_target_pre)/error_target_pre)**2
+            #error_sim_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak - np.mean(sims_pre[roi] / global_sim_peak)) ** 2)))
+            #error_target_pre = float(np.sqrt(np.mean((tgts_pre[roi]/ global_target_peak - np.mean(tgts_pre[roi]/global_target_peak)) ** 2)))
+            error_pre = float(np.sqrt(np.mean((sims_pre[roi] / global_sim_peak) ** 2)))**2
+            #error_pre = ((error_sim_pre - error_target_pre)/error_target_pre)**2
             #print('ROI', roi)
             #print('Error pre', error_pre)
             #print('Error post', error_post)

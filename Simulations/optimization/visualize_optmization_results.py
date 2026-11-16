@@ -21,6 +21,7 @@ in which they answer the questions about a run, and saved to <session>/diagnosti
   06_connectivity_inputs.png        weights of the background / external / modulatory input
   07_saturation.png                 baseline firing rate and post-stimulus range of every population relative to its maximum rate
   07b_sigmoid_operating_points.png  sigmoid of every population with the visited drive, to see whether it sits on a flat part
+  07c_prestim_spectrum.png          power spectrum of the pre-stimulus activity of the three ROI dipoles
 
 Figure 01 only reads the files of the run. 02-07 re-simulate the best parameter set; the
 re-simulated error must match the best error in evaluations.csv, otherwise the script stops.
@@ -45,10 +46,11 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.tri as mtri
 import matplotlib.colors as mcolors
 
 # ── settings ───────────────────────────────────────────────────────────────────
-OPT_RUN_ID = "optfull_20261110_174017_roi-all" #optfull_20261110_233754_roi-all"    # session folder name (or path); empty = newest optfull_* session
+OPT_RUN_ID = "optcma_20261113_173145_roi-all" #"optfull_20261111_225611_roi-all" #optfull_20261110_233754_roi-all"    # session folder name (or path); empty = newest optfull_* session
 CHECK_TOL = 1e-6        # allowed difference between the re-simulated and the logged best error
 PARAM_TOL = 0.01       # two evaluations count as the same point if no parameter differs by more than this fraction of its search range (correlation figure)
 
@@ -149,6 +151,18 @@ def resimulate_best(run):
     sim_dip = model.compute_dipoles()
     err, tc_sim, tc_target = model.compute_error_timecourse(
         cfg["target_csv"], sim_dip, scaling_factor=scaling_factor, target_dip=None, rois=tuple(cfg["fit_rois"]))
+
+    # compute the firing rate penalty error if this was done in the optimization run as well
+    mid_rate_error = 0
+    if "mid_rate_penalty" in cfg:
+        if cfg["mid_rate_penalty"]:
+            # mean squared distance of the baseline rate fraction (rate / r_max) from 0.5, 500 ms before the stimulus
+            stim_idx = round(model.input_onset / model.step_size)
+            frac = model.rate[:, stim_idx - 500:stim_idx].mean(axis=1) / model.sigm[:, 2]
+            mid_rate_error = cfg["mid_rate_penalty_weight"] * np.mean((frac - 0.5) ** 2)
+            # add the error to the other error
+    
+    err = err + mid_rate_error
 
     if abs(err - best_logged_err) > CHECK_TOL:
         raise RuntimeError(f"re-simulated error {err:.8f} differs from the best error in evaluations.csv "
@@ -297,16 +311,16 @@ def roi_error_terms(tc_sim, tc_target, fit_rois):
     terms = {}
     for r in rois:
         post = float(np.sqrt(np.mean((sim_post[r] / sim_peak - tgt_post[r] / tgt_peak) ** 2)))
-        #pre_tgt = float(np.sqrt(np.mean((tgt_pre[r][:ONSET_SAMPLE] / tgt_peak -  np.mean(tgt_pre[r][:ONSET_SAMPLE] / tgt_peak)) ** 2)))
+        #pre_tgt = float(np.sqrt(np.mean((tc_target[r][:ONSET_SAMPLE] / tgt_peak -  np.mean(tc_target[r][:ONSET_SAMPLE] / tgt_peak)) ** 2)))
         #pre_sim = float(np.sqrt(np.mean((tc_sim[r][:ONSET_SAMPLE] / sim_peak -  np.mean(tc_sim[r][:ONSET_SAMPLE] / sim_peak)) ** 2)))
         #pre = ((pre_sim - pre_tgt)/pre_tgt)**2
         
         # classical error: favors no fluctuations
         pre = float(np.mean((tc_sim[r][:ONSET_SAMPLE] / sim_peak) ** 2))
+
         terms[r] = (pre, post)
+
     return terms, sim_peak, tgt_peak
-
-
 
 
 def plot_roi_errors(run, err, tc_sim, tc_target):
@@ -315,8 +329,15 @@ def plot_roi_errors(run, err, tc_sim, tc_target):
     terms, sim_peak, tgt_peak = roi_error_terms(tc_sim, tc_target, fit_rois)
     rois = ("A3b", "A1", "S2")
     mean_check = float(np.mean([sum(terms[r]) for r in fit_rois]))
-    if abs(mean_check - err) > CHECK_TOL:
-        raise RuntimeError(f"per-ROI terms average {mean_check:.8f} but the model error is {err:.8f}")
+    
+    # compute the firing rate penalty error if this was done in the optimization run as well
+    # if we are also looking at the mid range firing rates, it is okay if the error does not match
+    # meaning the ROI wise error can only show the time course error!
+    
+    if "mid_rate_penalty" in run["config"]:
+        if not run["config"]["mid_rate_penalty"]:
+            if abs(mean_check - err) > CHECK_TOL:
+                raise RuntimeError(f"per-ROI terms average {mean_check:.8f} but the model error is {err:.8f}")
 
     fig = plt.figure(figsize=(13, 7), constrained_layout=True)
     grid = fig.add_gridspec(2, 3, height_ratios=[1, 1.3])
@@ -635,16 +656,246 @@ def plot_sigmoid_operating_points(model):
     return fig
 
 
+
+
+# ── 7c: spectrum of the pre-stimulus activity ──────────────────────────────────
+def plot_prestim_spectrum(model, sim_dip, fmin=1.0, fmax=40.0, seg_dur=1.0, overlap=0.5, settle_s=2.0):
+    """Power spectrum of the pre-stimulus activity of the three ROI dipoles (best fit).
+
+    ROI signals: A3b = sim_dip[0], A1 = sum of sim_dip[1:5], S2 = sum of sim_dip[5:9]. Welch estimate over the
+    settled pre-stimulus period (first settle_s seconds skipped): segments of seg_dur seconds with the given
+    overlap, the last one ending at stimulus onset; each segment has its mean removed and a Hann window, power is
+    |rfft|^2 / n^2, averaged over the segments. Row 1: linear axes, row 2: log-log axes. The strongest peak
+    between 5 and 15 Hz is marked."""
+    dt = model.step_size
+    stim_idx = round(model.input_onset / dt) - 1
+    n = round(seg_dur / dt)
+    hop = max(round(n * (1 - overlap)), 1)
+    first = round(settle_s / dt)
+    starts = []
+    s0 = stim_idx - n
+    while s0 >= first:
+        starts.append(s0)
+        s0 -= hop
+    if not starts:
+        raise ValueError(f"no {seg_dur} s segment fits between {settle_s} s and stimulus onset at {stim_idx * dt:.3f} s")
+    starts.sort()
+
+    sim_dip = np.asarray(sim_dip)
+    rois = {"A3b": sim_dip[0], "A1": sim_dip[1:5].sum(axis=0), "S2": sim_dip[5:9].sum(axis=0)}
+    win = np.hanning(n)
+    freqs = np.fft.rfftfreq(n, d=dt)
+    keep = (freqs >= fmin) & (freqs <= fmax)
+    band = (freqs[keep] >= 5) & (freqs[keep] <= 15)
+
+    fig, axes = plt.subplots(2, 3, figsize=(13, 7), constrained_layout=True)
+    for col, (roi, sig) in enumerate(rois.items()):
+        pre = sig[starts[0]:stim_idx]
+        if np.std(pre) <= 1e-9 * max(np.abs(np.mean(pre)), 1e-30):
+            print(f"prestim spectrum: WARNING the pre-stimulus signal of {roi} is flat, its spectrum is numerical residue")
+        psd = np.zeros(keep.sum())
+        for s0 in starts:
+            seg = sig[s0:s0 + n]
+            psd += (np.abs(np.fft.rfft((seg - seg.mean()) * win)) ** 2 / n ** 2)[keep]
+        psd /= len(starts)
+        f = freqs[keep]
+        i_pk = int(np.argmax(np.where(band, psd, -np.inf)))
+        for row, ax in enumerate(axes[:, col]):
+            ax.plot(f, psd, color="k", linewidth=1.4)
+            ax.plot(f[i_pk], psd[i_pk], "o", color="C3", markeredgecolor="k", zorder=5)
+            ax.set_xlabel("frequency (Hz)")
+            if row == 1:
+                ax.set_xscale("log")
+                ax.set_yscale("log")
+        axes[0, col].set_title(f"{roi}: peak {f[i_pk]:.1f} Hz (5-15 Hz)")
+        axes[0, col].set_ylabel("power")
+        axes[1, col].set_ylabel("power (log)")
+    fig.suptitle(f"pre-stimulus spectrum of the ROI dipoles, best fit: {len(starts)} segments of {seg_dur:g} s, "
+                 f"{overlap:.0%} overlap, ending at stimulus onset")
+    return fig
+
+
+# ── 8: error landscapes ───────────────────────────────────────────────────────
+
+def _landscape_bounds(run, names):
+    """Search bounds for the selected parameters, if they were optimized."""
+    cfg = run["config"]
+    bounds = dict(zip(cfg["optimized_parameters"], cfg["bounds"]))
+    return {name: bounds.get(name, None) for name in names}
+
+
+def plot_2D_errorlandscape(run, param1, param2, levels=30):
+    """2D error landscape of two optimized parameters.
+
+    x/y: selected parameters
+    colour: error (err_tc)
+
+    Uses triangulation to interpolate between the sampled evaluations.
+    Actual evaluations are shown as points and the best fit as a star.
+    Duplicate parameter combinations are represented by their lowest error.
+    """
+    ev = run["evaluations"]
+    best = ev.loc[ev["err_tc"].idxmin()]
+
+    # Extract sampled parameter combinations
+    x = ev[param1].to_numpy(dtype=float)
+    y = ev[param2].to_numpy(dtype=float)
+    err = ev["err_tc"].to_numpy(dtype=float)
+
+    # Remove invalid evaluations
+    valid = np.isfinite(x) & np.isfinite(y) & np.isfinite(err)
+    x, y, err = x[valid], y[valid], err[valid]
+
+    # Aggregate duplicate parameter combinations using their minimum error
+    data = pd.DataFrame({param1: x, param2: y, "err": err})
+    data = data.groupby([param1, param2], as_index=False)["err"].min()
+
+    x_unique = data[param1].to_numpy()
+    y_unique = data[param2].to_numpy()
+    err_unique = data["err"].to_numpy()
+
+    fig, ax = plt.subplots(figsize=(9, 7), constrained_layout=True)
+
+    # Interpolated error landscape
+    if len(data) >= 3:
+        try:
+            triang = mtri.Triangulation(x_unique, y_unique)
+            contour = ax.tricontourf(
+                triang, err_unique,
+                levels=levels,
+                cmap="viridis_r"
+            )
+            fig.colorbar(contour, ax=ax, label="error (err_tc)")
+        except (ValueError, RuntimeError) as exc:
+            print(f"Could not interpolate 2D landscape: {exc}")
+
+    # Actual evaluations
+    scatter = ax.scatter(
+        x, y,
+        c=err,
+        cmap="viridis_r",
+        s=12,
+        edgecolors="none",
+        alpha=0.65,
+        zorder=3
+    )
+
+    # Best fit
+    ax.scatter(
+        best[param1], best[param2],
+        marker="*",
+        s=220,
+        color="red",
+        edgecolor="black",
+        linewidth=0.8,
+        label=f"best fit (error={best['err_tc']:.5f})",
+        zorder=5
+    )
+
+    # Search bounds
+    bounds = _landscape_bounds(run, (param1, param2))
+    for name, axis in ((param1, ax.set_xlim), (param2, ax.set_ylim)):
+        if bounds[name] is not None:
+            lo, hi = bounds[name]
+            axis(lo, hi)
+
+    ax.set_xlabel(param1)
+    ax.set_ylabel(param2)
+    ax.set_title(f"2D error landscape: {param1} vs {param2}")
+    #ax.legend(loc="best")
+
+    return fig
+
+
+def plot_3D_errorlandscape(run, param1, param2, param3):
+    """3D parameter-space visualization of three parameters.
+
+    x/y/z: selected parameters
+    colour: error (err_tc)
+
+    Each point represents an actual evaluation. The best fit is marked
+    with a star. Unlike the 2D plot, no interpolation is performed.
+    """
+    ev = run["evaluations"]
+    best = ev.loc[ev["err_tc"].idxmin()]
+
+    x = ev[param1].to_numpy(dtype=float)
+    y = ev[param2].to_numpy(dtype=float)
+    z = ev[param3].to_numpy(dtype=float)
+    err = ev["err_tc"].to_numpy(dtype=float)
+
+    valid = (
+        np.isfinite(x) & np.isfinite(y) &
+        np.isfinite(z) & np.isfinite(err)
+    )
+    x, y, z, err = x[valid], y[valid], z[valid], err[valid]
+
+    fig = plt.figure(figsize=(11, 9), constrained_layout=True)
+    ax = fig.add_subplot(111, projection="3d")
+
+    # Actual evaluations, coloured by error
+    scatter = ax.scatter(
+        x, y, z,
+        c=err,
+        cmap="viridis_r",
+        s=18,
+        alpha=0.35,
+        edgecolors="none"
+    )
+
+    fig.colorbar(scatter, ax=ax, shrink=0.65, pad=0.1,
+                 label="error (err_tc)")
+
+    # Best fit
+    ax.scatter(
+        best[param1], best[param2], best[param3],
+        marker="*",
+        s=800,
+        color="red",
+        edgecolor="black",
+        linewidth=2.5,
+        depthshade=False,
+        label=f"best fit (error={best['err_tc']:.5f})",
+        zorder=100
+    )
+
+    # Search bounds
+    bounds = _landscape_bounds(run, (param1, param2, param3))
+    for name, axis in zip(
+        (param1, param2, param3),
+        (ax.set_xlim, ax.set_ylim, ax.set_zlim)
+    ):
+        if bounds[name] is not None:
+            lo, hi = bounds[name]
+            axis(lo, hi)
+
+    ax.set_xlabel(param1, labelpad=10)
+    ax.set_ylabel(param2, labelpad=10)
+    ax.set_zlabel(param3, labelpad=10)
+
+    ax.set_title(
+        f"3D parameter space: {param1}, {param2}, {param3}"
+    )
+    #ax.legend(loc="upper left")
+
+    return fig
+
+
+
 # ── main ───────────────────────────────────────────────────────────────────────
-def save(fig, out_dir, name):
-    path = os.path.join(out_dir, name)
-    fig.savefig(path, dpi=200, bbox_inches="tight")
-    plt.close(fig)
-    print("saved", path)
+def save(fig, out_dir, name, show=False):
+    
+    if show:
+        plt.show()
+    else:
+        path = os.path.join(out_dir, name)
+        fig.savefig(path, dpi=200, bbox_inches="tight")
+        plt.close(fig)
+        print("saved", path)
 
 
-def main(run_name=None):
-    run_dir = resolve_run_dir(run_name if run_name else OPT_RUN_ID)
+def main():
+    run_dir = os.path.join(OPT_OUT_DIR, OPT_RUN_ID)
     print("session:", run_dir)
     run = load_run(run_dir)
     out_dir = os.path.join(run_dir, "diagnostics")
@@ -669,17 +920,19 @@ def main(run_name=None):
     save(plot_dipole_parameters_clean(best_dipole_json(run, dipole_params)), out_dir, "03_dipole_parameters_best.png")
     save(plot_dipole_parameter_values(run, dipole_params), out_dir, "03b_dipole_parameters_10.png")
 
-    # 4: how the dipole is computed from the potentials
-    for area in ("S2", "A1", "A3b"):
-        save(plot_dipole_computation_area(model, sim_dip, area), out_dir, f"04_dipole_computation_{area}.png")
-        save(plot_layer_interneuron_contributions(model, sim_dip, area), out_dir,
-             f"04b_layer_interneuron_contributions_{area}.png")
+    plot_details = True
+    if plot_details:
+        # 4: how the dipole is computed from the potentials
+        for area in ("S2", "A1", "A3b"):
+            save(plot_dipole_computation_area(model, sim_dip, area), out_dir, f"04_dipole_computation_{area}.png")
+            save(plot_layer_interneuron_contributions(model, sim_dip, area), out_dir,
+                f"04b_layer_interneuron_contributions_{area}.png")
 
-    # 4c: dipole length per input cell type
-    save(plot_dipole_length_by_celltype(model), out_dir, "04c_dipole_length_by_celltype.png")
+        # 4c: dipole length per input cell type
+        save(plot_dipole_length_by_celltype(model), out_dir, "04c_dipole_length_by_celltype.png")
 
-    # 4d: per-synapse potentials of all populations
-    plot_full_potentials(model, out_dir)
+        # 4d: per-synapse potentials of all populations
+        plot_full_potentials(model, out_dir)
 
     # 5/6: network structure
     save(plot_connectivity_neural(model), out_dir, "05_connectivity_neural.png")
@@ -688,9 +941,35 @@ def main(run_name=None):
     # 7: are the populations saturated (do they respond to input at all)
     save(plot_saturation(model), out_dir, "07_saturation.png")
     save(plot_sigmoid_operating_points(model), out_dir, "07b_sigmoid_operating_points.png")
+    save(plot_prestim_spectrum(model, sim_dip), out_dir, "07c_prestim_spectrum.png")
+
+    # 8: 2D and 3D error landscapes
+
+    # Choose the parameters to visualize:
+    plot_error_landscape = True
+    if plot_error_landscape:
+        param_2d = ("strength_I", "Iext_strength")
+        param_3d = ("coupling_strength", "strength_I",
+                    "g_intercortical")
+
+        save(
+            plot_2D_errorlandscape(run, *param_2d),
+            out_dir,
+            f"08_error_landscape_2D_{param_2d[0]}_{param_2d[1]}.png",
+            False
+        )
+
+        save(
+            plot_3D_errorlandscape(run, *param_3d),
+            out_dir,
+            f"08_error_landscape_3D_{param_3d[0]}_{param_3d[1]}_{param_3d[2]}.png",
+            False
+        )
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Diagnostic plots of a run_optimization_full.py session")
-    parser.add_argument("--run", default=None, help="session folder name or path (default: OPT_RUN_ID, else newest)")
-    main(parser.parse_args().run)
+    #parser = argparse.ArgumentParser(description="Diagnostic plots of a run_optimization_full.py session")
+    #parser.add_argument("--run", default=None, help="session folder name or path (default: OPT_RUN_ID, else newest)")
+    main()
+
+# %%
